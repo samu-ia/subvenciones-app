@@ -4,17 +4,18 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
-  LayoutDashboard, Building2, Lightbulb,
-  FolderOpen, GitMerge, LogOut, Target, Settings,
+  LayoutDashboard, Building2, Lightbulb, FileText,
+  FolderOpen, LogOut, Target, Settings, Calendar, Brain,
 } from "lucide-react";
 
 const nav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/clientes", label: "Clientes", icon: Building2 },
+  { href: "/reuniones", label: "Reuniones", icon: Calendar },
   { href: "/oportunidades", label: "Oportunidades", icon: Target },
-  { href: "/ayudas", label: "Ayudas", icon: Lightbulb },
   { href: "/expedientes", label: "Expedientes", icon: FolderOpen },
-  { href: "/matches", label: "Matches", icon: GitMerge },
+  { href: "/documentos", label: "Documentos", icon: FileText },
+  { href: "/asistentes", label: "Asistentes IA", icon: Brain },
   { href: "/ajustes", label: "Ajustes", icon: Settings },
 ];
 

@@ -56,43 +56,6 @@ export default function AjustesPage() {
           </div>
         </a>
 
-        {/* Tarjeta: Usuarios */}
-        <a
-          href="/ajustes/usuarios"
-          className="table-row"
-          style={{
-            display: 'block',
-            padding: 'var(--s2)',
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: '8px',
-            textDecoration: 'none',
-            color: 'inherit',
-            transition: 'all 0.2s',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--s1)' }}>
-            <div style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '8px',
-              background: 'var(--green-bg)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}>
-              <Shield size={24} style={{ color: 'var(--teal)' }} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <h3 style={{ margin: '0 0 6px 0', fontSize: '16px', fontWeight: 600 }}>Usuarios</h3>
-              <p style={{ margin: 0, color: 'var(--muted)', fontSize: '14px', lineHeight: 1.5 }}>
-                Gestión de usuarios, roles y permisos de acceso
-              </p>
-            </div>
-          </div>
-        </a>
-
         {/* Tarjeta: Integraciones */}
         <a
           href="/ajustes/integraciones"
@@ -130,9 +93,9 @@ export default function AjustesPage() {
           </div>
         </a>
 
-        {/* Tarjeta: IA */}
+        {/* Tarjeta: Proveedores IA */}
         <a
-          href="/ajustes/ia"
+          href="/ajustes/proveedores-ia"
           className="table-row"
           style={{
             display: 'block',
@@ -159,9 +122,46 @@ export default function AjustesPage() {
               <Brain size={24} style={{ color: 'white' }} />
             </div>
             <div style={{ flex: 1 }}>
-              <h3 style={{ margin: '0 0 6px 0', fontSize: '16px', fontWeight: 600 }}>Configuración IA</h3>
+              <h3 style={{ margin: '0 0 6px 0', fontSize: '16px', fontWeight: 600 }}>Proveedores IA</h3>
               <p style={{ margin: 0, color: 'var(--muted)', fontSize: '14px', lineHeight: 1.5 }}>
-                Gestiona modelos, claves API, recuperación documental y comportamiento de la inteligencia artificial
+                Gestiona claves API, modelos y conexiones con proveedores de IA
+              </p>
+            </div>
+          </div>
+        </a>
+
+        {/* Tarjeta: Seguridad */}
+        <a
+          href="/ajustes/seguridad"
+          className="table-row"
+          style={{
+            display: 'block',
+            padding: 'var(--s2)',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: '8px',
+            textDecoration: 'none',
+            color: 'inherit',
+            transition: 'all 0.2s',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--s1)' }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '8px',
+              background: 'var(--red-bg)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <Shield size={24} style={{ color: 'var(--teal)' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ margin: '0 0 6px 0', fontSize: '16px', fontWeight: 600 }}>Seguridad</h3>
+              <p style={{ margin: 0, color: 'var(--muted)', fontSize: '14px', lineHeight: 1.5 }}>
+                Gestión de permisos, auditoría y políticas de seguridad
               </p>
             </div>
           </div>
