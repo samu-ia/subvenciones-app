@@ -144,17 +144,15 @@ export default async function ExpedientesPage() {
             return (
               <div 
                 key={expediente.id}
+                className="table-row"
                 style={{
                   display: 'grid',
                   gridTemplateColumns: '2fr 1.5fr 1.5fr 1fr 1.5fr',
                   gap: '16px',
                   padding: '20px 24px',
                   borderBottom: '1px solid var(--border)',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.15s'
+                  cursor: 'pointer'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
                 <div style={{
                   fontSize: '15px',

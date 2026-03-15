@@ -302,17 +302,15 @@ export default async function ClienteDetailPage({
               return (
                 <div 
                   key={exp.id}
+                  className="table-row"
                   style={{
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     padding: '16px',
                     border: '1px solid var(--border)',
-                    borderRadius: '8px',
-                    transition: 'background-color 0.15s'
+                    borderRadius: '8px'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--ink)' }}>

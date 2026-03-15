@@ -159,17 +159,15 @@ export default async function AyudasPage() {
             return (
               <div 
                 key={ayuda.id}
+                className="table-row"
                 style={{
                   display: 'grid',
                   gridTemplateColumns: '3fr 2fr 1fr 1fr 1fr',
                   gap: '16px',
                   padding: '20px 24px',
                   borderBottom: '1px solid var(--border)',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.15s'
+                  cursor: 'pointer'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <div style={{

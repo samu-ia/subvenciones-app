@@ -125,18 +125,14 @@ export default async function ClientesPage() {
               href={`/clientes/${cliente.nif}`}
               style={{ textDecoration: 'none' }}
             >
-              <div style={{
+              <div className="table-row" style={{
                 display: 'grid',
                 gridTemplateColumns: '2fr 1fr 2fr 1fr 1.5fr',
                 gap: '16px',
                 padding: '20px 24px',
                 borderBottom: '1px solid var(--border)',
-                cursor: 'pointer',
-                transition: 'background-color 0.15s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-              >
+                cursor: 'pointer'
+              }}>
                 <div style={{
                   fontSize: '15px',
                   fontWeight: '600',

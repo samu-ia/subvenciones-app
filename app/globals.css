@@ -30,3 +30,11 @@ body {
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
 }
+
+.table-row {
+  transition: background-color 0.15s;
+}
+
+.table-row:hover {
+  background-color: var(--bg);
+}
