@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   LayoutDashboard, Building2, Lightbulb,
-  FolderOpen, GitMerge, LogOut, Target,
+  FolderOpen, GitMerge, LogOut, Target, Settings,
 } from "lucide-react";
 
 const nav = [
@@ -15,6 +15,7 @@ const nav = [
   { href: "/ayudas", label: "Ayudas", icon: Lightbulb },
   { href: "/expedientes", label: "Expedientes", icon: FolderOpen },
   { href: "/matches", label: "Matches", icon: GitMerge },
+  { href: "/ajustes", label: "Ajustes", icon: Settings },
 ];
 
 export default function Sidebar() {
