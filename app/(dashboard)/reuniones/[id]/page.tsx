@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
-import { Calendar, Clock, User, ArrowLeft } from 'lucide-react';
+import { Calendar, Clock, User, ArrowLeft, Settings } from 'lucide-react';
+import ConfigModal from '@/components/workspace/ConfigModal';
 
 interface Reunion {
   id: string;
@@ -33,6 +34,7 @@ export default function ReunionDetailPage() {
   const [notas, setNotas] = useState('');
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [showConfig, setShowConfig] = useState(false);
 
   useEffect(() => {
     async function fetchReunion() {
@@ -138,14 +140,45 @@ export default function ReunionDetailPage() {
           Volver
         </Link>
 
-        <h1 style={{
-          fontSize: '24px',
-          fontWeight: '700',
-          color: 'var(--ink)',
-          marginBottom: '12px'
-        }}>
-          {reunion.titulo || 'Sin título'}
-        </h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h1 style={{
+            fontSize: '24px',
+            fontWeight: '700',
+            color: 'var(--ink)',
+            marginBottom: '12px'
+          }}>
+            {reunion.titulo || 'Sin título'}
+          </h1>
+
+          <button
+            onClick={() => setShowConfig(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              border: '1px solid var(--border)',
+              borderRadius: '6px',
+              backgroundColor: 'white',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: '500',
+              color: 'var(--ink2)',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#f8f9fa';
+              e.currentTarget.style.borderColor = 'var(--ink2)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'white';
+              e.currentTarget.style.borderColor = 'var(--border)';
+            }}
+          >
+            <Settings size={16} />
+            Ajustes IA
+          </button>
+        </div>
 
         {/* Info Compacta en Una Línea */}
         <div style={{
@@ -277,6 +310,8 @@ export default function ReunionDetailPage() {
           />
         </div>
       </div>
+
+      <ConfigModal isOpen={showConfig} onClose={() => setShowConfig(false)} />
     </div>
   );
 }

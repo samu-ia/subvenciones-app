@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
-import { ArrowLeft, Plus, FileText, Paperclip, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, FileText, Paperclip, Trash2, Settings } from 'lucide-react';
+import ConfigModal from '@/components/workspace/ConfigModal';
 
 interface Expediente {
   id: string;
@@ -38,6 +39,7 @@ export default function ExpedienteDetailPage() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingDocId, setEditingDocId] = useState<string | null>(null);
   const [editingDocName, setEditingDocName] = useState('');
+  const [showConfig, setShowConfig] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -202,15 +204,44 @@ export default function ExpedienteDetailPage() {
             </p>
           </div>
           
-          <div style={{ fontSize: '13px', color: 'var(--muted)' }}>
-            {saving ? (
-              <span style={{ color: 'var(--amber)' }}>Guardando...</span>
-            ) : lastSaved ? (
-              <span>Guardado {lastSaved.toLocaleTimeString('es-ES')}</span>
-            ) : (
-              <span>Guardado automático activado</span>
-            )}
-          </div>
+          <button
+            onClick={() => setShowConfig(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              border: '1px solid var(--border)',
+              borderRadius: '6px',
+              backgroundColor: 'white',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: '500',
+              color: 'var(--ink2)',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#f8f9fa';
+              e.currentTarget.style.borderColor = 'var(--ink2)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'white';
+              e.currentTarget.style.borderColor = 'var(--border)';
+            }}
+          >
+            <Settings size={16} />
+            Ajustes IA
+          </button>
+        </div>
+        
+        <div style={{ fontSize: '13px', color: 'var(--muted)' }}>
+          {saving ? (
+            <span style={{ color: 'var(--amber)' }}>Guardando...</span>
+          ) : lastSaved ? (
+            <span>Guardado {lastSaved.toLocaleTimeString('es-ES')}</span>
+          ) : (
+            <span>Guardado automático activado</span>
+          )}
         </div>
       </div>
 
@@ -539,6 +570,8 @@ Puedes usar este espacio para:
           )}
         </div>
       </div>
+      
+      <ConfigModal isOpen={showConfig} onClose={() => setShowConfig(false)} />
     </div>
   );
 }
