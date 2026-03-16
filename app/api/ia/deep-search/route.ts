@@ -93,8 +93,8 @@ export async function POST(request: NextRequest) {
 
       const provider = createProvider({
         provider: toolConfig.provider,
-        apiKey: providerConfig.apiKey,
-        baseUrl: providerConfig.baseUrl,
+        apiKey: providerConfig.api_key,
+        baseUrl: providerConfig.base_url,
         organization: providerConfig.organization,
         enabled: true,
       });
