@@ -6,9 +6,14 @@ import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { ArrowLeft, Calendar, User } from 'lucide-react';
 import WorkspaceLayout from '@/components/workspace/WorkspaceLayout';
-import DocumentList from '@/components/workspace/DocumentList';
+import NotebookLeftPanel from '@/components/workspace/NotebookLeftPanel';
+import DeepSearchButton from '@/components/workspace/DeepSearchButton';
 import RichTextEditor from '@/components/workspace/RichTextEditor';
 import AIPanelV2 from '@/components/workspace/AIPanelV2';
+import type {
+  SubvencionDetectada, EstadoInvestigacion, EstadoExpediente,
+  ClienteSnapshot,
+} from '@/lib/types/notebook';
 
 interface Reunion {
   id: string;
@@ -18,9 +23,9 @@ interface Reunion {
   fecha_programada: string | null;
   cliente_nif: string | null;
   objetivo: string | null;
-  cliente: {
-    nombre_normalizado: string | null;
-  }[];
+  investigacion_estado?: string | null;
+  num_subvenciones?: number | null;
+  cliente: { nombre_normalizado: string | null }[];
 }
 
 interface Documento {
@@ -32,18 +37,32 @@ interface Documento {
   updated_at: string;
 }
 
-export default function ReunionWorkspacePage() {
+interface Archivo {
+  id: string;
+  nombre: string;
+  mime_type?: string | null;
+  tamano_bytes?: number;
+  storage_path?: string;
+}
+
+export default function ReunionNotebookPage() {
   const params = useParams();
   const reunionId = params.id as string;
 
   const [reunion, setReunion] = useState<Reunion | null>(null);
+  const [clienteSnapshot, setClienteSnapshot] = useState<ClienteSnapshot>({});
   const [documentos, setDocumentos] = useState<Documento[]>([]);
+  const [archivos, setArchivos] = useState<Archivo[]>([]);
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [docContent, setDocContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const [archivos, setArchivos] = useState<Array<{ id: string; nombre: string; mime_type?: string | null; tamano_bytes?: number; storage_path?: string }>>([]);
+
+  const [subvenciones, setSubvenciones] = useState<SubvencionDetectada[]>([]);
+  const [subvencionActivaId, setSubvencionActivaId] = useState<string | null>(null);
+  const [investigacionEstado, setInvestigacionEstado] = useState<EstadoInvestigacion>('pendiente');
+  const [investigacionError, setInvestigacionError] = useState<string | null>(null);
 
   const selectedDoc = documentos.find(d => d.id === selectedDocId);
 
@@ -56,44 +75,60 @@ export default function ReunionWorkspacePage() {
         return [...prev, newDoc];
       });
       setSelectedDocId(newDoc.id);
-      setDocContent('');
+      setDocContent(newDoc.contenido || '');
     };
     window.addEventListener('doc-created', handler);
     return () => window.removeEventListener('doc-created', handler);
   }, []);
 
-  // Obtener userId
   useEffect(() => {
-    const getUserId = async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id || null);
-    };
-    getUserId();
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => setUserId(user?.id ?? null));
   }, []);
 
-  // Cargar datos iniciales
-  useEffect(() => {
-    loadData();
-  }, [reunionId]);
+  useEffect(() => { loadData(); }, [reunionId]);
 
   const loadData = async () => {
     const supabase = createClient();
 
-    // Cargar reunión
     const { data: reunionData } = await supabase
       .from('reuniones')
-      .select(`
-        *,
-        cliente:cliente_nif (
-          nombre_normalizado
-        )
-      `)
+      .select('*, cliente:cliente_nif(nombre_normalizado, tamano_empresa, actividad, ciudad)')
       .eq('id', reunionId)
       .single();
 
     if (reunionData) {
       setReunion(reunionData);
+      setInvestigacionEstado((reunionData.investigacion_estado as EstadoInvestigacion) || 'pendiente');
+    }
+
+    if (reunionData?.cliente_nif) {
+      const { data: einforma } = await supabase
+        .from('einforma')
+        .select('cnae, empleados, ventas, forma_juridica, fecha_constitucion, localidad')
+        .eq('nif', reunionData.cliente_nif)
+        .maybeSingle();
+
+      const clienteArr = reunionData.cliente as Array<{
+        nombre_normalizado: string | null;
+        tamano_empresa: string | null;
+        actividad: string | null;
+        ciudad: string | null;
+      }>;
+      const cliente = clienteArr?.[0];
+
+      setClienteSnapshot({
+        nif: reunionData.cliente_nif,
+        nombre: cliente?.nombre_normalizado ?? undefined,
+        cnae: einforma?.cnae ?? undefined,
+        actividad: cliente?.actividad ?? undefined,
+        ciudad: cliente?.ciudad ?? einforma?.localidad ?? undefined,
+        tamano_empresa: cliente?.tamano_empresa ?? undefined,
+        empleados: einforma?.empleados ?? undefined,
+        ventas: einforma?.ventas ?? undefined,
+        forma_juridica: einforma?.forma_juridica ?? undefined,
+        fecha_constitucion: einforma?.fecha_constitucion ?? undefined,
+      });
     }
 
     // Cargar documentos
@@ -108,11 +143,9 @@ export default function ReunionWorkspacePage() {
       setSelectedDocId(docsData[0].id);
       setDocContent(docsData[0].contenido || '');
     } else {
-      // Crear documentos por defecto
       const defaultDocs = [
-        { nombre: 'Notas de Reunión', tipo_documento: 'notas', contenido: '' },
-        { nombre: 'Preparación', tipo_documento: 'preparacion', contenido: '' },
-        { nombre: 'Conclusiones', tipo_documento: 'conclusiones', contenido: '' }
+        { nombre: 'Notas de Reunion', tipo_documento: 'notas', contenido: '' },
+        { nombre: 'Preparacion', tipo_documento: 'preparacion', contenido: '' },
       ];
 
       const { data: newDocs } = await supabase
@@ -134,10 +167,24 @@ export default function ReunionWorkspacePage() {
       }
     }
 
+    // Archivos
+    const { data: archivosData } = await supabase
+      .from('archivos').select('*').eq('reunion_id', reunionId);
+    if (archivosData) setArchivos(archivosData);
+
+    // Subvenciones detectadas
+    const { data: subvData } = await supabase
+      .from('subvenciones_detectadas')
+      .select('*, checklist:subvenciones_checklist(*)')
+      .eq('reunion_id', reunionId)
+      .order('puntuacion', { ascending: false });
+    if (subvData && subvData.length > 0) {
+      setSubvenciones(subvData as SubvencionDetectada[]);
+    }
+
     setLoading(false);
   };
 
-  // Guardar documento actual
   const saveDocument = useCallback(async (content: string) => {
     if (!selectedDocId) return;
 
@@ -149,7 +196,6 @@ export default function ReunionWorkspacePage() {
 
     if (!error) {
       setLastSaved(new Date());
-      // Actualizar en estado local
       setDocumentos(docs =>
         docs.map(d => d.id === selectedDocId ? { ...d, contenido: content } : d)
       );
@@ -211,46 +257,25 @@ export default function ReunionWorkspacePage() {
     }
   };
 
-  // Seleccionar documento
   const handleSelectDoc = (docId: string) => {
     const doc = documentos.find(d => d.id === docId);
-    if (doc) {
-      setSelectedDocId(docId);
-      setDocContent(doc.contenido || '');
-    }
+    if (doc) { setSelectedDocId(docId); setDocContent(doc.contenido || ''); }
   };
 
-  // Generar documento desde IA
-  const handleGenerarDocumento = async (nombre: string, contenido: string, prompt: string) => {
+  const handleGenerarDocumento = async (nombre: string, contenido: string, promptUsado: string) => {
     const supabase = createClient();
-
-    // Modo insertar en documento existente
     if (nombre.startsWith('__insert__')) {
       const docId = nombre.replace('__insert__', '');
-      await supabase
-        .from('documentos')
-        .update({ contenido, updated_at: new Date().toISOString() })
-        .eq('id', docId);
+      await supabase.from('documentos').update({ contenido, updated_at: new Date().toISOString() }).eq('id', docId);
       setDocumentos(prev => prev.map(d => d.id === docId ? { ...d, contenido } : d));
       setSelectedDocId(docId);
       setDocContent(contenido);
       return;
     }
-
-    const { data: newDoc } = await supabase
-      .from('documentos')
-      .insert({
-        nombre,
-        contenido,
-        reunion_id: reunionId,
-        nif: reunion?.cliente_nif,
-        generado_por_ia: true,
-        prompt_usado: prompt,
-        orden: documentos.length
-      })
-      .select()
-      .single();
-
+    const { data: newDoc } = await supabase.from('documentos').insert({
+      nombre, contenido, reunion_id: reunionId, nif: reunion?.cliente_nif,
+      generado_por_ia: true, prompt_usado: promptUsado, orden: documentos.length,
+    }).select().single();
     if (newDoc) {
       setDocumentos(prev => [...prev, newDoc]);
       setSelectedDocId(newDoc.id);
@@ -258,75 +283,108 @@ export default function ReunionWorkspacePage() {
     }
   };
 
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return 'Sin fecha';
-    return new Date(dateStr).toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    });
+  const handleDeepSearch = async () => {
+    setInvestigacionEstado('ejecutando');
+    setInvestigacionError(null);
+    try {
+      const res = await fetch('/api/ia/deep-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reunionId,
+          contextoTipo: 'reunion',
+          clienteSnapshot,
+          contextoAdicional: documentos
+            .filter(d => d.contenido)
+            .map(d => d.contenido)
+            .join('\n\n---\n\n')
+            .substring(0, 2000),
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Error en la investigacion');
+      }
+      const data = await res.json();
+      if (data.documento) {
+        setDocumentos(prev => {
+          if (prev.find(d => d.id === data.documento.id)) return prev;
+          return [...prev, data.documento];
+        });
+        setSelectedDocId(data.documento.id);
+        setDocContent(data.documento.contenido || '');
+      }
+      setSubvenciones(data.subvenciones || []);
+      setInvestigacionEstado('completada');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      setInvestigacionError(msg);
+      setInvestigacionEstado('error');
+    }
   };
 
-  if (loading) {
-    return <div style={{ padding: '40px', textAlign: 'center' }}>Cargando workspace...</div>;
-  }
+  const handleChecklistItem = async (checklistId: string, done: boolean) => {
+    await fetch('/api/subvenciones', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'checklist', id: checklistId, updates: { completado: done } }),
+    });
+    setSubvenciones(prev => prev.map(sv => ({
+      ...sv,
+      checklist: sv.checklist?.map(c => c.id === checklistId ? { ...c, completado: done } : c),
+    })));
+  };
 
-  if (!reunion) {
-    return <div style={{ padding: '40px', textAlign: 'center' }}>Reunión no encontrada</div>;
-  }
+  const handleChangeEstadoSubvencion = async (id: string, estado: EstadoExpediente) => {
+    await fetch('/api/subvenciones', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'subvencion', id, updates: { estado_expediente: estado } }),
+    });
+    setSubvenciones(prev => prev.map(sv => sv.id === id ? { ...sv, estado_expediente: estado } : sv));
+  };
+
+  const handleDeleteSubvencion = async (id: string) => {
+    await fetch('/api/subvenciones?id=' + id, { method: 'DELETE' });
+    setSubvenciones(prev => prev.filter(sv => sv.id !== id));
+  };
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return 'Sin fecha';
+    return new Date(dateStr).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Cargando notebook...</div>;
+  if (!reunion) return <div style={{ padding: '40px', textAlign: 'center' }}>Reunion no encontrada</div>;
 
   return (
     <WorkspaceLayout
       header={
-        <div>
-          <Link
-            href="/reuniones"
-            style={{
-              color: 'var(--primary)',
-              fontSize: '13px',
-              fontWeight: '600',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              marginBottom: '12px'
-            }}
-          >
-            <ArrowLeft size={14} />
-            Volver a reuniones
-          </Link>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h1 style={{ fontSize: '20px', fontWeight: '700', margin: '0 0 8px 0' }}>
-                {reunion.titulo || 'Reunión sin título'}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <Link href="/reuniones" style={{
+              color: 'var(--primary)', fontSize: '12px', fontWeight: '600',
+              textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', marginBottom: '4px',
+            }}>
+              <ArrowLeft size={12} /> Reuniones
+            </Link>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <h1 style={{ fontSize: '16px', fontWeight: '700', margin: 0 }}>
+                {reunion.titulo || 'Reunion sin titulo'}
               </h1>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px',
-                fontSize: '13px',
-                color: 'var(--muted-foreground)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <User size={14} />
-                  <span>{reunion.cliente?.[0]?.nombre_normalizado || reunion.cliente_nif}</span>
-                </div>
-                <div>|</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Calendar size={14} />
-                  <span>{formatDate(reunion.fecha_programada)}</span>
-                </div>
-                <div>|</div>
-                <span>{reunion.tipo}</span>
-                <div>|</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--muted-foreground)' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <User size={11} /> {reunion.cliente?.[0]?.nombre_normalizado || reunion.cliente_nif}
+                </span>
+                <span>·</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Calendar size={11} /> {formatDate(reunion.fecha_programada)}
+                </span>
+                {reunion.tipo && <><span>·</span><span>{reunion.tipo}</span></>}
                 <span style={{
-                  padding: '3px 8px',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  fontWeight: '600',
-                  backgroundColor: reunion.estado === 'realizada' ? 'var(--success)' : 'var(--warning)',
-                  color: 'white'
+                  padding: '1px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '600',
+                  background: reunion.estado === 'realizada' ? '#dcfce7' : '#fef9c3',
+                  color: reunion.estado === 'realizada' ? '#16a34a' : '#a16207',
                 }}>
                   {reunion.estado}
                 </span>
@@ -336,7 +394,8 @@ export default function ReunionWorkspacePage() {
         </div>
       }
       documentList={
-        <DocumentList
+        <NotebookLeftPanel
+          clienteSnapshot={clienteSnapshot}
           documentos={documentos}
           archivos={archivos}
           selectedDocId={selectedDocId}
@@ -344,11 +403,25 @@ export default function ReunionWorkspacePage() {
           onCreateDoc={handleCreateDoc}
           onRenameDoc={handleRenameDoc}
           onDeleteDoc={handleDeleteDoc}
-          onUploadFile={() => {}}
           contextoId={reunionId}
           contextoTipo="reunion"
-          nif={reunion?.cliente_nif ?? undefined}
-          onArchivoUploaded={(archivo) => setArchivos(prev => [...prev, archivo])}
+          nif={reunion.cliente_nif ?? undefined}
+          onArchivoUploaded={archivo => setArchivos(prev => [...prev, archivo])}
+          investigacionEstado={investigacionEstado}
+          subvenciones={subvenciones}
+          subvencionActivaId={subvencionActivaId}
+          onSelectSubvencion={setSubvencionActivaId}
+          onChecklistItem={handleChecklistItem}
+          onChangeEstadoSubvencion={handleChangeEstadoSubvencion}
+          onDeleteSubvencion={handleDeleteSubvencion}
+        />
+      }
+      leftFooter={
+        <DeepSearchButton
+          estado={investigacionEstado}
+          numSubvenciones={subvenciones.length}
+          onLanzar={handleDeepSearch}
+          errorMsg={investigacionError}
         />
       }
       editor={
@@ -361,8 +434,10 @@ export default function ReunionWorkspacePage() {
             placeholder="Empieza a escribir..."
           />
         ) : (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--muted-foreground)' }}>
-            Selecciona o crea un documento para empezar
+          <div style={{ textAlign: 'center', padding: '60px 40px', color: 'var(--muted-foreground)' }}>
+            <div style={{ fontSize: '32px', marginBottom: '12px' }}>📄</div>
+            <div style={{ fontSize: '14px', fontWeight: '500' }}>Selecciona un documento para empezar</div>
+            <div style={{ fontSize: '12px', marginTop: '6px' }}>O crea uno nuevo desde el panel izquierdo</div>
           </div>
         )
       }
@@ -373,6 +448,7 @@ export default function ReunionWorkspacePage() {
             contextoId={reunionId}
             contextoTipo="reunion"
             documentos={documentos}
+            clienteNombre={clienteSnapshot.nombre}
             onGenerarDocumento={handleGenerarDocumento}
             selectedDocId={selectedDocId}
             onSelectDoc={handleSelectDoc}

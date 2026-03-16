@@ -7,13 +7,16 @@ interface WorkspaceLayoutProps {
   editor: ReactNode;
   aiPanel: ReactNode;
   header?: ReactNode;
+  /** Slot de pie de la columna izquierda (e.g. DeepSearchButton) */
+  leftFooter?: ReactNode;
 }
 
 export default function WorkspaceLayout({
   documentList,
   editor,
   aiPanel,
-  header
+  header,
+  leftFooter,
 }: WorkspaceLayoutProps) {
   return (
     <div style={{
@@ -26,7 +29,7 @@ export default function WorkspaceLayout({
       {/* Header */}
       {header && (
         <div style={{
-          padding: '16px 24px',
+          padding: '12px 20px',
           borderBottom: '1px solid var(--border)',
           backgroundColor: 'var(--card)',
           flexShrink: 0
@@ -38,26 +41,34 @@ export default function WorkspaceLayout({
       {/* Main Workspace - 3 columnas */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '280px 1fr 320px',
-        gap: '0',
-        height: '100%',
-        overflow: 'hidden'
+        gridTemplateColumns: '300px 1fr 360px',
+        flex: 1,
+        overflow: 'hidden',
+        minHeight: 0,
       }}>
-        {/* Columna Izquierda: Documentos */}
+        {/* Columna Izquierda: Panel notebook (fuentes, cliente, subvenciones) */}
         <div style={{
           borderRight: '1px solid var(--border)',
           backgroundColor: 'var(--card)',
-          overflowY: 'auto',
-          padding: '16px'
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
         }}>
-          {documentList}
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {documentList}
+          </div>
+          {leftFooter && (
+            <div style={{ flexShrink: 0 }}>
+              {leftFooter}
+            </div>
+          )}
         </div>
 
         {/* Columna Central: Editor */}
         <div style={{
           overflowY: 'auto',
           backgroundColor: 'var(--background)',
-          padding: '32px'
+          padding: '36px 40px',
         }}>
           {editor}
         </div>
@@ -66,9 +77,9 @@ export default function WorkspaceLayout({
         <div style={{
           borderLeft: '1px solid var(--border)',
           backgroundColor: 'var(--card)',
-          overflowY: 'auto',
+          overflow: 'hidden',
           display: 'flex',
-          flexDirection: 'column'
+          flexDirection: 'column',
         }}>
           {aiPanel}
         </div>
