@@ -96,14 +96,16 @@ export default function NotebookLeftPanel({
       const path = `${contextoTipo}s/${contextoId}/${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage.from('archivos').upload(path, file);
       if (upErr) throw upErr;
-      const { data: archivoRec } = await supabase.from('archivos').insert({
-        [`${contextoTipo}_id`]: contextoId,
+      const insertData: Record<string, unknown> = {
         nif,
         nombre: file.name,
         storage_path: path,
         mime_type: file.type,
         tamano_bytes: file.size,
-      }).select().single();
+      };
+      if (contextoTipo === 'reunion') insertData.reunion_id = contextoId;
+      else insertData.expediente_id = contextoId;
+      const { data: archivoRec } = await supabase.from('archivos').insert(insertData).select().single();
       if (archivoRec) onArchivoUploaded(archivoRec);
     } catch (err) {
       console.error('Upload error:', err);
@@ -120,14 +122,16 @@ export default function NotebookLeftPanel({
     setNewDocName('');
     if (!name) return;
     const supabase = createClient();
-    const { data: newDoc } = await supabase.from('documentos').insert({
+    const docData: Record<string, unknown> = {
       nombre: name,
-      [`${contextoTipo}_id`]: contextoId,
       nif,
       contenido: '',
       tipo_documento: 'nota',
       orden: documentos.length,
-    }).select().single();
+    };
+    if (contextoTipo === 'reunion') docData.reunion_id = contextoId;
+    else docData.expediente_id = contextoId;
+    const { data: newDoc } = await supabase.from('documentos').insert(docData).select().single();
     if (newDoc) {
       window.dispatchEvent(new CustomEvent('doc-created', { detail: newDoc }));
     }
