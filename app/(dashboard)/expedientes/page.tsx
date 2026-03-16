@@ -2,9 +2,8 @@
 
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { FolderOpen, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { FolderOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 interface Expediente {
   id: string;
@@ -34,10 +33,8 @@ const estadoLabels: Record<string, string> = {
 };
 
 export default function ExpedientesPage() {
-  const router = useRouter();
   const [expedientes, setExpedientes] = useState<Expediente[]>([]);
   const [loading, setLoading] = useState(true);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchExpedientes() {
@@ -65,30 +62,6 @@ export default function ExpedientesPage() {
     }
     fetchExpedientes();
   }, []);
-
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (!confirm('¿Estás seguro de que quieres eliminar este expediente?')) return;
-    
-    const supabase = createClient();
-    const { error } = await supabase.from('expediente').delete().eq('id', id);
-    
-    if (error) {
-      alert('Error al eliminar el expediente');
-      console.error(error);
-    } else {
-      setExpedientes(expedientes.filter(e => e.id !== id));
-    }
-    setOpenMenuId(null);
-  };
-
-  const handleEdit = (id: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    router.push(`/expedientes/${id}/editar`);
-  };
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('es-ES', {
@@ -184,7 +157,7 @@ export default function ExpedientesPage() {
           {/* Table Header */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '2fr 1.5fr 1.5fr 1fr 1.5fr 50px',
+            gridTemplateColumns: '2fr 1.5fr 1.5fr 1fr 1.5fr',
             gap: '16px',
             padding: '16px 24px',
             backgroundColor: 'var(--bg)',
@@ -200,7 +173,6 @@ export default function ExpedientesPage() {
             <div>Nº BDNS</div>
             <div>Estado</div>
             <div>Fecha Creación</div>
-            <div></div>
           </div>
 
           {/* Table Body */}
@@ -209,20 +181,22 @@ export default function ExpedientesPage() {
             const clienteNombre = expediente.cliente?.[0]?.nombre_normalizado || expediente.nif;
             
             return (
-              <div
+              <Link
                 key={expediente.id}
-                className="table-row"
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '2fr 1.5fr 1.5fr 1fr 1.5fr 50px',
-                  gap: '16px',
-                  padding: '20px 24px',
-                  borderBottom: '1px solid var(--border)',
-                  cursor: 'pointer',
-                  position: 'relative'
-                }}
-                onClick={() => router.push(`/expedientes/${expediente.id}`)}
+                href={`/expedientes/${expediente.id}`}
+                style={{ textDecoration: 'none' }}
               >
+                <div
+                  className="table-row"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '2fr 1.5fr 1.5fr 1fr 1.5fr',
+                    gap: '16px',
+                    padding: '20px 24px',
+                    borderBottom: '1px solid var(--border)',
+                    cursor: 'pointer'
+                  }}
+                >
                   <div style={{
                     fontSize: '15px',
                     fontWeight: '600',
@@ -263,102 +237,8 @@ export default function ExpedientesPage() {
                   }}>
                     {formatDate(expediente.created_at)}
                   </div>
-                  
-                  {/* Menu de 3 puntos */}
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenMenuId(openMenuId === expediente.id ? null : expediente.id);
-                      }}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: '8px',
-                        borderRadius: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'var(--muted)'
-                      }}
-                    >
-                      <MoreVertical size={18} />
-                    </button>
-                    
-                    {openMenuId === expediente.id && (
-                      <>
-                        <div 
-                          style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            zIndex: 999
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setOpenMenuId(null);
-                          }}
-                        />
-                        <div style={{
-                          position: 'absolute',
-                          right: 0,
-                          top: '100%',
-                          backgroundColor: 'white',
-                          border: '1px solid var(--border)',
-                          borderRadius: '8px',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                          zIndex: 1000,
-                          minWidth: '160px',
-                          overflow: 'hidden',
-                          marginTop: '4px'
-                        }}>
-                          <button
-                            onClick={(e) => handleEdit(expediente.id, e)}
-                            style={{
-                              width: '100%',
-                              padding: '12px 16px',
-                              border: 'none',
-                              background: 'white',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '10px',
-                              fontSize: '14px',
-                              color: 'var(--ink)',
-                              textAlign: 'left'
-                            }}
-                          >
-                            <Edit size={16} />
-                            Editar
-                          </button>
-                          <button
-                            onClick={(e) => handleDelete(expediente.id, e)}
-                            style={{
-                              width: '100%',
-                              padding: '12px 16px',
-                              border: 'none',
-                              background: 'white',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '10px',
-                              fontSize: '14px',
-                              color: 'var(--red)',
-                              textAlign: 'left',
-                              borderTop: '1px solid var(--border)'
-                            }}
-                          >
-                            <Trash2 size={16} />
-                            Eliminar
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
                 </div>
+              </Link>
             );
           })}
         </div>

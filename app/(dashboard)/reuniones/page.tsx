@@ -1,10 +1,9 @@
 'use client';
 
-import { Calendar, Plus, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { Calendar, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
 
 interface Reunion {
   id: string;
@@ -19,34 +18,8 @@ interface Reunion {
 }
 
 export default function ReunionesPage() {
-  const router = useRouter();
   const [reuniones, setReuniones] = useState<Reunion[]>([]);
   const [loading, setLoading] = useState(true);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (!confirm('¿Estás seguro de que quieres eliminar esta reunión?')) return;
-    
-    const supabase = createClient();
-    const { error } = await supabase.from('reuniones').delete().eq('id', id);
-    
-    if (error) {
-      alert('Error al eliminar la reunión');
-      console.error(error);
-    } else {
-      setReuniones(reuniones.filter(r => r.id !== id));
-    }
-    setOpenMenuId(null);
-  };
-
-  const handleEdit = (id: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    router.push(`/reuniones/${id}/editar`);
-  };
 
   useEffect(() => {
     async function fetchReuniones() {
@@ -165,20 +138,22 @@ export default function ReunionesPage() {
           overflow: 'hidden'
         }}>
           {reuniones.map((reunion) => (
-            <div
+            <Link
               key={reunion.id}
-              className="table-row"
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '2fr 1.5fr 1fr 1fr 50px',
-                gap: '16px',
-                padding: '20px 24px',
-                borderBottom: '1px solid var(--border)',
-                cursor: 'pointer',
-                position: 'relative'
-              }}
-              onClick={() => router.push(`/reuniones/${reunion.id}`)}
+              href={`/reuniones/${reunion.id}`}
+              style={{ textDecoration: 'none' }}
             >
+              <div
+                className="table-row"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '2fr 1.5fr 1fr 1fr',
+                  gap: '16px',
+                  padding: '20px 24px',
+                  borderBottom: '1px solid var(--border)',
+                  cursor: 'pointer'
+                }}
+              >
                 <div>
                   <div style={{
                     fontSize: '15px',
@@ -231,102 +206,8 @@ export default function ReunionesPage() {
                     </span>
                   )}
                 </div>
-                
-                {/* Menu de 3 puntos */}
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setOpenMenuId(openMenuId === reunion.id ? null : reunion.id);
-                    }}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: '8px',
-                      borderRadius: '6px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'var(--muted)'
-                    }}
-                  >
-                    <MoreVertical size={18} />
-                  </button>
-                  
-                  {openMenuId === reunion.id && (
-                    <>
-                      <div 
-                        style={{
-                          position: 'fixed',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          zIndex: 999
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpenMenuId(null);
-                        }}
-                      />
-                      <div style={{
-                        position: 'absolute',
-                        right: 0,
-                        top: '100%',
-                        backgroundColor: 'white',
-                        border: '1px solid var(--border)',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                        zIndex: 1000,
-                        minWidth: '160px',
-                        overflow: 'hidden',
-                        marginTop: '4px'
-                      }}>
-                        <button
-                          onClick={(e) => handleEdit(reunion.id, e)}
-                          style={{
-                            width: '100%',
-                            padding: '12px 16px',
-                            border: 'none',
-                            background: 'white',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            fontSize: '14px',
-                            color: 'var(--ink)',
-                            textAlign: 'left'
-                          }}
-                        >
-                          <Edit size={16} />
-                          Editar
-                        </button>
-                        <button
-                          onClick={(e) => handleDelete(reunion.id, e)}
-                          style={{
-                            width: '100%',
-                            padding: '12px 16px',
-                            border: 'none',
-                            background: 'white',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            fontSize: '14px',
-                            color: 'var(--red)',
-                            textAlign: 'left',
-                            borderTop: '1px solid var(--border)'
-                          }}
-                        >
-                          <Trash2 size={16} />
-                          Eliminar
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
               </div>
+            </Link>
           ))}
         </div>
       )}
