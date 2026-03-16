@@ -4,8 +4,11 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
-import { ArrowLeft, Plus, FileText, Paperclip, Trash2, Settings } from 'lucide-react';
-import ConfigModal from '@/components/workspace/ConfigModal';
+import { ArrowLeft, Briefcase, User } from 'lucide-react';
+import WorkspaceLayout from '@/components/workspace/WorkspaceLayout';
+import DocumentList from '@/components/workspace/DocumentList';
+import RichTextEditor from '@/components/workspace/RichTextEditor';
+import AIPanelV2 from '@/components/workspace/AIPanelV2';
 
 interface Expediente {
   id: string;
@@ -22,556 +25,294 @@ interface Documento {
   id: string;
   nombre: string;
   contenido: string | null;
-  created_at: string;
+  tipo_documento: string | null;
+  generado_por_ia: boolean;
+  updated_at: string;
 }
 
-export default function ExpedienteDetailPage() {
+export default function ExpedienteWorkspacePage() {
   const params = useParams();
   const expedienteId = params.id as string;
-  
+
   const [expediente, setExpediente] = useState<Expediente | null>(null);
   const [documentos, setDocumentos] = useState<Documento[]>([]);
-  const [selectedDoc, setSelectedDoc] = useState<Documento | null>(null);
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [docContent, setDocContent] = useState('');
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [editingDocId, setEditingDocId] = useState<string | null>(null);
-  const [editingDocName, setEditingDocName] = useState('');
-  const [showConfig, setShowConfig] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
+  const selectedDoc = documentos.find(d => d.id === selectedDocId);
+
+  // Obtener userId
   useEffect(() => {
-    async function fetchData() {
+    const getUser = async () => {
       const supabase = createClient();
-      
-      // Fetch expediente
-      const { data: expData, error: expError } = await supabase
-        .from('expediente')
-        .select(`
-          *,
-          cliente:nif (
-            nombre_normalizado
-          )
-        `)
-        .eq('id', expedienteId)
-        .single();
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+    };
+    getUser();
+  }, []);
 
-      if (expError) {
-        console.error('Error cargando expediente:', expError);
-      } else {
-        setExpediente(expData);
-      }
-
-      // Fetch documents (using documentos table if it exists, otherwise create mock)
-      // For now, we'll use localStorage as a simple storage
-      const storedDocs = localStorage.getItem(`expediente_${expedienteId}_docs`);
-      if (storedDocs) {
-        const docs = JSON.parse(storedDocs);
-        setDocumentos(docs);
-        if (docs.length > 0) {
-          setSelectedDoc(docs[0]);
-          setDocContent(docs[0].contenido || '');
-        }
-      } else {
-        // Create default documents
-        const defaultDocs: Documento[] = [
-          { id: '1', nombre: 'Memoria', contenido: '', created_at: new Date().toISOString() },
-          { id: '2', nombre: 'Notas', contenido: '', created_at: new Date().toISOString() },
-          { id: '3', nombre: 'Checklist', contenido: '', created_at: new Date().toISOString() },
-        ];
-        setDocumentos(defaultDocs);
-        setSelectedDoc(defaultDocs[0]);
-        setDocContent('');
-        localStorage.setItem(`expediente_${expedienteId}_docs`, JSON.stringify(defaultDocs));
-      }
-      
-      setLoading(false);
-    }
-
-    fetchData();
+  // Cargar datos
+  useEffect(() => {
+    loadData();
   }, [expedienteId]);
 
-  const saveDocument = useCallback(async (content: string) => {
-    if (!selectedDoc) return;
-    
-    setSaving(true);
-    
-    // Update document in state and localStorage
-    const updatedDocs = documentos.map(doc => 
-      doc.id === selectedDoc.id 
-        ? { ...doc, contenido: content }
-        : doc
-    );
-    
-    setDocumentos(updatedDocs);
-    localStorage.setItem(`expediente_${expedienteId}_docs`, JSON.stringify(updatedDocs));
-    setLastSaved(new Date());
-    setSaving(false);
-  }, [selectedDoc, documentos, expedienteId]);
+  const loadData = async () => {
+    const supabase = createClient();
 
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (selectedDoc && docContent !== (selectedDoc.contenido || '')) {
-        saveDocument(docContent);
+    const { data: expData } = await supabase
+      .from('expediente')
+      .select(`*, cliente:nif (nombre_normalizado)`)
+      .eq('id', expedienteId)
+      .single();
+
+    if (expData) setExpediente(expData);
+
+    const { data: docsData } = await supabase
+      .from('documentos')
+      .select('*')
+      .eq('expediente_id', expedienteId)
+      .order('orden', { ascending: true });
+
+    if (docsData && docsData.length > 0) {
+      setDocumentos(docsData);
+      setSelectedDocId(docsData[0].id);
+      setDocContent(docsData[0].contenido || '');
+    } else {
+      const defaultDocs = [
+        { nombre: 'Memoria', tipo_documento: 'memoria', contenido: '' },
+        { nombre: 'Checklist', tipo_documento: 'checklist', contenido: '' },
+        { nombre: 'Notas', tipo_documento: 'notas', contenido: '' },
+      ];
+      const { data: newDocs } = await supabase
+        .from('documentos')
+        .insert(defaultDocs.map((doc, idx) => ({
+          ...doc,
+          expediente_id: expedienteId,
+          nif: expData?.nif,
+          orden: idx,
+          generado_por_ia: false,
+        })))
+        .select();
+      if (newDocs) {
+        setDocumentos(newDocs);
+        setSelectedDocId(newDocs[0].id);
+        setDocContent('');
       }
-    }, 1000);
-
-    return () => clearTimeout(timeoutId);
-  }, [docContent, selectedDoc, saveDocument]);
-
-  const createNewDoc = () => {
-    const newDoc: Documento = {
-      id: Date.now().toString(),
-      nombre: `Documento ${documentos.length + 1}`,
-      contenido: '',
-      created_at: new Date().toISOString()
-    };
-    
-    const updatedDocs = [...documentos, newDoc];
-    setDocumentos(updatedDocs);
-    localStorage.setItem(`expediente_${expedienteId}_docs`, JSON.stringify(updatedDocs));
-    setSelectedDoc(newDoc);
-    setDocContent('');
+    }
+    setLoading(false);
   };
 
-  const deleteDoc = (docId: string) => {
-    if (documentos.length <= 1) {
-      alert('Debe haber al menos un documento');
+  const saveDocument = useCallback(async (content: string) => {
+    if (!selectedDocId) return;
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('documentos')
+      .update({ contenido: content, updated_at: new Date().toISOString() })
+      .eq('id', selectedDocId);
+    if (!error) {
+      setLastSaved(new Date());
+      setDocumentos(docs =>
+        docs.map(d => d.id === selectedDocId ? { ...d, contenido: content } : d)
+      );
+    }
+  }, [selectedDocId]);
+
+  const handleCreateDoc = async () => {
+    const nombre = prompt('Nombre del documento:');
+    if (!nombre) return;
+    const supabase = createClient();
+    const { data: newDoc } = await supabase
+      .from('documentos')
+      .insert({
+        nombre,
+        expediente_id: expedienteId,
+        nif: expediente?.nif,
+        contenido: '',
+        orden: documentos.length,
+        generado_por_ia: false,
+      })
+      .select()
+      .single();
+    if (newDoc) {
+      setDocumentos([...documentos, newDoc]);
+      setSelectedDocId(newDoc.id);
+      setDocContent('');
+    }
+  };
+
+  const handleRenameDoc = async (docId: string, newName: string) => {
+    const supabase = createClient();
+    await supabase.from('documentos').update({ nombre: newName }).eq('id', docId);
+    setDocumentos(docs => docs.map(d => d.id === docId ? { ...d, nombre: newName } : d));
+  };
+
+  const handleDeleteDoc = async (docId: string) => {
+    const supabase = createClient();
+    await supabase.from('documentos').delete().eq('id', docId);
+    const newDocs = documentos.filter(d => d.id !== docId);
+    setDocumentos(newDocs);
+    if (selectedDocId === docId && newDocs.length > 0) {
+      setSelectedDocId(newDocs[0].id);
+      setDocContent(newDocs[0].contenido || '');
+    }
+  };
+
+  const handleSelectDoc = (docId: string) => {
+    const doc = documentos.find(d => d.id === docId);
+    if (doc) {
+      setSelectedDocId(docId);
+      setDocContent(doc.contenido || '');
+    }
+  };
+
+  const handleGenerarDocumento = async (nombre: string, contenido: string, prompt: string) => {
+    const supabase = createClient();
+
+    // Modo insertar en documento existente
+    if (nombre.startsWith('__insert__')) {
+      const docId = nombre.replace('__insert__', '');
+      await supabase
+        .from('documentos')
+        .update({ contenido, updated_at: new Date().toISOString() })
+        .eq('id', docId);
+      setDocumentos(prev => prev.map(d => d.id === docId ? { ...d, contenido } : d));
+      setSelectedDocId(docId);
+      setDocContent(contenido);
       return;
     }
-    
-    const updatedDocs = documentos.filter(doc => doc.id !== docId);
-    setDocumentos(updatedDocs);
-    localStorage.setItem(`expediente_${expedienteId}_docs`, JSON.stringify(updatedDocs));
-    
-    if (selectedDoc?.id === docId) {
-      setSelectedDoc(updatedDocs[0]);
-      setDocContent(updatedDocs[0].contenido || '');
-    }
-  };
 
-  const selectDoc = (doc: Documento) => {
-    setSelectedDoc(doc);
-    setDocContent(doc.contenido || '');
+    const { data: newDoc } = await supabase
+      .from('documentos')
+      .insert({
+        nombre,
+        contenido,
+        expediente_id: expedienteId,
+        nif: expediente?.nif,
+        generado_por_ia: true,
+        prompt_usado: prompt,
+        orden: documentos.length,
+      })
+      .select()
+      .single();
+    if (newDoc) {
+      setDocumentos(prev => [...prev, newDoc]);
+      setSelectedDocId(newDoc.id);
+      setDocContent(contenido);
+    }
   };
 
   if (loading) {
-    return <div style={{ padding: '40px', textAlign: 'center' }}>Cargando...</div>;
+    return <div style={{ padding: '40px', textAlign: 'center' }}>Cargando workspace...</div>;
   }
 
   if (!expediente) {
     return <div style={{ padding: '40px', textAlign: 'center' }}>Expediente no encontrado</div>;
   }
 
+  const titulo = expediente.numero_bdns
+    ? `BDNS ${expediente.numero_bdns}`
+    : `Expediente ${expediente.id.slice(0, 8)}`;
+
   return (
-    <div style={{ height: 'calc(100vh - 60px)', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <div style={{
-        padding: '24px 40px',
-        borderBottom: '1px solid var(--border)',
-        backgroundColor: 'var(--surface)'
-      }}>
-        <Link
-          href="/expedientes"
-          style={{
-            color: 'var(--teal)',
-            fontSize: '14px',
-            fontWeight: '600',
-            textDecoration: 'none',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '4px',
-            marginBottom: '12px'
-          }}
-        >
-          <ArrowLeft size={16} />
-          Volver a expedientes
-        </Link>
-        
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h1 style={{
-              fontSize: '24px',
-              fontWeight: '700',
-              color: 'var(--ink)',
-              marginBottom: '4px'
-            }}>
-              {expediente.numero_bdns ? `BDNS ${expediente.numero_bdns}` : `Expediente ${expediente.id.slice(0, 8)}`}
-            </h1>
-            <p style={{ fontSize: '14px', color: 'var(--ink2)' }}>
-              {expediente.cliente?.[0]?.nombre_normalizado || expediente.nif}
-            </p>
-          </div>
-          
-          <button
-            onClick={() => setShowConfig(true)}
+    <WorkspaceLayout
+      header={
+        <div>
+          <Link
+            href="/expedientes"
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 14px',
-              border: '1px solid var(--border)',
-              borderRadius: '6px',
-              backgroundColor: 'white',
-              cursor: 'pointer',
+              color: 'var(--primary)',
               fontSize: '13px',
-              fontWeight: '500',
-              color: 'var(--ink2)',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#f8f9fa';
-              e.currentTarget.style.borderColor = 'var(--ink2)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'white';
-              e.currentTarget.style.borderColor = 'var(--border)';
+              fontWeight: '600',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              marginBottom: '12px',
             }}
           >
-            <Settings size={16} />
-            Ajustes IA
-          </button>
-        </div>
-        
-        <div style={{ fontSize: '13px', color: 'var(--muted)' }}>
-          {saving ? (
-            <span style={{ color: 'var(--amber)' }}>Guardando...</span>
-          ) : lastSaved ? (
-            <span>Guardado {lastSaved.toLocaleTimeString('es-ES')}</span>
-          ) : (
-            <span>Guardado automático activado</span>
-          )}
-        </div>
-      </div>
-
-      {/* Two-panel layout */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {/* Left Panel - Documents List */}
-        <div style={{
-          width: '320px',
-          borderRight: '1px solid var(--border)',
-          backgroundColor: 'var(--bg)',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          {/* Documents Section */}
-          <div style={{ padding: '20px', borderBottom: '1px solid var(--border)' }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '12px'
-            }}>
-              <h3 style={{
-                fontSize: '13px',
-                fontWeight: '700',
-                color: 'var(--muted)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-                margin: 0
-              }}>
-                Documentos
-              </h3>
-              <button
-                onClick={createNewDoc}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--teal)',
-                  cursor: 'pointer',
-                  padding: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '13px',
-                  fontWeight: '600'
-                }}
-              >
-                <Plus size={16} />
-                Nuevo
-              </button>
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {documentos.map(doc => (
-                <div
-                  key={doc.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    backgroundColor: selectedDoc?.id === doc.id ? 'var(--surface)' : 'transparent',
-                    border: selectedDoc?.id === doc.id ? '1px solid var(--border)' : '1px solid transparent',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
-                    position: 'relative'
-                  }}
-                  onClick={() => selectDoc(doc)}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
-                    <FileText size={16} style={{ color: 'var(--teal)' }} />
-                    {editingDocId === doc.id ? (
-                      <input
-                        type="text"
-                        value={editingDocName}
-                        onChange={(e) => setEditingDocName(e.target.value)}
-                        onBlur={() => {
-                          const updatedDocs = documentos.map(d =>
-                            d.id === doc.id ? { ...d, nombre: editingDocName } : d
-                          );
-                          setDocumentos(updatedDocs);
-                          if (selectedDoc?.id === doc.id) {
-                            setSelectedDoc({ ...doc, nombre: editingDocName });
-                          }
-                          localStorage.setItem(`expediente_${expedienteId}_docs`, JSON.stringify(updatedDocs));
-                          setEditingDocId(null);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.currentTarget.blur();
-                          }
-                        }}
-                        autoFocus
-                        style={{
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          color: 'var(--ink)',
-                          border: '1px solid var(--border)',
-                          borderRadius: '4px',
-                          padding: '4px 8px',
-                          outline: 'none',
-                          flex: 1
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    ) : (
-                      <span style={{
-                        fontSize: '14px',
-                        fontWeight: selectedDoc?.id === doc.id ? '600' : '500',
-                        color: 'var(--ink)'
-                      }}>
-                        {doc.nombre}
-                      </span>
-                    )}
-                  </div>
-                  
-                  {/* Menu de 3 puntos */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setOpenMenuId(openMenuId === doc.id ? null : doc.id);
-                    }}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: '4px',
-                      borderRadius: '4px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      color: 'var(--muted)'
-                    }}
-                  >
-                    <Plus size={16} style={{ transform: 'rotate(90deg)' }} />
-                  </button>
-                  
-                  {openMenuId === doc.id && (
-                    <>
-                      <div 
-                        style={{
-                          position: 'fixed',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          zIndex: 999
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpenMenuId(null);
-                        }}
-                      />
-                      <div style={{
-                        position: 'absolute',
-                        right: 0,
-                        top: '100%',
-                        backgroundColor: 'white',
-                        border: '1px solid var(--border)',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                        zIndex: 1000,
-                        minWidth: '140px',
-                        overflow: 'hidden',
-                        marginTop: '4px'
-                      }}>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingDocId(doc.id);
-                            setEditingDocName(doc.nombre);
-                            setOpenMenuId(null);
-                          }}
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            border: 'none',
-                            background: 'white',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            fontSize: '13px',
-                            color: 'var(--ink)',
-                            textAlign: 'left'
-                          }}
-                        >
-                          <FileText size={14} />
-                          Renombrar
-                        </button>
-                        {documentos.length > 1 && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteDoc(doc.id);
-                              setOpenMenuId(null);
-                            }}
-                            style={{
-                              width: '100%',
-                              padding: '10px 12px',
-                              border: 'none',
-                              background: 'white',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              fontSize: '13px',
-                              color: 'var(--red)',
-                              textAlign: 'left',
-                              borderTop: '1px solid var(--border)'
-                            }}
-                          >
-                            <Plus size={14} style={{ transform: 'rotate(45deg)' }} />
-                            Eliminar
-                          </button>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Archivos Section (Placeholder) */}
-          <div style={{ padding: '20px' }}>
-            <h3 style={{
-              fontSize: '13px',
-              fontWeight: '700',
-              color: 'var(--muted)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-              marginBottom: '12px'
-            }}>
-              Archivos
-            </h3>
-            <div style={{
-              padding: '24px',
-              textAlign: 'center',
-              color: 'var(--muted)',
-              fontSize: '13px'
-            }}>
-              <Paperclip size={24} style={{ margin: '0 auto 8px', opacity: 0.3 }} />
-              <p style={{ margin: 0 }}>Sin archivos adjuntos</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Panel - Document Editor */}
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          backgroundColor: 'white'
-        }}>
-          {selectedDoc ? (
-            <>
+            <ArrowLeft size={14} />
+            Volver a expedientes
+          </Link>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h1 style={{ fontSize: '20px', fontWeight: '700', margin: '0 0 8px 0' }}>
+                {titulo}
+              </h1>
               <div style={{
-                padding: '20px 32px',
-                borderBottom: '1px solid var(--border)',
-                backgroundColor: 'var(--surface)'
+                display: 'flex', alignItems: 'center', gap: '16px',
+                fontSize: '13px', color: 'var(--muted-foreground)',
               }}>
-                <input
-                  type="text"
-                  value={selectedDoc.nombre}
-                  onChange={(e) => {
-                    const updatedDocs = documentos.map(doc => 
-                      doc.id === selectedDoc.id 
-                        ? { ...doc, nombre: e.target.value }
-                        : doc
-                    );
-                    setDocumentos(updatedDocs);
-                    setSelectedDoc({ ...selectedDoc, nombre: e.target.value });
-                    localStorage.setItem(`expediente_${expedienteId}_docs`, JSON.stringify(updatedDocs));
-                  }}
-                  style={{
-                    fontSize: '20px',
-                    fontWeight: '700',
-                    color: 'var(--ink)',
-                    border: 'none',
-                    outline: 'none',
-                    backgroundColor: 'transparent',
-                    width: '100%',
-                    padding: '4px 0'
-                  }}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <User size={14} />
+                  <span>{expediente.cliente?.[0]?.nombre_normalizado || expediente.nif}</span>
+                </div>
+                <span>|</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Briefcase size={14} />
+                  <span>{expediente.nif}</span>
+                </div>
+                <span>|</span>
+                <span style={{
+                  padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '600',
+                  backgroundColor:
+                    expediente.estado === 'aprobado' ? 'var(--success)' :
+                    expediente.estado === 'rechazado' ? 'var(--destructive)' : 'var(--warning)',
+                  color: 'white',
+                }}>
+                  {expediente.estado}
+                </span>
               </div>
-              
-              <div style={{ flex: 1, overflow: 'auto', padding: '32px' }}>
-                <textarea
-                  value={docContent}
-                  onChange={(e) => setDocContent(e.target.value)}
-                  placeholder="Escribe aquí el contenido del documento...
-
-Puedes usar este espacio para:
-• Redactar la memoria del proyecto
-• Tomar notas sobre el expediente
-• Crear checklists de documentos necesarios
-• Escribir resúmenes y conclusiones
-• Cualquier contenido relacionado con este expediente"
-                  style={{
-                    width: '100%',
-                    minHeight: '100%',
-                    padding: '0',
-                    fontSize: '15px',
-                    lineHeight: '1.8',
-                    border: 'none',
-                    outline: 'none',
-                    backgroundColor: 'transparent',
-                    color: 'var(--ink)',
-                    fontFamily: 'inherit',
-                    resize: 'none'
-                  }}
-                />
-              </div>
-            </>
-          ) : (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              color: 'var(--muted)'
-            }}>
-              <p>Selecciona un documento para editarlo</p>
             </div>
-          )}
+          </div>
         </div>
-      </div>
-      
-      <ConfigModal isOpen={showConfig} onClose={() => setShowConfig(false)} />
-    </div>
+      }
+      documentList={
+        <DocumentList
+          documentos={documentos}
+          archivos={[]}
+          selectedDocId={selectedDocId}
+          onSelectDoc={handleSelectDoc}
+          onCreateDoc={handleCreateDoc}
+          onRenameDoc={handleRenameDoc}
+          onDeleteDoc={handleDeleteDoc}
+          onUploadFile={() => alert('Upload de archivos próximamente')}
+        />
+      }
+      editor={
+        selectedDoc ? (
+          <RichTextEditor
+            content={docContent}
+            onChange={setDocContent}
+            onSave={saveDocument}
+            lastSaved={lastSaved}
+            placeholder="Empieza a escribir..."
+          />
+        ) : (
+          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--muted-foreground)' }}>
+            Selecciona o crea un documento para empezar
+          </div>
+        )
+      }
+      aiPanel={
+        userId ? (
+          <AIPanelV2
+            userId={userId}
+            contextoId={expedienteId}
+            contextoTipo="expediente"
+            documentos={documentos}
+            onGenerarDocumento={handleGenerarDocumento}
+            selectedDocId={selectedDocId}
+            onSelectDoc={handleSelectDoc}
+          />
+        ) : (
+          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
+            Cargando asistente...
+          </div>
+        )
+      }
+    />
   );
 }

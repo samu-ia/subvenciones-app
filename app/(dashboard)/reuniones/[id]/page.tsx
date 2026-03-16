@@ -8,7 +8,7 @@ import { ArrowLeft, Calendar, User } from 'lucide-react';
 import WorkspaceLayout from '@/components/workspace/WorkspaceLayout';
 import DocumentList from '@/components/workspace/DocumentList';
 import RichTextEditor from '@/components/workspace/RichTextEditor';
-import AIPanel from '@/components/workspace/AIPanel';
+import AIPanelV2 from '@/components/workspace/AIPanelV2';
 
 interface Reunion {
   id: string;
@@ -42,8 +42,19 @@ export default function ReunionWorkspacePage() {
   const [docContent, setDocContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const selectedDoc = documentos.find(d => d.id === selectedDocId);
+
+  // Obtener userId
+  useEffect(() => {
+    const getUserId = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+    };
+    getUserId();
+  }, []);
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -196,6 +207,20 @@ export default function ReunionWorkspacePage() {
   // Generar documento desde IA
   const handleGenerarDocumento = async (nombre: string, contenido: string, prompt: string) => {
     const supabase = createClient();
+
+    // Modo insertar en documento existente
+    if (nombre.startsWith('__insert__')) {
+      const docId = nombre.replace('__insert__', '');
+      await supabase
+        .from('documentos')
+        .update({ contenido, updated_at: new Date().toISOString() })
+        .eq('id', docId);
+      setDocumentos(prev => prev.map(d => d.id === docId ? { ...d, contenido } : d));
+      setSelectedDocId(docId);
+      setDocContent(contenido);
+      return;
+    }
+
     const { data: newDoc } = await supabase
       .from('documentos')
       .insert({
@@ -211,7 +236,7 @@ export default function ReunionWorkspacePage() {
       .single();
 
     if (newDoc) {
-      setDocumentos([...documentos, newDoc]);
+      setDocumentos(prev => [...prev, newDoc]);
       setSelectedDocId(newDoc.id);
       setDocContent(contenido);
     }
@@ -322,13 +347,21 @@ export default function ReunionWorkspacePage() {
         )
       }
       aiPanel={
-        <AIPanel
-          contextoId={reunionId}
-          contextoTipo="reunion"
-          clienteNombre={reunion.cliente?.[0]?.nombre_normalizado || undefined}
-          documentos={documentos.map(d => ({ id: d.id, nombre: d.nombre }))}
-          onGenerarDocumento={handleGenerarDocumento}
-        />
+        userId ? (
+          <AIPanelV2
+            userId={userId}
+            contextoId={reunionId}
+            contextoTipo="reunion"
+            documentos={documentos}
+            onGenerarDocumento={handleGenerarDocumento}
+            selectedDocId={selectedDocId}
+            onSelectDoc={handleSelectDoc}
+          />
+        ) : (
+          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
+            Cargando asistente...
+          </div>
+        )
       }
     />
   );

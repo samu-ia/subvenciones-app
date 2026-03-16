@@ -4,6 +4,7 @@ import { getOrCreateToolConfig } from '@/lib/db/ia-config';
 import { getProviderConfig, logToolExecution } from '@/lib/db/ia-config';
 import { createProvider } from '@/lib/ai/providers/factory';
 import { Message } from '@/lib/ai/providers/base';
+import { createClient } from '@/lib/supabase/server';
 
 /**
  * API Endpoint: Herramientas de IA
@@ -38,8 +39,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Obtener userId real del token/sesión
-    const userId = 'temp-user-id';
+    // Obtener userId de la sesión
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Usuario no autenticado' },
+        { status: 401 }
+      );
+    }
+    
+    const userId = user.id;
 
     // Obtener configuración de la herramienta
     const toolConfig = await getOrCreateToolConfig(userId, tool, contextoTipo);
@@ -127,8 +138,11 @@ export async function POST(request: NextRequest) {
     
     // Log error de ejecución
     try {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
       await logToolExecution({
-        userId: 'temp-user-id',
+        userId: user?.id || 'unknown',
         workspaceId: 'unknown',
         workspaceType: 'expediente',
         tool: 'summary',
