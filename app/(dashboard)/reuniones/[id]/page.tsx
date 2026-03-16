@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
-import { Calendar, Clock, User, ArrowLeft, Settings } from 'lucide-react';
-import ConfigModal from '@/components/workspace/ConfigModal';
+import { ArrowLeft, Calendar, User } from 'lucide-react';
+import WorkspaceLayout from '@/components/workspace/WorkspaceLayout';
+import DocumentList from '@/components/workspace/DocumentList';
+import RichTextEditor from '@/components/workspace/RichTextEditor';
+import AIPanel from '@/components/workspace/AIPanel';
 
 interface Reunion {
   id: string;
@@ -13,106 +16,218 @@ interface Reunion {
   tipo: string | null;
   estado: string | null;
   fecha_programada: string | null;
-  duracion_minutos: number | null;
   cliente_nif: string | null;
-  notas: string | null;
   objetivo: string | null;
-  conclusiones: string | null;
-  proximos_pasos: string[] | null;
   cliente: {
     nombre_normalizado: string | null;
   }[];
 }
 
-export default function ReunionDetailPage() {
+interface Documento {
+  id: string;
+  nombre: string;
+  contenido: string | null;
+  tipo_documento: string | null;
+  generado_por_ia: boolean;
+  updated_at: string;
+}
+
+export default function ReunionWorkspacePage() {
   const params = useParams();
-  const router = useRouter();
   const reunionId = params.id as string;
-  
+
   const [reunion, setReunion] = useState<Reunion | null>(null);
+  const [documentos, setDocumentos] = useState<Documento[]>([]);
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+  const [docContent, setDocContent] = useState('');
   const [loading, setLoading] = useState(true);
-  const [notas, setNotas] = useState('');
-  const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [showConfig, setShowConfig] = useState(false);
 
+  const selectedDoc = documentos.find(d => d.id === selectedDocId);
+
+  // Cargar datos iniciales
   useEffect(() => {
-    async function fetchReunion() {
-      try {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from('reuniones')
-          .select(`
-            *,
-            cliente:cliente_nif (
-              nombre_normalizado
-            )
-          `)
-          .eq('id', reunionId)
-          .single();
-
-        if (error) {
-          console.error('Error cargando reunión:', error);
-          setLoading(false);
-          return;
-        }
-
-        if (data) {
-          setReunion(data);
-          setNotas(data.notas || '');
-        }
-        setLoading(false);
-      } catch (err) {
-        console.error('Error en fetchReunion:', err);
-        setLoading(false);
-      }
-    }
-
-    if (reunionId) {
-      fetchReunion();
-    }
+    loadData();
   }, [reunionId]);
 
-  const saveNotas = useCallback(async (content: string) => {
-    setSaving(true);
+  const loadData = async () => {
     const supabase = createClient();
-    
-    const { error } = await supabase
+
+    // Cargar reunión
+    const { data: reunionData } = await supabase
       .from('reuniones')
-      .update({ notas: content })
-      .eq('id', reunionId);
+      .select(`
+        *,
+        cliente:cliente_nif (
+          nombre_normalizado
+        )
+      `)
+      .eq('id', reunionId)
+      .single();
 
-    if (error) {
-      console.error('Error guardando notas:', error);
-    } else {
-      setLastSaved(new Date());
+    if (reunionData) {
+      setReunion(reunionData);
     }
-    setSaving(false);
-  }, [reunionId]);
 
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (notas !== (reunion?.notas || '')) {
-        saveNotas(notas);
+    // Cargar documentos
+    const { data: docsData } = await supabase
+      .from('documentos')
+      .select('*')
+      .eq('reunion_id', reunionId)
+      .order('orden', { ascending: true });
+
+    if (docsData && docsData.length > 0) {
+      setDocumentos(docsData);
+      setSelectedDocId(docsData[0].id);
+      setDocContent(docsData[0].contenido || '');
+    } else {
+      // Crear documentos por defecto
+      const defaultDocs = [
+        { nombre: 'Notas de Reunión', tipo_documento: 'notas', contenido: '' },
+        { nombre: 'Preparación', tipo_documento: 'preparacion', contenido: '' },
+        { nombre: 'Conclusiones', tipo_documento: 'conclusiones', contenido: '' }
+      ];
+
+      const { data: newDocs } = await supabase
+        .from('documentos')
+        .insert(
+          defaultDocs.map((doc, idx) => ({
+            ...doc,
+            reunion_id: reunionId,
+            nif: reunionData?.cliente_nif,
+            orden: idx
+          }))
+        )
+        .select();
+
+      if (newDocs) {
+        setDocumentos(newDocs);
+        setSelectedDocId(newDocs[0].id);
+        setDocContent(newDocs[0].contenido || '');
       }
-    }, 1000);
+    }
 
-    return () => clearTimeout(timeoutId);
-  }, [notas, reunion?.notas, saveNotas]);
+    setLoading(false);
+  };
+
+  // Guardar documento actual
+  const saveDocument = useCallback(async (content: string) => {
+    if (!selectedDocId) return;
+
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('documentos')
+      .update({ contenido: content })
+      .eq('id', selectedDocId);
+
+    if (!error) {
+      setLastSaved(new Date());
+      // Actualizar en estado local
+      setDocumentos(docs =>
+        docs.map(d => d.id === selectedDocId ? { ...d, contenido: content } : d)
+      );
+    }
+  }, [selectedDocId]);
+
+  // Crear documento
+  const handleCreateDoc = async () => {
+    const nombre = prompt('Nombre del documento:');
+    if (!nombre) return;
+
+    const supabase = createClient();
+    const { data: newDoc } = await supabase
+      .from('documentos')
+      .insert({
+        nombre,
+        reunion_id: reunionId,
+        nif: reunion?.cliente_nif,
+        contenido: '',
+        orden: documentos.length
+      })
+      .select()
+      .single();
+
+    if (newDoc) {
+      setDocumentos([...documentos, newDoc]);
+      setSelectedDocId(newDoc.id);
+      setDocContent('');
+    }
+  };
+
+  // Renombrar documento
+  const handleRenameDoc = async (docId: string, newName: string) => {
+    const supabase = createClient();
+    await supabase
+      .from('documentos')
+      .update({ nombre: newName })
+      .eq('id', docId);
+
+    setDocumentos(docs =>
+      docs.map(d => d.id === docId ? { ...d, nombre: newName } : d)
+    );
+  };
+
+  // Eliminar documento
+  const handleDeleteDoc = async (docId: string) => {
+    const supabase = createClient();
+    await supabase
+      .from('documentos')
+      .delete()
+      .eq('id', docId);
+
+    const newDocs = documentos.filter(d => d.id !== docId);
+    setDocumentos(newDocs);
+
+    if (selectedDocId === docId && newDocs.length > 0) {
+      setSelectedDocId(newDocs[0].id);
+      setDocContent(newDocs[0].contenido || '');
+    }
+  };
+
+  // Seleccionar documento
+  const handleSelectDoc = (docId: string) => {
+    const doc = documentos.find(d => d.id === docId);
+    if (doc) {
+      setSelectedDocId(docId);
+      setDocContent(doc.contenido || '');
+    }
+  };
+
+  // Generar documento desde IA
+  const handleGenerarDocumento = async (nombre: string, contenido: string, prompt: string) => {
+    const supabase = createClient();
+    const { data: newDoc } = await supabase
+      .from('documentos')
+      .insert({
+        nombre,
+        contenido,
+        reunion_id: reunionId,
+        nif: reunion?.cliente_nif,
+        generado_por_ia: true,
+        prompt_usado: prompt,
+        orden: documentos.length
+      })
+      .select()
+      .single();
+
+    if (newDoc) {
+      setDocumentos([...documentos, newDoc]);
+      setSelectedDocId(newDoc.id);
+      setDocContent(contenido);
+    }
+  };
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return 'Sin fecha';
     return new Date(dateStr).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      month: 'short',
+      year: 'numeric'
     });
   };
 
   if (loading) {
-    return <div style={{ padding: '40px', textAlign: 'center' }}>Cargando...</div>;
+    return <div style={{ padding: '40px', textAlign: 'center' }}>Cargando workspace...</div>;
   }
 
   if (!reunion) {
@@ -120,198 +235,101 @@ export default function ReunionDetailPage() {
   }
 
   return (
-    <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '40px' }}>
-      {/* Header Compacto */}
-      <div style={{ marginBottom: '24px' }}>
-        <Link
-          href="/reuniones"
-          style={{
-            color: 'var(--teal)',
-            fontSize: '13px',
-            fontWeight: '600',
-            textDecoration: 'none',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '4px',
-            marginBottom: '12px'
-          }}
-        >
-          <ArrowLeft size={14} />
-          Volver
-        </Link>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h1 style={{
-            fontSize: '24px',
-            fontWeight: '700',
-            color: 'var(--ink)',
-            marginBottom: '12px'
-          }}>
-            {reunion.titulo || 'Sin título'}
-          </h1>
-
-          <button
-            onClick={() => setShowConfig(true)}
+    <WorkspaceLayout
+      header={
+        <div>
+          <Link
+            href="/reuniones"
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 14px',
-              border: '1px solid var(--border)',
-              borderRadius: '6px',
-              backgroundColor: 'white',
-              cursor: 'pointer',
+              color: 'var(--primary)',
               fontSize: '13px',
-              fontWeight: '500',
-              color: 'var(--ink2)',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#f8f9fa';
-              e.currentTarget.style.borderColor = 'var(--ink2)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'white';
-              e.currentTarget.style.borderColor = 'var(--border)';
+              fontWeight: '600',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              marginBottom: '12px'
             }}
           >
-            <Settings size={16} />
-            Ajustes IA
-          </button>
-        </div>
+            <ArrowLeft size={14} />
+            Volver a reuniones
+          </Link>
 
-        {/* Info Compacta en Una Línea */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '24px',
-          fontSize: '14px',
-          color: 'var(--ink2)',
-          paddingBottom: '16px',
-          borderBottom: '1px solid var(--border)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <User size={14} style={{ color: 'var(--muted)' }} />
-            <span style={{ fontWeight: '500' }}>
-              {reunion.cliente?.[0]?.nombre_normalizado || reunion.cliente_nif || '—'}
-            </span>
-          </div>
-          <div style={{ color: 'var(--border)' }}>|</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Calendar size={14} style={{ color: 'var(--muted)' }} />
-            <span>{formatDate(reunion.fecha_programada)}</span>
-          </div>
-          <div style={{ color: 'var(--border)' }}>|</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span>📋</span>
-            <span>{reunion.tipo || '—'}</span>
-          </div>
-          <div style={{ color: 'var(--border)' }}>|</div>
-          <span style={{
-            padding: '4px 10px',
-            borderRadius: '6px',
-            fontSize: '12px',
-            fontWeight: '600',
-            backgroundColor: reunion.estado === 'realizada' ? 'var(--green-bg)' : 'var(--amber-bg)',
-            color: reunion.estado === 'realizada' ? 'var(--green)' : 'var(--amber)'
-          }}>
-            {reunion.estado || 'pendiente'}
-          </span>
-        </div>
-
-        {/* Objetivo compacto si existe */}
-        {reunion.objetivo && (
-          <div style={{
-            marginTop: '16px',
-            padding: '12px 16px',
-            backgroundColor: 'var(--surface)',
-            borderRadius: '8px',
-            border: '1px solid var(--border)',
-            fontSize: '14px',
-            color: 'var(--ink2)',
-            lineHeight: '1.5'
-          }}>
-            <strong style={{ color: 'var(--ink)' }}>Objetivo:</strong> {reunion.objetivo}
-          </div>
-        )}
-      </div>
-
-      {/* EDITOR PRINCIPAL - Ocupa casi toda la pantalla */}
-      <div style={{
-        backgroundColor: 'white',
-        borderRadius: '12px',
-        border: '1px solid var(--border)',
-        overflow: 'hidden',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-      }}>
-        {/* Barra superior limpia */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '16px 20px',
-          borderBottom: '1px solid var(--border)',
-          backgroundColor: 'var(--bg)'
-        }}>
-          <h2 style={{
-            fontSize: '15px',
-            fontWeight: '600',
-            color: 'var(--ink)',
-            margin: 0,
-            textTransform: 'uppercase',
-            letterSpacing: '0.3px'
-          }}>
-            Cuaderno
-          </h2>
-          <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: '500' }}>
-            {saving ? (
-              <span style={{ color: 'var(--amber)' }}>●  Guardando...</span>
-            ) : lastSaved ? (
-              <span style={{ color: 'var(--green)' }}>✓  Guardado {lastSaved.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
-            ) : (
-              <span>Guardado automático</span>
-            )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h1 style={{ fontSize: '20px', fontWeight: '700', margin: '0 0 8px 0' }}>
+                {reunion.titulo || 'Reunión sin título'}
+              </h1>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                fontSize: '13px',
+                color: 'var(--muted-foreground)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <User size={14} />
+                  <span>{reunion.cliente?.[0]?.nombre_normalizado || reunion.cliente_nif}</span>
+                </div>
+                <div>|</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Calendar size={14} />
+                  <span>{formatDate(reunion.fecha_programada)}</span>
+                </div>
+                <div>|</div>
+                <span>{reunion.tipo}</span>
+                <div>|</div>
+                <span style={{
+                  padding: '3px 8px',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  backgroundColor: reunion.estado === 'realizada' ? 'var(--success)' : 'var(--warning)',
+                  color: 'white'
+                }}>
+                  {reunion.estado}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
-
-        {/* Área de escritura grande */}
-        <div style={{ padding: '0' }}>
-          <textarea
-            value={notas}
-            onChange={(e) => setNotas(e.target.value)}
-            placeholder="Escribe aquí tus notas...
-
-📋 Preparación
-- Puntos a tratar
-- Documentos necesarios
-
-📝 Durante la reunión
-- Comentarios del cliente
-- Decisiones tomadas
-
-✅ Conclusiones
-- Resumen de acuerdos
-
-🎯 Próximos pasos
-- Acciones a realizar"
-            style={{
-              width: '100%',
-              minHeight: '65vh',
-              padding: '32px',
-              fontSize: '15px',
-              lineHeight: '1.8',
-              border: 'none',
-              backgroundColor: 'white',
-              color: 'var(--ink)',
-              fontFamily: 'inherit',
-              resize: 'vertical',
-              outline: 'none'
-            }}
+      }
+      documentList={
+        <DocumentList
+          documentos={documentos}
+          archivos={[]} // TODO: Implementar archivos
+          selectedDocId={selectedDocId}
+          onSelectDoc={handleSelectDoc}
+          onCreateDoc={handleCreateDoc}
+          onRenameDoc={handleRenameDoc}
+          onDeleteDoc={handleDeleteDoc}
+          onUploadFile={() => alert('Upload de archivos próximamente')}
+        />
+      }
+      editor={
+        selectedDoc ? (
+          <RichTextEditor
+            content={docContent}
+            onChange={setDocContent}
+            onSave={saveDocument}
+            lastSaved={lastSaved}
+            placeholder="Empieza a escribir..."
           />
-        </div>
-      </div>
-
-      <ConfigModal isOpen={showConfig} onClose={() => setShowConfig(false)} />
-    </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--muted-foreground)' }}>
+            Selecciona o crea un documento para empezar
+          </div>
+        )
+      }
+      aiPanel={
+        <AIPanel
+          contextoId={reunionId}
+          contextoTipo="reunion"
+          clienteNombre={reunion.cliente?.[0]?.nombre_normalizado || undefined}
+          documentos={documentos.map(d => ({ id: d.id, nombre: d.nombre }))}
+          onGenerarDocumento={handleGenerarDocumento}
+        />
+      }
+    />
   );
 }
