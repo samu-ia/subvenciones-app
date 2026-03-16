@@ -36,29 +36,39 @@ export default function ReunionDetailPage() {
 
   useEffect(() => {
     async function fetchReunion() {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('reuniones')
-        .select(`
-          *,
-          cliente:cliente_nif (
-            nombre_normalizado
-          )
-        `)
-        .eq('id', reunionId)
-        .single();
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('reuniones')
+          .select(`
+            *,
+            cliente:cliente_nif (
+              nombre_normalizado
+            )
+          `)
+          .eq('id', reunionId)
+          .single();
 
-      if (error) {
-        console.error('Error cargando reunión:', error);
-        return;
+        if (error) {
+          console.error('Error cargando reunión:', error);
+          setLoading(false);
+          return;
+        }
+
+        if (data) {
+          setReunion(data);
+          setNotas(data.notas || '');
+        }
+        setLoading(false);
+      } catch (err) {
+        console.error('Error en fetchReunion:', err);
+        setLoading(false);
       }
-
-      setReunion(data);
-      setNotas(data.notas || '');
-      setLoading(false);
     }
 
-    fetchReunion();
+    if (reunionId) {
+      fetchReunion();
+    }
   }, [reunionId]);
 
   const saveNotas = useCallback(async (content: string) => {
