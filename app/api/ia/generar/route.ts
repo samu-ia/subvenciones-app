@@ -2,12 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+const getOpenAI = () => {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+  return new OpenAI({ apiKey });
+};
 
 export async function POST(request: NextRequest) {
   try {
+    const openai = getOpenAI();
+    if (!openai) {
+      return NextResponse.json(
+        { error: 'API de OpenAI no configurada. Configura OPENAI_API_KEY en ajustes del expediente.' },
+        { status: 503 }
+      );
+    }
+
     const { contextoId, contextoTipo, tipo, prompt, nombreDocumento } = await request.json();
 
     if (!contextoId || !contextoTipo || !tipo) {
