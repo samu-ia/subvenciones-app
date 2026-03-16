@@ -10,7 +10,7 @@ import WorkspaceLayout from '@/components/workspace/WorkspaceLayout';
 import DocumentList from '@/components/workspace/DocumentList';
 import RichTextEditor from '@/components/workspace/RichTextEditor';
 import AIPanel from '@/components/workspace/AIPanel';
-import { CollapsibleColumn } from '@/components/workspace/CollapsibleColumn';
+import { CollapsibleColumn, createCollapseButton } from '@/components/workspace/CollapsibleColumn';
 import { useWorkspaceColumnsStore } from '@/lib/stores/workspace-columns-store';
 import { useIsDesktop } from '@/lib/hooks/use-media-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -229,23 +229,13 @@ export default function ExpedienteDetailPage() {
   };
 
   const collapseButtonDocs = useMemo(
-    () =>
-      CollapsibleColumn.createCollapseButton(
-        'Documentos',
-        documentosCollapsed,
-        toggleDocumentos
-      ),
-    [documentosCollapsed, toggleDocumentos]
+    () => createCollapseButton(toggleDocumentos, 'Documentos'),
+    [toggleDocumentos]
   );
 
   const collapseButtonAi = useMemo(
-    () =>
-      CollapsibleColumn.createCollapseButton(
-        'Asistente IA',
-        aiCollapsed,
-        toggleAi
-      ),
-    [aiCollapsed, toggleAi]
+    () => createCollapseButton(toggleAi, 'Asistente IA'),
+    [toggleAi]
   );
 
   if (loading) {
