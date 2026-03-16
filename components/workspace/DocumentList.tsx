@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { FileText, Plus, Upload, MoreVertical, Pencil, Trash2, Bot } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { FileText, Plus, Upload, MoreVertical, Pencil, Trash2, Bot, Loader2 } from 'lucide-react';
 import { ContextToggle, type ContextMode } from './ContextToggle';
 import { Badge } from '@/components/ui/badge';
+import { createClient } from '@/lib/supabase/client';
 
 interface Documento {
   id: string;
@@ -18,6 +19,7 @@ interface Archivo {
   nombre: string;
   mime_type?: string | null;
   tamano_bytes?: number;
+  storage_path?: string;
 }
 
 interface DocumentListProps {
@@ -32,6 +34,12 @@ interface DocumentListProps {
   onUploadFile: () => void;
   onContextModeChange?: (docId: string, mode: ContextMode) => void;
   collapseButton?: React.ReactNode;
+  // Necesarios para la subida real de archivos
+  contextoId?: string;
+  contextoTipo?: 'reunion' | 'expediente';
+  userId?: string;
+  nif?: string;
+  onArchivoUploaded?: (archivo: Archivo) => void;
 }
 
 export default function DocumentList({
@@ -45,11 +53,23 @@ export default function DocumentList({
   onDeleteDoc,
   onUploadFile,
   onContextModeChange,
-  collapseButton
+  collapseButton,
+  contextoId,
+  contextoTipo,
+  userId,
+  nif,
+  onArchivoUploaded,
 }: DocumentListProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  // Inline new doc
+  const [creatingDoc, setCreatingDoc] = useState(false);
+  const [newDocName, setNewDocName] = useState('');
+  // Upload
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleRename = (docId: string) => {
     if (editingName.trim()) {
@@ -57,6 +77,110 @@ export default function DocumentList({
       setEditingId(null);
       setEditingName('');
     }
+  };
+
+  const handleCreateInline = () => {
+    const name = newDocName.trim();
+    setCreatingDoc(false);
+    setNewDocName('');
+    if (!name) return;
+    // Delegamos en el padre (ya tiene la lógica Supabase)
+    // Sobreescribimos temporalmente onCreateDoc con el nombre capturado
+    // usando un evento personalizado más limpio: guardamos el nombre en un data-attr
+    // y llamamos onCreateDoc que en las páginas usa prompt(). 
+    // Para evitar prompt() definitivamente, pasamos el nombre vía el event system:
+    onCreateDocWithName(name);
+  };
+
+  // Crea doc en Supabase directamente desde el componente si tenemos los datos necesarios
+  // Si no, delega al padre con el nombre pre-rellenado
+  const onCreateDocWithName = async (name: string) => {
+    if (!contextoId || !contextoTipo) {
+      // Fallback: usa el flujo antiguo del padre
+      // No podemos evitar el prompt, pero al menos lo rellenamos
+      // con el nombre inline. Sin acceso al padre, simplemente llamamos onCreateDoc.
+      onCreateDoc();
+      return;
+    }
+    const supabase = createClient();
+    const insertData: Record<string, unknown> = {
+      nombre: name,
+      contenido: '',
+      generado_por_ia: false,
+    };
+    if (nif) insertData.nif = nif;
+    if (contextoTipo === 'reunion') insertData.reunion_id = contextoId;
+    else insertData.expediente_id = contextoId;
+
+    const { data: newDoc } = await supabase
+      .from('documentos')
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (newDoc) {
+      // Notificar al padre para que actualice su estado
+      onArchivoUploaded?.({ id: newDoc.id, nombre: newDoc.nombre });
+      // Seleccionar el nuevo doc
+      onSelectDoc(newDoc.id);
+      // Forzar recarga del padre es responsabilidad del padre;
+      // aqui disparamos onCreateDoc para que el padre recargue si quiere
+      // Pero primero hacemos el doc visible disparando un evento
+      // La forma más limpia: re-usar onRenameDoc con id fake no funciona.
+      // Llamamos onCreateDoc() para que el padre sepa que algo cambio - 
+      // pero el padre tiene prompt(). Usamos window.dispatchEvent:
+      window.dispatchEvent(new CustomEvent('doc-created', { detail: newDoc }));
+    }
+  };
+
+  const handleUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    if (!contextoId || !contextoTipo) {
+      onUploadFile();
+      return;
+    }
+    setUploading(true);
+    setUploadError(null);
+    const supabase = createClient();
+
+    for (const file of Array.from(files)) {
+      try {
+        // 1. Subir al bucket 'archivos'
+        const ext = file.name.split('.').pop();
+        const path = `${contextoTipo}/${contextoId}/${Date.now()}-${file.name}`;
+        const { error: storageError } = await supabase.storage
+          .from('archivos')
+          .upload(path, file, { upsert: false });
+
+        if (storageError) throw storageError;
+
+        // 2. Insertar fila en tabla archivos
+        const insertData: Record<string, unknown> = {
+          nombre: file.name,
+          storage_path: path,
+          mime_type: file.type,
+          tamano_bytes: file.size,
+        };
+        if (nif) insertData.nif = nif;
+        if (contextoTipo === 'reunion') insertData.reunion_id = contextoId;
+        else insertData.expediente_id = contextoId;
+
+        const { data: archivoRow } = await supabase
+          .from('archivos')
+          .insert(insertData)
+          .select()
+          .single();
+
+        if (archivoRow) {
+          onArchivoUploaded?.(archivoRow);
+        }
+      } catch (err) {
+        console.error('Upload error:', err);
+        setUploadError(`Error al subir "${file.name}"`);
+      }
+    }
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
@@ -80,7 +204,7 @@ export default function DocumentList({
           </h3>
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
             <button
-              onClick={onCreateDoc}
+              onClick={() => { setCreatingDoc(true); setNewDocName(''); }}
               style={{
                 padding: '4px',
                 borderRadius: '4px',
@@ -271,6 +395,31 @@ export default function DocumentList({
             </div>
           ))}
         </div>
+
+        {/* Inline: crear nuevo documento */}
+        {creatingDoc && (
+          <div style={{ marginTop: '6px', display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <FileText size={14} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
+            <input
+              type="text"
+              value={newDocName}
+              onChange={e => setNewDocName(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') handleCreateInline();
+                if (e.key === 'Escape') { setCreatingDoc(false); setNewDocName(''); }
+              }}
+              onBlur={handleCreateInline}
+              placeholder="Nombre del documento..."
+              autoFocus
+              style={{
+                flex: 1, padding: '5px 8px', borderRadius: '6px',
+                border: '1px solid var(--primary)', fontSize: '13px',
+                outline: 'none', backgroundColor: 'var(--background)',
+                color: 'var(--foreground)',
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Archivos */}
@@ -291,26 +440,43 @@ export default function DocumentList({
             Archivos
           </h3>
           <button
-            onClick={onUploadFile}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
             style={{
               padding: '4px',
               borderRadius: '4px',
               border: 'none',
               backgroundColor: 'transparent',
               color: 'var(--muted-foreground)',
-              cursor: 'pointer',
+              cursor: uploading ? 'wait' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              fontSize: '12px'
+              fontSize: '12px',
+              opacity: uploading ? 0.6 : 1,
             }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--accent)'}
+            onMouseEnter={(e) => { if (!uploading) e.currentTarget.style.backgroundColor = 'var(--accent)'; }}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
-            <Upload size={14} />
-            Subir
+            {uploading ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Upload size={14} />}
+            {uploading ? 'Subiendo...' : 'Subir'}
           </button>
+          {/* Input oculto */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".pdf,.doc,.docx,.txt,.xlsx,.xls,.png,.jpg,.jpeg"
+            style={{ display: 'none' }}
+            onChange={e => handleUpload(e.target.files)}
+          />
         </div>
+
+        {uploadError && (
+          <p style={{ fontSize: '11px', color: 'var(--destructive)', padding: '4px 8px', marginBottom: '4px' }}>
+            {uploadError}
+          </p>
+        )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {archivos.length === 0 ? (
@@ -350,7 +516,7 @@ export default function DocumentList({
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .doc-menu-btn {
           opacity: 0 !important;
         }
@@ -360,6 +526,10 @@ export default function DocumentList({
         .doc-menu-btn:hover {
           opacity: 1 !important;
           background-color: var(--accent) !important;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>

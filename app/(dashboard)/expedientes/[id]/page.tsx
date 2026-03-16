@@ -41,8 +41,24 @@ export default function ExpedienteWorkspacePage() {
   const [loading, setLoading] = useState(true);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [archivos, setArchivos] = useState<Array<{ id: string; nombre: string; mime_type?: string | null; tamano_bytes?: number; storage_path?: string }>>([]);
 
   const selectedDoc = documentos.find(d => d.id === selectedDocId);
+
+  // Escuchar evento doc-created para actualizar lista sin prompt()
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const newDoc = (e as CustomEvent).detail;
+      setDocumentos(prev => {
+        if (prev.find(d => d.id === newDoc.id)) return prev;
+        return [...prev, newDoc];
+      });
+      setSelectedDocId(newDoc.id);
+      setDocContent('');
+    };
+    window.addEventListener('doc-created', handler);
+    return () => window.removeEventListener('doc-created', handler);
+  }, []);
 
   // Obtener userId
   useEffect(() => {
@@ -272,13 +288,17 @@ export default function ExpedienteWorkspacePage() {
       documentList={
         <DocumentList
           documentos={documentos}
-          archivos={[]}
+          archivos={archivos}
           selectedDocId={selectedDocId}
           onSelectDoc={handleSelectDoc}
           onCreateDoc={handleCreateDoc}
           onRenameDoc={handleRenameDoc}
           onDeleteDoc={handleDeleteDoc}
-          onUploadFile={() => alert('Upload de archivos próximamente')}
+          onUploadFile={() => {}}
+          contextoId={expedienteId}
+          contextoTipo="expediente"
+          nif={expediente?.nif}
+          onArchivoUploaded={(archivo) => setArchivos(prev => [...prev, archivo])}
         />
       }
       editor={
