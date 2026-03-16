@@ -10,7 +10,7 @@ import WorkspaceLayout from '@/components/workspace/WorkspaceLayout';
 import DocumentList from '@/components/workspace/DocumentList';
 import RichTextEditor from '@/components/workspace/RichTextEditor';
 import AIPanel from '@/components/workspace/AIPanel';
-import CollapsibleColumn from '@/components/workspace/CollapsibleColumn';
+import { CollapsibleColumn } from '@/components/workspace/CollapsibleColumn';
 import { useWorkspaceColumnsStore } from '@/lib/stores/workspace-columns-store';
 import { useIsDesktop } from '@/lib/hooks/use-media-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
