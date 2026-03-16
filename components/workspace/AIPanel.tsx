@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Send, Sparkles, FileText, CheckSquare, Search, Mail, AlertCircle } from 'lucide-react';
 import DeepSearchModal from './DeepSearchModal';
+import { ContextIndicator } from './ContextIndicator';
+import type { ContextMode } from './ContextToggle';
 
 interface Mensaje {
   id: string;
@@ -23,9 +25,11 @@ interface AccionRapida {
 interface AIPanelProps {
   contextoId: string;
   contextoTipo: 'reunion' | 'expediente';
-  documentos: Array<{ id: string; nombre: string }>;
+  documentos: Array<{ id: string; nombre: string; generado_por_ia?: boolean }>;
+  contextSelections?: Record<string, ContextMode>;
   clienteNombre?: string;
   onGenerarDocumento?: (nombre: string, contenido: string, prompt: string) => void;
+  collapseButton?: React.ReactNode;
 }
 
 const ACCIONES_RAPIDAS: AccionRapida[] = [
@@ -63,14 +67,41 @@ export default function AIPanel({
   contextoId,
   contextoTipo,
   documentos,
+  contextSelections,
   clienteNombre,
-  onGenerarDocumento
+  onGenerarDocumento,
+  collapseButton
 }: AIPanelProps) {
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [showBusquedaProfunda, setShowBusquedaProfunda] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Calcular stats de contexto
+  const contextStats = useMemo(() => {
+    let docsInsights = 0;
+    let docsFull = 0;
+
+    if (contextSelections) {
+      documentos.forEach(doc => {
+        const mode = contextSelections[doc.id];
+        if (mode === 'insights') {
+          docsInsights++;
+        } else if (mode === 'full') {
+          docsFull++;
+        }
+      });
+    }
+
+    return {
+      docsInsights,
+      docsFull,
+      notesCount: 0, // No hay notas en este contexto
+      tokenCount: undefined,
+      charCount: undefined
+    };
+  }, [documentos, contextSelections]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -176,14 +207,22 @@ export default function AIPanel({
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
+          justifyContent: 'space-between',
           marginBottom: '12px'
         }}>
-          <Sparkles size={18} style={{ color: 'var(--primary)' }} />
-          <h3 style={{ fontSize: '14px', fontWeight: '600', margin: 0 }}>
-            Asistente IA
-          </h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Sparkles size={18} style={{ color: 'var(--primary)' }} />
+            <h3 style={{ fontSize: '14px', fontWeight: '600', margin: 0 }}>
+              Asistente IA
+            </h3>
+          </div>
+          {collapseButton}
         </div>
+
+        {/* Context Indicator */}
+        {contextSelections && (
+          <ContextIndicator {...contextStats} className="mb-3" />
+        )}
 
         {/* Acciones Rápidas */}
         <div style={{

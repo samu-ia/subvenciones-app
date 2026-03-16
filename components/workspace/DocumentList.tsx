@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { FileText, Plus, Upload, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { FileText, Plus, Upload, MoreVertical, Pencil, Trash2, Bot } from 'lucide-react';
+import { ContextToggle, type ContextMode } from './ContextToggle';
+import { Badge } from '@/components/ui/badge';
 
 interface Documento {
   id: string;
@@ -22,22 +24,28 @@ interface DocumentListProps {
   documentos: Documento[];
   archivos: Archivo[];
   selectedDocId: string | null;
+  contextSelections?: Record<string, ContextMode>;
   onSelectDoc: (docId: string) => void;
   onCreateDoc: () => void;
   onRenameDoc: (docId: string, newName: string) => void;
   onDeleteDoc: (docId: string) => void;
   onUploadFile: () => void;
+  onContextModeChange?: (docId: string, mode: ContextMode) => void;
+  collapseButton?: React.ReactNode;
 }
 
 export default function DocumentList({
   documentos,
   archivos,
   selectedDocId,
+  contextSelections,
   onSelectDoc,
   onCreateDoc,
   onRenameDoc,
   onDeleteDoc,
-  onUploadFile
+  onUploadFile,
+  onContextModeChange,
+  collapseButton
 }: DocumentListProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -70,26 +78,29 @@ export default function DocumentList({
           }}>
             Documentos
           </h3>
-          <button
-            onClick={onCreateDoc}
-            style={{
-              padding: '4px',
-              borderRadius: '4px',
-              border: 'none',
-              backgroundColor: 'transparent',
-              color: 'var(--muted-foreground)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              fontSize: '12px'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--accent)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-          >
-            <Plus size={14} />
-            Nuevo
-          </button>
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+            <button
+              onClick={onCreateDoc}
+              style={{
+                padding: '4px',
+                borderRadius: '4px',
+                border: 'none',
+                backgroundColor: 'transparent',
+                color: 'var(--muted-foreground)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '12px'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--accent)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <Plus size={14} />
+              Nuevo
+            </button>
+            {collapseButton}
+          </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -154,15 +165,21 @@ export default function DocumentList({
               )}
 
               {doc.generado_por_ia && (
-                <span style={{
-                  fontSize: '10px',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  backgroundColor: 'var(--primary)',
-                  color: 'white'
-                }}>
+                <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                  <Bot className="h-3 w-3" />
                   IA
-                </span>
+                </Badge>
+              )}
+
+              {/* Context Toggle */}
+              {onContextModeChange && contextSelections && (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <ContextToggle
+                    mode={contextSelections[doc.id] || 'off'}
+                    hasInsights={doc.generado_por_ia || false}
+                    onChange={(mode) => onContextModeChange(doc.id, mode)}
+                  />
+                </div>
               )}
 
               {!editingId && (
