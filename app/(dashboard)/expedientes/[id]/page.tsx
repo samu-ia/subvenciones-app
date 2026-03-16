@@ -35,6 +35,9 @@ export default function ExpedienteDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [editingDocId, setEditingDocId] = useState<string | null>(null);
+  const [editingDocName, setEditingDocName] = useState('');
 
   useEffect(() => {
     async function fetchData() {
@@ -263,7 +266,6 @@ export default function ExpedienteDetailPage() {
               {documentos.map(doc => (
                 <div
                   key={doc.id}
-                  onClick={() => selectDoc(doc)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -273,36 +275,159 @@ export default function ExpedienteDetailPage() {
                     backgroundColor: selectedDoc?.id === doc.id ? 'var(--surface)' : 'transparent',
                     border: selectedDoc?.id === doc.id ? '1px solid var(--border)' : '1px solid transparent',
                     cursor: 'pointer',
-                    transition: 'all 0.15s'
+                    transition: 'all 0.15s',
+                    position: 'relative'
                   }}
+                  onClick={() => selectDoc(doc)}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
                     <FileText size={16} style={{ color: 'var(--teal)' }} />
-                    <span style={{
-                      fontSize: '14px',
-                      fontWeight: selectedDoc?.id === doc.id ? '600' : '500',
-                      color: 'var(--ink)'
-                    }}>
-                      {doc.nombre}
-                    </span>
+                    {editingDocId === doc.id ? (
+                      <input
+                        type="text"
+                        value={editingDocName}
+                        onChange={(e) => setEditingDocName(e.target.value)}
+                        onBlur={() => {
+                          const updatedDocs = documentos.map(d =>
+                            d.id === doc.id ? { ...d, nombre: editingDocName } : d
+                          );
+                          setDocumentos(updatedDocs);
+                          if (selectedDoc?.id === doc.id) {
+                            setSelectedDoc({ ...doc, nombre: editingDocName });
+                          }
+                          localStorage.setItem(`expediente_${expedienteId}_docs`, JSON.stringify(updatedDocs));
+                          setEditingDocId(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.currentTarget.blur();
+                          }
+                        }}
+                        autoFocus
+                        style={{
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: 'var(--ink)',
+                          border: '1px solid var(--border)',
+                          borderRadius: '4px',
+                          padding: '4px 8px',
+                          outline: 'none',
+                          flex: 1
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    ) : (
+                      <span style={{
+                        fontSize: '14px',
+                        fontWeight: selectedDoc?.id === doc.id ? '600' : '500',
+                        color: 'var(--ink)'
+                      }}>
+                        {doc.nombre}
+                      </span>
+                    )}
                   </div>
-                  {documentos.length > 1 && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteDoc(doc.id);
-                      }}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'var(--muted)',
-                        cursor: 'pointer',
-                        padding: '4px',
-                        display: 'flex'
-                      }}
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                  
+                  {/* Menu de 3 puntos */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenMenuId(openMenuId === doc.id ? null : doc.id);
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      color: 'var(--muted)'
+                    }}
+                  >
+                    <Plus size={16} style={{ transform: 'rotate(90deg)' }} />
+                  </button>
+                  
+                  {openMenuId === doc.id && (
+                    <>
+                      <div 
+                        style={{
+                          position: 'fixed',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          zIndex: 999
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenMenuId(null);
+                        }}
+                      />
+                      <div style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: '100%',
+                        backgroundColor: 'white',
+                        border: '1px solid var(--border)',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        zIndex: 1000,
+                        minWidth: '140px',
+                        overflow: 'hidden',
+                        marginTop: '4px'
+                      }}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingDocId(doc.id);
+                            setEditingDocName(doc.nombre);
+                            setOpenMenuId(null);
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: 'none',
+                            background: 'white',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: '13px',
+                            color: 'var(--ink)',
+                            textAlign: 'left'
+                          }}
+                        >
+                          <FileText size={14} />
+                          Renombrar
+                        </button>
+                        {documentos.length > 1 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteDoc(doc.id);
+                              setOpenMenuId(null);
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '10px 12px',
+                              border: 'none',
+                              background: 'white',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              fontSize: '13px',
+                              color: 'var(--red)',
+                              textAlign: 'left',
+                              borderTop: '1px solid var(--border)'
+                            }}
+                          >
+                            <Plus size={14} style={{ transform: 'rotate(45deg)' }} />
+                            Eliminar
+                          </button>
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
               ))}
