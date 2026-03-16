@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { ArrowLeft, Settings } from 'lucide-react';
 import ConfigModal from '@/components/workspace/ConfigModal';
-import WorkspaceLayout from '@/components/workspace/WorkspaceLayout';
 import DocumentList from '@/components/workspace/DocumentList';
 import RichTextEditor from '@/components/workspace/RichTextEditor';
 import AIPanel from '@/components/workspace/AIPanel';
@@ -36,6 +35,13 @@ interface Documento {
   generado_por_ia?: boolean;
 }
 
+interface Archivo {
+  id: string;
+  nombre: string;
+  mime_type?: string | null;
+  tamano_bytes?: number;
+}
+
 export default function ExpedienteDetailPage() {
   const params = useParams();
   const expedienteId = params.id as string;
@@ -49,6 +55,7 @@ export default function ExpedienteDetailPage() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [showConfig, setShowConfig] = useState(false);
   const [contextSelections, setContextSelections] = useState<Record<string, ContextMode>>({});
+  const [archivos] = useState<Archivo[]>([]);
   
   // Mobile tabs
   const [mobileTab, setMobileTab] = useState<'docs' | 'editor' | 'ai'>('docs');
@@ -329,41 +336,55 @@ export default function ExpedienteDetailPage() {
 
       {/* Workspace Layout */}
       {isDesktop ? (
-        <WorkspaceLayout>
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           {/* Left: Documents */}
           <CollapsibleColumn
             isCollapsed={documentosCollapsed}
             onToggle={toggleDocumentos}
-            label="Documentos"
-            side="left"
+            collapsedIcon={require('lucide-react').FileText}
+            collapsedLabel="Documentos"
           >
-            <DocumentList
-              documentos={documentos}
-              selectedDocId={selectedDoc?.id || null}
-              onSelectDoc={selectDoc}
-              onCreateDoc={createNewDoc}
-              onDeleteDoc={deleteDoc}
-              onRenameDoc={renameDoc}
-              contextSelections={contextSelections}
-              onContextModeChange={handleContextModeChange}
-              collapseButton={collapseButtonDocs}
-            />
+            <div style={{
+              width: documentosCollapsed ? '48px' : '320px',
+              borderRight: '1px solid var(--border)',
+              backgroundColor: 'var(--bg)',
+              display: 'flex',
+              flexDirection: 'column',
+              transition: 'width 150ms'
+            }}>
+              <DocumentList
+                documentos={documentos}
+                archivos={archivos}
+                selectedDocId={selectedDoc?.id || null}
+                onSelectDoc={(docId) => {
+                  const doc = documentos.find(d => d.id === docId);
+                  if (doc) selectDoc(doc);
+                }}
+                onCreateDoc={createNewDoc}
+                onDeleteDoc={deleteDoc}
+                onRenameDoc={renameDoc}
+                onUploadFile={() => {}}
+                contextSelections={contextSelections}
+                onContextModeChange={handleContextModeChange}
+                collapseButton={collapseButtonDocs}
+              />
+            </div>
           </CollapsibleColumn>
 
           {/* Center: Editor */}
           <div style={{
+            flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            height: '100%',
-            backgroundColor: 'white'
+            backgroundColor: 'white',
+            overflow: 'auto'
           }}>
             {selectedDoc && (
               <RichTextEditor
-                docId={selectedDoc.id}
-                initialContent={selectedDoc.contenido || ''}
-                docName={selectedDoc.nombre}
-                onSave={(content) => saveDocument(content)}
-                onRename={(newName) => renameDoc(selectedDoc.id, newName)}
+                content={docContent}
+                onChange={setDocContent}
+                onSave={saveDocument}
+                lastSaved={lastSaved}
               />
             )}
           </div>
@@ -372,18 +393,28 @@ export default function ExpedienteDetailPage() {
           <CollapsibleColumn
             isCollapsed={aiCollapsed}
             onToggle={toggleAi}
-            label="Asistente IA"
-            side="right"
+            collapsedIcon={require('lucide-react').Sparkles}
+            collapsedLabel="Asistente IA"
           >
-            <AIPanel
-              documentos={documentos}
-              onGenerarDocumento={handleGenerarDocumento}
-              expedienteId={expedienteId}
-              contextSelections={contextSelections}
-              collapseButton={collapseButtonAi}
-            />
+            <div style={{
+              width: aiCollapsed ? '48px' : '320px',
+              borderLeft: '1px solid var(--border)',
+              backgroundColor: 'var(--bg)',
+              display: 'flex',
+              flexDirection: 'column',
+              transition: 'width 150ms'
+            }}>
+              <AIPanel
+                contextoId={expedienteId}
+                contextoTipo="expediente"
+                documentos={documentos}
+                contextSelections={contextSelections}
+                onGenerarDocumento={handleGenerarDocumento}
+                collapseButton={collapseButtonAi}
+              />
+            </div>
           </CollapsibleColumn>
-        </WorkspaceLayout>
+        </div>
       ) : (
         /* Mobile: Tabs */
         <Tabs value={mobileTab} onValueChange={(v) => setMobileTab(v as typeof mobileTab)} className="flex flex-col flex-1 overflow-hidden">
@@ -396,14 +427,19 @@ export default function ExpedienteDetailPage() {
           <TabsContent value="docs" className="flex-1 overflow-auto m-0">
             <DocumentList
               documentos={documentos}
+              archivos={archivos}
               selectedDocId={selectedDoc?.id || null}
-              onSelectDoc={(doc) => {
-                selectDoc(doc);
-                setMobileTab('editor');
+              onSelectDoc={(docId) => {
+                const doc = documentos.find(d => d.id === docId);
+                if (doc) {
+                  selectDoc(doc);
+                  setMobileTab('editor');
+                }
               }}
               onCreateDoc={createNewDoc}
               onDeleteDoc={deleteDoc}
               onRenameDoc={renameDoc}
+              onUploadFile={() => {}}
               contextSelections={contextSelections}
               onContextModeChange={handleContextModeChange}
             />
@@ -412,21 +448,21 @@ export default function ExpedienteDetailPage() {
           <TabsContent value="editor" className="flex-1 overflow-auto m-0">
             {selectedDoc && (
               <RichTextEditor
-                docId={selectedDoc.id}
-                initialContent={selectedDoc.contenido || ''}
-                docName={selectedDoc.nombre}
-                onSave={(content) => saveDocument(content)}
-                onRename={(newName) => renameDoc(selectedDoc.id, newName)}
+                content={docContent}
+                onChange={setDocContent}
+                onSave={saveDocument}
+                lastSaved={lastSaved}
               />
             )}
           </TabsContent>
           
           <TabsContent value="ai" className="flex-1 overflow-auto m-0">
             <AIPanel
+              contextoId={expedienteId}
+              contextoTipo="expediente"
               documentos={documentos}
-              onGenerarDocumento={handleGenerarDocumento}
-              expedienteId={expedienteId}
               contextSelections={contextSelections}
+              onGenerarDocumento={handleGenerarDocumento}
             />
           </TabsContent>
         </Tabs>
