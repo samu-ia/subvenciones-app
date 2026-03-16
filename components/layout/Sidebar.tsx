@@ -4,19 +4,13 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
-  LayoutDashboard, Building2, Lightbulb, FileText,
-  FolderOpen, LogOut, Target, Settings, Calendar, Brain,
+  Building2, Calendar, FolderOpen, LogOut,
 } from "lucide-react";
 
 const nav = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/clientes", label: "Clientes", icon: Building2 },
   { href: "/reuniones", label: "Reuniones", icon: Calendar },
-  { href: "/oportunidades", label: "Oportunidades", icon: Target },
   { href: "/expedientes", label: "Expedientes", icon: FolderOpen },
-  { href: "/documentos", label: "Documentos", icon: FileText },
-  { href: "/asistentes", label: "Asistentes IA", icon: Brain },
-  { href: "/ajustes", label: "Ajustes", icon: Settings },
 ];
 
 export default function Sidebar() {

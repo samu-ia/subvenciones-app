@@ -2,23 +2,83 @@
 
 import { Calendar, Plus } from 'lucide-react';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
+
+interface Reunion {
+  id: string;
+  titulo: string | null;
+  tipo: string | null;
+  estado: string | null;
+  fecha_programada: string | null;
+  cliente_nif: string | null;
+  cliente: {
+    nombre_normalizado: string | null;
+  }[];
+}
 
 export default function ReunionesPage() {
+  const [reuniones, setReuniones] = useState<Reunion[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchReuniones() {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('reuniones')
+        .select(`
+          id,
+          titulo,
+          tipo,
+          estado,
+          fecha_programada,
+          cliente_nif,
+          cliente:cliente_nif (
+            nombre_normalizado
+          )
+        `)
+        .order('fecha_programada', { ascending: false });
+
+      if (error) {
+        console.error('Error cargando reuniones:', error);
+      } else {
+        setReuniones(data || []);
+      }
+      setLoading(false);
+    }
+    fetchReuniones();
+  }, []);
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return 'Sin fecha';
+    return new Date(dateStr).toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (loading) {
+    return <div style={{ padding: '40px', textAlign: 'center' }}>Cargando...</div>;
+  }
+
   return (
-    <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '40px' }}>
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 'var(--s2)',
+        marginBottom: '32px',
       }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s1)', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
             <Calendar size={32} style={{ color: 'var(--teal)' }} />
-            <h1 style={{ margin: 0, fontSize: '32px', fontWeight: 600 }}>Reuniones</h1>
+            <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 700 }}>Reuniones</h1>
           </div>
-          <p style={{ margin: 0, color: 'var(--muted)', fontSize: '15px' }}>
-            Gestiona reuniones con clientes, prepara contexto y genera documentación
+          <p style={{ margin: 0, color: 'var(--ink2)', fontSize: '15px' }}>
+            Gestiona reuniones con clientes
           </p>
         </div>
 
@@ -43,17 +103,114 @@ export default function ReunionesPage() {
         </Link>
       </div>
 
-      <div style={{
-        padding: 'var(--s2)',
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: '8px',
-        textAlign: 'center',
-      }}>
-        <p style={{ margin: 0, color: 'var(--muted)' }}>
-          Módulo en desarrollo. Incluirá: lista de reuniones, preparación con IA, búsqueda profunda, generación de guiones y documentos.
-        </p>
-      </div>
+      {reuniones.length === 0 ? (
+        <div style={{
+          backgroundColor: 'var(--surface)',
+          borderRadius: '12px',
+          padding: '64px 32px',
+          textAlign: 'center',
+          boxShadow: 'var(--s1)',
+          border: '1px solid var(--border)'
+        }}>
+          <div style={{
+            fontSize: '48px',
+            marginBottom: '16px',
+            opacity: 0.3
+          }}>📅</div>
+          <h3 style={{ 
+            fontSize: '18px', 
+            fontWeight: '600', 
+            color: 'var(--ink)',
+            marginBottom: '8px'
+          }}>
+            No hay reuniones programadas
+          </h3>
+          <p style={{ color: 'var(--muted)', fontSize: '15px' }}>
+            Comienza creando tu primera reunión
+          </p>
+        </div>
+      ) : (
+        <div style={{
+          backgroundColor: 'var(--surface)',
+          borderRadius: '12px',
+          boxShadow: 'var(--s1)',
+          border: '1px solid var(--border)',
+          overflow: 'hidden'
+        }}>
+          {reuniones.map((reunion) => (
+            <Link
+              key={reunion.id}
+              href={`/reuniones/${reunion.id}`}
+              style={{ textDecoration: 'none' }}
+            >
+              <div
+                className="table-row"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '2fr 1.5fr 1fr 1fr',
+                  gap: '16px',
+                  padding: '20px 24px',
+                  borderBottom: '1px solid var(--border)',
+                  cursor: 'pointer'
+                }}
+              >
+                <div>
+                  <div style={{
+                    fontSize: '15px',
+                    fontWeight: '600',
+                    color: 'var(--ink)',
+                    marginBottom: '4px'
+                  }}>
+                    {reunion.titulo || 'Sin título'}
+                  </div>
+                  <div style={{
+                    fontSize: '14px',
+                    color: 'var(--muted)'
+                  }}>
+                    {reunion.cliente?.[0]?.nombre_normalizado || reunion.cliente_nif || 'Sin cliente'}
+                  </div>
+                </div>
+                <div style={{
+                  fontSize: '14px',
+                  color: 'var(--ink2)',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  {formatDate(reunion.fecha_programada)}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  {reunion.tipo && (
+                    <span style={{
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      backgroundColor: 'var(--blue-bg)',
+                      color: 'var(--blue)'
+                    }}>
+                      {reunion.tipo}
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  {reunion.estado && (
+                    <span style={{
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      backgroundColor: reunion.estado === 'realizada' ? 'var(--green-bg)' : 'var(--amber-bg)',
+                      color: reunion.estado === 'realizada' ? 'var(--green)' : 'var(--amber)'
+                    }}>
+                      {reunion.estado}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

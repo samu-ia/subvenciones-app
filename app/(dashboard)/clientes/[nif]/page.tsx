@@ -43,6 +43,15 @@ interface Expediente {
   updated_at: string;
 }
 
+interface Reunion {
+  id: string;
+  titulo: string | null;
+  tipo: string | null;
+  estado: string | null;
+  fecha_programada: string | null;
+  created_at: string;
+}
+
 const estadoBadgeStyles: Record<string, { bg: string; color: string }> = {
   lead_caliente: { bg: 'var(--amber-bg)', color: 'var(--amber)' },
   en_proceso: { bg: 'var(--blue-bg)', color: 'var(--blue)' },
@@ -91,6 +100,13 @@ export default async function ClienteDetailPage({
     .select('id, numero_bdns, estado, created_at, updated_at')
     .eq('nif', nif)
     .order('created_at', { ascending: false });
+
+  // Obtener reuniones del cliente
+  const { data: reuniones } = await supabase
+    .from('reuniones')
+    .select('id, titulo, tipo, estado, fecha_programada, created_at')
+    .eq('cliente_nif', nif)
+    .order('fecha_programada', { ascending: false });
 
   const formatCurrency = (value: number | null) => {
     if (!value) return '—';
@@ -251,6 +267,139 @@ export default async function ClienteDetailPage({
         </div>
       </div>
 
+      {/* Action Buttons */}
+      <div style={{ 
+        display: 'flex', 
+        gap: '16px', 
+        marginBottom: '32px' 
+      }}>
+        <Link href={`/reuniones/nueva?cliente=${nif}`}>
+          <button style={{
+            backgroundColor: 'var(--teal)',
+            color: 'white',
+            padding: '12px 24px',
+            borderRadius: '8px',
+            border: 'none',
+            fontSize: '15px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            boxShadow: 'var(--s1)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            📅 Nueva reunión
+          </button>
+        </Link>
+        <Link href={`/expedientes/nuevo?cliente=${nif}`}>
+          <button style={{
+            backgroundColor: 'var(--blue)',
+            color: 'white',
+            padding: '12px 24px',
+            borderRadius: '8px',
+            border: 'none',
+            fontSize: '15px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            boxShadow: 'var(--s1)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            📁 Nuevo expediente
+          </button>
+        </Link>
+      </div>
+
+      {/* Reuniones */}
+      <div style={{
+        backgroundColor: 'var(--surface)',
+        borderRadius: '12px',
+        padding: '24px',
+        boxShadow: 'var(--s1)',
+        border: '1px solid var(--border)',
+        marginBottom: '24px'
+      }}>
+        <h2 style={{
+          fontSize: '18px',
+          fontWeight: '700',
+          color: 'var(--ink)',
+          marginBottom: '20px'
+        }}>
+          Reuniones
+        </h2>
+
+        {!reuniones || reuniones.length === 0 ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '40px',
+            color: 'var(--muted)'
+          }}>
+            <p>No hay reuniones programadas para este cliente</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {reuniones.map((reunion: Reunion) => (
+              <Link 
+                key={reunion.id}
+                href={`/reuniones/${reunion.id}`}
+                style={{ textDecoration: 'none' }}
+              >
+                <div 
+                  className="table-row"
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '16px',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--ink)' }}>
+                      {reunion.titulo || 'Sin título'}
+                    </div>
+                    <div style={{ fontSize: '13px', color: 'var(--muted)' }}>
+                      {reunion.fecha_programada 
+                        ? `Programada: ${formatDate(reunion.fecha_programada)}`
+                        : 'Fecha no programada'}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    {reunion.tipo && (
+                      <span style={{
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        backgroundColor: 'var(--blue-bg)',
+                        color: 'var(--blue)'
+                      }}>
+                        {reunion.tipo}
+                      </span>
+                    )}
+                    {reunion.estado && (
+                      <span style={{
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        backgroundColor: reunion.estado === 'realizada' ? 'var(--green-bg)' : 'var(--amber-bg)',
+                        color: reunion.estado === 'realizada' ? 'var(--green)' : 'var(--amber)'
+                      }}>
+                        {reunion.estado}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Expedientes */}
       <div style={{
         backgroundColor: 'var(--surface)',
@@ -259,33 +408,14 @@ export default async function ClienteDetailPage({
         boxShadow: 'var(--s1)',
         border: '1px solid var(--border)'
       }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+        <h2 style={{
+          fontSize: '18px',
+          fontWeight: '700',
+          color: 'var(--ink)',
           marginBottom: '20px'
         }}>
-          <h2 style={{
-            fontSize: '18px',
-            fontWeight: '700',
-            color: 'var(--ink)'
-          }}>
-            Expedientes
-          </h2>
-          <button style={{
-            backgroundColor: 'var(--teal)',
-            color: 'white',
-            padding: '10px 20px',
-            borderRadius: '8px',
-            border: 'none',
-            fontSize: '14px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            boxShadow: 'var(--s1)'
-          }}>
-            + Nuevo expediente
-          </button>
-        </div>
+          Expedientes
+        </h2>
 
         {!expedientes || expedientes.length === 0 ? (
           <div style={{
@@ -300,38 +430,44 @@ export default async function ClienteDetailPage({
             {expedientes.map((exp: Expediente) => {
               const style = estadoBadgeStyles[exp.estado] || { bg: 'var(--bg)', color: 'var(--ink2)' };
               return (
-                <div 
+                <Link
                   key={exp.id}
-                  className="table-row"
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '16px',
-                    border: '1px solid var(--border)',
-                    borderRadius: '8px'
-                  }}
+                  href={`/expedientes/${exp.id}`}
+                  style={{ textDecoration: 'none' }}
                 >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--ink)' }}>
-                      {exp.numero_bdns ? `BDNS ${exp.numero_bdns}` : `Expediente ${exp.id.slice(0, 8)}`}
+                  <div 
+                    className="table-row"
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '16px',
+                      border: '1px solid var(--border)',
+                      borderRadius: '8px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--ink)' }}>
+                        {exp.numero_bdns ? `BDNS ${exp.numero_bdns}` : `Expediente ${exp.id.slice(0, 8)}`}
+                      </div>
+                      <div style={{ fontSize: '13px', color: 'var(--muted)' }}>
+                        Creado el {formatDate(exp.created_at)}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '13px', color: 'var(--muted)' }}>
-                      Creado el {formatDate(exp.created_at)}
-                    </div>
+                    <span style={{
+                      display: 'inline-block',
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      backgroundColor: style.bg,
+                      color: style.color
+                    }}>
+                      {estadoLabels[exp.estado] || exp.estado}
+                    </span>
                   </div>
-                  <span style={{
-                    display: 'inline-block',
-                    padding: '6px 12px',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    backgroundColor: style.bg,
-                    color: style.color
-                  }}>
-                    {estadoLabels[exp.estado] || exp.estado}
-                  </span>
-                </div>
+                </Link>
               );
             })}
           </div>

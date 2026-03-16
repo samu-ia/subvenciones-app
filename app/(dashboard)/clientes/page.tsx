@@ -1,5 +1,9 @@
+'use client';
+
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { Search } from 'lucide-react';
 
 interface Cliente {
   nif: string;
@@ -9,20 +13,51 @@ interface Cliente {
   ciudad: string | null;
 }
 
-export default async function ClientesPage() {
-  const supabase = await createClient();
-  
-  const { data: clientes, error } = await supabase
-    .from('cliente')
-    .select('nif, nombre_normalizado, actividad, tamano_empresa, ciudad')
-    .order('created_at', { ascending: false });
+export default function ClientesPage() {
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [filteredClientes, setFilteredClientes] = useState<Cliente[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  if (error) {
-    console.error('Error cargando clientes:', error);
+  useEffect(() => {
+    async function fetchClientes() {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('cliente')
+        .select('nif, nombre_normalizado, actividad, tamano_empresa, ciudad')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error cargando clientes:', error);
+      } else {
+        setClientes(data || []);
+        setFilteredClientes(data || []);
+      }
+      setLoading(false);
+    }
+    fetchClientes();
+  }, []);
+
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredClientes(clientes);
+    } else {
+      const filtered = clientes.filter(cliente => 
+        cliente.nombre_normalizado?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        cliente.nif?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        cliente.actividad?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        cliente.ciudad?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredClientes(filtered);
+    }
+  }, [searchTerm, clientes]);
+
+  if (loading) {
+    return <div style={{ padding: '32px', textAlign: 'center' }}>Cargando...</div>;
   }
 
   return (
-    <div style={{ padding: '32px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto' }}>
       {/* Header */}
       <div style={{ 
         display: 'flex', 
@@ -62,8 +97,40 @@ export default async function ClientesPage() {
         </Link>
       </div>
 
+      {/* Search Bar */}
+      <div style={{ marginBottom: '24px' }}>
+        <div style={{
+          position: 'relative',
+          maxWidth: '500px'
+        }}>
+          <Search size={20} style={{
+            position: 'absolute',
+            left: '16px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            color: 'var(--muted)'
+          }} />
+          <input
+            type="text"
+            placeholder="Buscar clientes por nombre, NIF, actividad o ciudad..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px 16px 12px 48px',
+              fontSize: '15px',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
+              backgroundColor: 'var(--surface)',
+              color: 'var(--ink)',
+              outline: 'none'
+            }}
+          />
+        </div>
+      </div>
+
       {/* Lista de clientes */}
-      {!clientes || clientes.length === 0 ? (
+      {filteredClientes.length === 0 ? (
         <div style={{
           backgroundColor: 'var(--surface)',
           borderRadius: '12px',
@@ -83,10 +150,10 @@ export default async function ClientesPage() {
             color: 'var(--ink)',
             marginBottom: '8px'
           }}>
-            No hay clientes registrados
+            {searchTerm ? 'No se encontraron clientes' : 'No hay clientes registrados'}
           </h3>
           <p style={{ color: 'var(--muted)', fontSize: '15px' }}>
-            Comienza agregando tu primer cliente
+            {searchTerm ? 'Intenta con otro término de búsqueda' : 'Comienza agregando tu primer cliente'}
           </p>
         </div>
       ) : (
@@ -119,7 +186,7 @@ export default async function ClientesPage() {
           </div>
 
           {/* Table Body */}
-          {clientes.map((cliente: Cliente) => (
+          {filteredClientes.map((cliente: Cliente) => (
             <Link 
               key={cliente.nif} 
               href={`/clientes/${cliente.nif}`}

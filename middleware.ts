@@ -32,7 +32,11 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user && request.nextUrl.pathname === "/login") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL("/clientes", request.url));
+  }
+
+  if (user && request.nextUrl.pathname === "/") {
+    return NextResponse.redirect(new URL("/clientes", request.url));
   }
 
   return supabaseResponse;

@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import { FolderOpen } from 'lucide-react';
 
 interface Expediente {
   id: string;
@@ -57,7 +59,7 @@ export default async function ExpedientesPage() {
   };
 
   return (
-    <div style={{ padding: '32px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto' }}>
       {/* Header */}
       <div style={{ 
         display: 'flex', 
@@ -78,6 +80,26 @@ export default async function ExpedientesPage() {
             Seguimiento de expedientes de subvenciones
           </p>
         </div>
+        
+        <Link href="/expedientes/nuevo">
+          <button style={{
+            backgroundColor: 'var(--teal)',
+            color: 'white',
+            padding: '12px 24px',
+            borderRadius: '8px',
+            border: 'none',
+            fontSize: '15px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            boxShadow: 'var(--s1)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <FolderOpen size={18} />
+            Crear expediente
+          </button>
+        </Link>
       </div>
 
       {/* Lista de expedientes */}
@@ -142,59 +164,64 @@ export default async function ExpedientesPage() {
             const clienteNombre = expediente.cliente?.[0]?.nombre_normalizado || expediente.nif;
             
             return (
-              <div 
+              <Link
                 key={expediente.id}
-                className="table-row"
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '2fr 1.5fr 1.5fr 1fr 1.5fr',
-                  gap: '16px',
-                  padding: '20px 24px',
-                  borderBottom: '1px solid var(--border)',
-                  cursor: 'pointer'
-                }}
+                href={`/expedientes/${expediente.id}`}
+                style={{ textDecoration: 'none' }}
               >
-                <div style={{
-                  fontSize: '15px',
-                  fontWeight: '600',
-                  color: 'var(--navy)'
-                }}>
-                  {clienteNombre}
-                </div>
-                <div style={{
-                  fontSize: '14px',
-                  color: 'var(--ink2)',
-                  fontFamily: 'monospace'
-                }}>
-                  {expediente.nif}
-                </div>
-                <div style={{
-                  fontSize: '14px',
-                  color: 'var(--ink2)',
-                  fontFamily: 'monospace'
-                }}>
-                  {expediente.numero_bdns || '—'}
-                </div>
-                <div>
-                  <span style={{
-                    display: 'inline-block',
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    fontSize: '13px',
+                <div 
+                  className="table-row"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '2fr 1.5fr 1.5fr 1fr 1.5fr',
+                    gap: '16px',
+                    padding: '20px 24px',
+                    borderBottom: '1px solid var(--border)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <div style={{
+                    fontSize: '15px',
                     fontWeight: '600',
-                    backgroundColor: style.bg,
-                    color: style.color
+                    color: 'var(--navy)'
                   }}>
-                    {estadoLabels[expediente.estado] || expediente.estado}
-                  </span>
+                    {clienteNombre}
+                  </div>
+                  <div style={{
+                    fontSize: '14px',
+                    color: 'var(--ink2)',
+                    fontFamily: 'monospace'
+                  }}>
+                    {expediente.nif}
+                  </div>
+                  <div style={{
+                    fontSize: '14px',
+                    color: 'var(--ink2)',
+                    fontFamily: 'monospace'
+                  }}>
+                    {expediente.numero_bdns || '—'}
+                  </div>
+                  <div>
+                    <span style={{
+                      display: 'inline-block',
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      backgroundColor: style.bg,
+                      color: style.color
+                    }}>
+                      {estadoLabels[expediente.estado] || expediente.estado}
+                    </span>
+                  </div>
+                  <div style={{
+                    fontSize: '14px',
+                    color: 'var(--ink2)'
+                  }}>
+                    {formatDate(expediente.created_at)}
+                  </div>
                 </div>
-                <div style={{
-                  fontSize: '14px',
-                  color: 'var(--ink2)'
-                }}>
-                  {formatDate(expediente.created_at)}
-                </div>
-              </div>
+              </Link>
             );
           })}
         </div>
