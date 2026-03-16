@@ -110,13 +110,15 @@ ${contextoAdicional ? `CONTEXTO ADICIONAL:\n${contextoAdicional}` : ''}
 Proporciona una investigación completa de subvenciones actuales para esta empresa.`;
 
       // ── 4. Llamar a la IA ──────────────────────────────────────────────
-      const aiResponse = await provider.chat({
-        messages: [{ role: 'user', content: userMessage }],
-        systemPrompt: DEEP_SEARCH_SYSTEM_PROMPT,
-        model: toolConfig.model,
-        temperature: 0.3,
-        maxTokens: toolConfig.maxTokens || 4000,
-      });
+      const aiResponse = await provider.complete(
+        [{ role: 'user', content: userMessage }],
+        {
+          model: toolConfig.model,
+          systemPrompt: DEEP_SEARCH_SYSTEM_PROMPT,
+          temperature: 0.3,
+          maxTokens: toolConfig.maxTokens || 4000,
+        }
+      );
 
       const rawContent = aiResponse.content;
 
