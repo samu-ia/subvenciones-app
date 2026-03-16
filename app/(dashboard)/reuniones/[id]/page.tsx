@@ -118,184 +118,156 @@ export default function ReunionDetailPage() {
   }
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px' }}>
-      {/* Header */}
-      <Link
-        href="/reuniones"
-        style={{
-          color: 'var(--teal)',
-          fontSize: '14px',
-          fontWeight: '600',
-          textDecoration: 'none',
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '4px',
-          marginBottom: '24px'
-        }}
-      >
-        <ArrowLeft size={16} />
-        Volver a reuniones
-      </Link>
+    <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '40px' }}>
+      {/* Header Compacto */}
+      <div style={{ marginBottom: '24px' }}>
+        <Link
+          href="/reuniones"
+          style={{
+            color: 'var(--teal)',
+            fontSize: '13px',
+            fontWeight: '600',
+            textDecoration: 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            marginBottom: '12px'
+          }}
+        >
+          <ArrowLeft size={14} />
+          Volver
+        </Link>
 
-      <div style={{ marginBottom: '32px' }}>
         <h1 style={{
-          fontSize: '28px',
+          fontSize: '24px',
           fontWeight: '700',
           color: 'var(--ink)',
-          marginBottom: '16px'
+          marginBottom: '12px'
         }}>
           {reunion.titulo || 'Sin título'}
         </h1>
 
-        {/* Info Grid */}
+        {/* Info Compacta en Una Línea */}
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '16px',
-          backgroundColor: 'var(--surface)',
-          padding: '20px',
-          borderRadius: '12px',
-          border: '1px solid var(--border)'
+          display: 'flex',
+          alignItems: 'center',
+          gap: '24px',
+          fontSize: '14px',
+          color: 'var(--ink2)',
+          paddingBottom: '16px',
+          borderBottom: '1px solid var(--border)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <User size={18} style={{ color: 'var(--muted)' }} />
-            <div>
-              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '2px' }}>Cliente</div>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--ink)' }}>
-                {reunion.cliente?.[0]?.nombre_normalizado || reunion.cliente_nif || '—'}
-              </div>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <User size={14} style={{ color: 'var(--muted)' }} />
+            <span style={{ fontWeight: '500' }}>
+              {reunion.cliente?.[0]?.nombre_normalizado || reunion.cliente_nif || '—'}
+            </span>
           </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Calendar size={18} style={{ color: 'var(--muted)' }} />
-            <div>
-              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '2px' }}>Fecha</div>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--ink)' }}>
-                {formatDate(reunion.fecha_programada)}
-              </div>
-            </div>
+          <div style={{ color: 'var(--border)' }}>|</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Calendar size={14} style={{ color: 'var(--muted)' }} />
+            <span>{formatDate(reunion.fecha_programada)}</span>
           </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ fontSize: '18px' }}>📋</div>
-            <div>
-              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '2px' }}>Tipo</div>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--ink)' }}>
-                {reunion.tipo || '—'}
-              </div>
-            </div>
+          <div style={{ color: 'var(--border)' }}>|</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span>📋</span>
+            <span>{reunion.tipo || '—'}</span>
           </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ fontSize: '18px' }}>🚦</div>
-            <div>
-              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '2px' }}>Estado</div>
-              <span style={{
-                display: 'inline-block',
-                padding: '4px 10px',
-                borderRadius: '6px',
-                fontSize: '13px',
-                fontWeight: '500',
-                backgroundColor: reunion.estado === 'realizada' ? 'var(--green-bg)' : 'var(--amber-bg)',
-                color: reunion.estado === 'realizada' ? 'var(--green)' : 'var(--amber)'
-              }}>
-                {reunion.estado || 'pendiente'}
-              </span>
-            </div>
-          </div>
+          <div style={{ color: 'var(--border)' }}>|</div>
+          <span style={{
+            padding: '4px 10px',
+            borderRadius: '6px',
+            fontSize: '12px',
+            fontWeight: '600',
+            backgroundColor: reunion.estado === 'realizada' ? 'var(--green-bg)' : 'var(--amber-bg)',
+            color: reunion.estado === 'realizada' ? 'var(--green)' : 'var(--amber)'
+          }}>
+            {reunion.estado || 'pendiente'}
+          </span>
         </div>
+
+        {/* Objetivo compacto si existe */}
+        {reunion.objetivo && (
+          <div style={{
+            marginTop: '16px',
+            padding: '12px 16px',
+            backgroundColor: 'var(--surface)',
+            borderRadius: '8px',
+            border: '1px solid var(--border)',
+            fontSize: '14px',
+            color: 'var(--ink2)',
+            lineHeight: '1.5'
+          }}>
+            <strong style={{ color: 'var(--ink)' }}>Objetivo:</strong> {reunion.objetivo}
+          </div>
+        )}
       </div>
 
-      {/* Objetivo */}
-      {reunion.objetivo && (
-        <div style={{
-          backgroundColor: 'var(--surface)',
-          padding: '20px',
-          borderRadius: '12px',
-          border: '1px solid var(--border)',
-          marginBottom: '24px'
-        }}>
-          <h3 style={{
-            fontSize: '15px',
-            fontWeight: '700',
-            color: 'var(--ink)',
-            marginBottom: '12px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px'
-          }}>
-            Objetivo
-          </h3>
-          <p style={{ fontSize: '15px', color: 'var(--ink2)', lineHeight: '1.6', margin: 0 }}>
-            {reunion.objetivo}
-          </p>
-        </div>
-      )}
-
-      {/* Cuaderno de Notas */}
+      {/* EDITOR PRINCIPAL - Ocupa casi toda la pantalla */}
       <div style={{
-        backgroundColor: 'var(--surface)',
+        backgroundColor: 'white',
         borderRadius: '12px',
         border: '1px solid var(--border)',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
       }}>
+        {/* Barra superior limpia */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '20px 24px',
+          padding: '16px 20px',
           borderBottom: '1px solid var(--border)',
           backgroundColor: 'var(--bg)'
         }}>
           <h2 style={{
-            fontSize: '18px',
-            fontWeight: '700',
+            fontSize: '15px',
+            fontWeight: '600',
             color: 'var(--ink)',
-            margin: 0
+            margin: 0,
+            textTransform: 'uppercase',
+            letterSpacing: '0.3px'
           }}>
-            Cuaderno de la reunión
+            Cuaderno
           </h2>
-          <div style={{ fontSize: '13px', color: 'var(--muted)' }}>
+          <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: '500' }}>
             {saving ? (
-              <span style={{ color: 'var(--amber)' }}>Guardando...</span>
+              <span style={{ color: 'var(--amber)' }}>●  Guardando...</span>
             ) : lastSaved ? (
-              <span>Guardado {lastSaved.toLocaleTimeString('es-ES')}</span>
+              <span style={{ color: 'var(--green)' }}>✓  Guardado {lastSaved.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
             ) : (
-              <span>Guardado automático activado</span>
+              <span>Guardado automático</span>
             )}
           </div>
         </div>
 
-        <div style={{ padding: '24px' }}>
+        {/* Área de escritura grande */}
+        <div style={{ padding: '0' }}>
           <textarea
             value={notas}
             onChange={(e) => setNotas(e.target.value)}
-            placeholder="Escribe aquí la preparación de la reunión, notas durante la reunión, conclusiones y próximos pasos...
+            placeholder="Escribe aquí tus notas...
 
-Puedes estructurarlo como prefieras:
-
-📋 Preparación:
+📋 Preparación
 - Puntos a tratar
 - Documentos necesarios
 
-📝 Notas:
+📝 Durante la reunión
 - Comentarios del cliente
 - Decisiones tomadas
 
-✅ Conclusiones:
+✅ Conclusiones
 - Resumen de acuerdos
 
-🎯 Próximos pasos:
-- Acciones a realizar
-- Fechas de seguimiento"
+🎯 Próximos pasos
+- Acciones a realizar"
             style={{
               width: '100%',
-              minHeight: '500px',
-              padding: '16px',
+              minHeight: '65vh',
+              padding: '32px',
               fontSize: '15px',
-              lineHeight: '1.7',
-              border: '1px solid var(--border)',
-              borderRadius: '8px',
+              lineHeight: '1.8',
+              border: 'none',
               backgroundColor: 'white',
               color: 'var(--ink)',
               fontFamily: 'inherit',
