@@ -62,7 +62,7 @@ export default function ExpedienteDetailPage() {
   const isDesktop = useIsDesktop();
 
   // Zustand store
-  const { documentosCollapsed, aiCollapsed, toggleDocumentos, toggleAi } = useWorkspaceColumnsStore();
+  const { documentosCollapsed, aiCollapsed, toggleDocumentos, toggleAI } = useWorkspaceColumnsStore();
 
   useEffect(() => {
     async function fetchData() {
@@ -241,8 +241,8 @@ export default function ExpedienteDetailPage() {
   );
 
   const collapseButtonAi = useMemo(
-    () => createCollapseButton(toggleAi, 'Asistente IA'),
-    [toggleAi]
+    () => createCollapseButton(toggleAI, 'Asistente IA'),
+    [toggleAI]
   );
 
   if (loading) {
@@ -392,7 +392,7 @@ export default function ExpedienteDetailPage() {
           {/* Right: AI Panel */}
           <CollapsibleColumn
             isCollapsed={aiCollapsed}
-            onToggle={toggleAi}
+            onToggle={toggleAI}
             collapsedIcon={require('lucide-react').Sparkles}
             collapsedLabel="Asistente IA"
           >
