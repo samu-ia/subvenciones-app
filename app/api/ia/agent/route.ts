@@ -10,61 +10,78 @@ import type {
 
 // ─── System prompt del agente ─────────────────────────────────────────────────
 
-const AGENT_SYSTEM_PROMPT = `Eres un asistente experto en gestión de expedientes y subvenciones.
-Tienes acceso a un notebook con documentos editables y puedes actuar sobre ellos.
+const AGENT_SYSTEM_PROMPT = `Eres un agente IA especializado en gestión de expedientes y subvenciones.
+Tu función principal es ACTUAR sobre los documentos del notebook, no solo responder por chat.
 
-Cuando el usuario te pida organizar, preparar o construir el expediente, debes responder con un JSON estructurado.
-Cuando sea una pregunta simple o conversación, responde directamente en texto normal.
+## REGLA FUNDAMENTAL
+Siempre que el usuario pida generar, redactar, preparar, escribir, crear o completar cualquier contenido (notas, actas, informes, emails, checklists, memorias, cronogramas, etc.), debes CREAR O EDITAR UN DOCUMENTO en el notebook. Nunca respondas ese contenido solo en el chat.
 
-## REGLAS IMPORTANTES
-- Solo crea/edita documentos cuando el usuario lo pida explícitamente o sea claramente necesario.
-- Usa el contexto del expediente para rellenar documentos con contenido relevante.
-- El contenido de documentos debe estar en formato Markdown.
-- Para preguntas o consultas simples, usa solo respond_chat.
+## CUÁNDO USAR EL JSON DE ACCIONES
+USA EL JSON (obligatorio) cuando el usuario:
+- Pida redactar, escribir, generar, preparar o crear cualquier tipo de documento
+- Pida notas de reunión, actas, resúmenes, informes, borradores, emails
+- Pida organizar, estructurar o preparar el expediente
+- Pida completar, rellenar o actualizar un documento existente
+- Cualquier solicitud de contenido que pueda guardarse como documento
 
-## FORMATO DE RESPUESTA
+SOLO usa texto plano (sin JSON) para:
+- Preguntas cortas de consulta ("¿cuándo vence el plazo?")
+- Conversación casual sin generación de contenido
 
-Cuando vayas a ejecutar acciones sobre documentos, responde ÚNICAMENTE con este JSON (sin texto adicional):
+## FORMATO DE RESPUESTA CON ACCIONES
+
+Responde ÚNICAMENTE con este JSON (sin texto antes ni después):
 
 {
   "actions": [
-    { "type": "create_folder", "folder_name": "Nombre Carpeta" },
-    { "type": "create_document", "nombre": "Título", "contenido": "## Título\\n\\nContenido...", "tipo_documento": "memoria", "folder_name": "Nombre Carpeta" },
-    { "type": "edit_document", "nombre": "Título existente", "contenido": "Nuevo contenido completo", "append": false },
-    { "type": "respond", "content": "Explicación al usuario de lo que has hecho..." }
+    { "type": "create_document", "nombre": "Título del documento", "contenido": "## Título\\n\\nContenido completo en Markdown...", "tipo_documento": "notas" },
+    { "type": "respond", "content": "Breve descripción de lo que has creado." }
   ]
 }
 
-El campo "respond" con tu mensaje de chat SIEMPRE debe estar al final de las acciones.
+REGLAS DEL JSON:
+- El campo "respond" va SIEMPRE al final, es obligatorio
+- El contenido de los documentos debe ser completo y detallado, en Markdown
+- Usa \\n para saltos de línea dentro de las strings JSON
+- No pongas texto fuera del JSON
 
 ## TIPOS DE DOCUMENTO VÁLIDOS
-memoria, checklist, notas, email, informe, proyecto_tecnico, memoria_economica, cronograma, otro
+notas, memoria, checklist, email, informe, proyecto_tecnico, memoria_economica, cronograma, acta, otro
 
-## CUANDO SOLO RESPONDES POR CHAT (sin JSON):
-- Preguntas sobre el contenido de documentos
-- Consultas de información
-- Conversación general
+## ACCIONES DISPONIBLES
+- create_folder: { "type": "create_folder", "folder_name": "Nombre" }
+- create_document: { "type": "create_document", "nombre": "...", "contenido": "...", "tipo_documento": "...", "folder_name": "..." (opcional) }
+- edit_document: { "type": "edit_document", "nombre": "nombre exacto del doc existente", "contenido": "...", "append": false }
+- respond: { "type": "respond", "content": "mensaje al usuario" }
 `;
 
 // ─── Parser de la respuesta del LLM ──────────────────────────────────────────
 
 function parseAgentResponse(raw: string): AgentAction[] {
-  // Intentar extraer JSON del response (puede venir con texto antes/después)
-  const jsonMatch = raw.match(/\{[\s\S]*"actions"[\s\S]*\}/);
-  if (!jsonMatch) {
-    // No hay JSON → es un respond puro
-    return [{ type: 'respond', content: raw.trim() }];
-  }
+  // 1. Intentar extraer bloque ```json ... ``` primero
+  const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const candidate = fenceMatch ? fenceMatch[1].trim() : raw;
 
-  try {
-    const parsed = JSON.parse(jsonMatch[0]);
-    if (Array.isArray(parsed.actions)) {
-      return parsed.actions as AgentAction[];
+  // 2. Buscar el JSON con "actions"
+  const jsonMatch = candidate.match(/\{[\s\S]*"actions"[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (Array.isArray(parsed.actions) && parsed.actions.length > 0) {
+        // Asegurar que hay un respond al final
+        const actions = parsed.actions as AgentAction[];
+        const hasRespond = actions.some(a => a.type === 'respond');
+        if (!hasRespond) {
+          actions.push({ type: 'respond', content: 'Hecho.' });
+        }
+        return actions;
+      }
+    } catch {
+      // JSON malformado — caemos al fallback
     }
-  } catch {
-    // JSON malformado → respond con el texto
   }
 
+  // 3. Fallback: respuesta pura de chat (sin acciones)
   return [{ type: 'respond', content: raw.trim() }];
 }
 
@@ -216,13 +233,20 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = AGENT_SYSTEM_PROMPT + docsIndex + (context ? `\n\n## CONTEXTO DE DOCUMENTOS\n${context}` : '');
 
+    // Añadir hint si el mensaje parece pedir generación de contenido
+    const contentKeywords = /redact|escrib|generat|prepar|crea|elabor|haz|hace|desarrolla|hace\s+un|resume|resume|acta|informe|nota|document/i;
+    const needsActionHint = contentKeywords.test(message);
+    const userContent = needsActionHint
+      ? `${message}\n\n[SISTEMA: Esta petición requiere crear o editar un documento. Responde EXCLUSIVAMENTE con el JSON de acciones.]`
+      : message;
+
     // Construir mensajes
     const messages: Message[] = [
       ...history.slice(-6).map(h => ({
         role: h.role as 'user' | 'assistant',
         content: h.content,
       })),
-      { role: 'user', content: message },
+      { role: 'user', content: userContent },
     ];
 
     // Llamar al LLM
