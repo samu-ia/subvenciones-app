@@ -156,7 +156,7 @@ CREATE INDEX IF NOT EXISTS idx_expediente_estado ON public.expediente(estado);
 
 -- Índices para documentos
 CREATE INDEX IF NOT EXISTS idx_documentos_expediente ON public.documentos(expediente_id);
-CREATE INDEX IF NOT EXISTS idx_documentos_cliente ON public.documentos(nif);
+CREATE INDEX IF NOT EXISTS idx_documentos_cliente ON public.documentos(cliente_nif);
 
 -- Índices para notas
 CREATE INDEX IF NOT EXISTS idx_notas_expediente ON public.notas(expediente_id);

@@ -56,19 +56,19 @@ CREATE TABLE IF NOT EXISTS ia_tool_executions (
 );
 
 -- Índices para ia_providers
-CREATE INDEX idx_ia_providers_user ON ia_providers(user_id);
-CREATE INDEX idx_ia_providers_enabled ON ia_providers(user_id, enabled);
+CREATE INDEX IF NOT EXISTS idx_ia_providers_user ON ia_providers(user_id);
+CREATE INDEX IF NOT EXISTS idx_ia_providers_enabled ON ia_providers(user_id, enabled);
 
 -- Índices para ia_tool_configs
-CREATE INDEX idx_ia_tool_configs_user ON ia_tool_configs(user_id);
-CREATE INDEX idx_ia_tool_configs_tool ON ia_tool_configs(tool);
-CREATE INDEX idx_ia_tool_configs_user_workspace ON ia_tool_configs(user_id, workspace_type);
+CREATE INDEX IF NOT EXISTS idx_ia_tool_configs_user ON ia_tool_configs(user_id);
+CREATE INDEX IF NOT EXISTS idx_ia_tool_configs_tool ON ia_tool_configs(tool);
+CREATE INDEX IF NOT EXISTS idx_ia_tool_configs_user_workspace ON ia_tool_configs(user_id, workspace_type);
 
 -- Índices para ia_tool_executions
-CREATE INDEX idx_ia_tool_executions_user ON ia_tool_executions(user_id);
-CREATE INDEX idx_ia_tool_executions_workspace ON ia_tool_executions(workspace_id);
-CREATE INDEX idx_ia_tool_executions_tool ON ia_tool_executions(tool);
-CREATE INDEX idx_ia_tool_executions_created ON ia_tool_executions(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ia_tool_executions_user ON ia_tool_executions(user_id);
+CREATE INDEX IF NOT EXISTS idx_ia_tool_executions_workspace ON ia_tool_executions(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_ia_tool_executions_tool ON ia_tool_executions(tool);
+CREATE INDEX IF NOT EXISTS idx_ia_tool_executions_created ON ia_tool_executions(created_at DESC);
 
 -- Comentarios
 COMMENT ON TABLE ia_providers IS 'Configuración de proveedores de IA (OpenAI, Anthropic, etc) por usuario';
