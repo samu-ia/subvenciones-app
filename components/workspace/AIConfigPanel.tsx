@@ -189,12 +189,54 @@ export default function AIConfigPanel({ userId, workspaceType, inline, isOpen, o
 
   const updateTool = (field: Partial<ToolState>) => {
     setTools(prev => prev.map(t => t.tool === selectedTool ? { ...t, ...field } : t));
+    // Marcar para auto-save
+    setToolDirty(true);
   };
 
   // El modelo efectivo: si hay texto manual, usa ese; si no, el del dropdown
   const effectiveModel = (t: ToolState) => t.modelManual.trim() || t.model;
 
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [toolDirty, setToolDirty] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle'|'saving'|'saved'>('idle');
+
+  // Auto-save herramienta al modificar (debounce 800ms)
+  useEffect(() => {
+    if (!toolDirty || !selectedTool) return;
+    const t = tools.find(x => x.tool === selectedTool);
+    if (!t) return;
+    const timer = setTimeout(async () => {
+      setAutoSaveStatus('saving');
+      setToolDirty(false);
+      const res = await fetch('/api/ia/config/tools', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tool: t.tool, workspaceType,
+          enabled: t.enabled,
+          provider: t.provider,
+          model: effectiveModel(t),
+          systemPrompt: t.systemPrompt,
+          temperature: t.temperature,
+          maxTokens: t.maxTokens,
+          config: { saveAsDoc: t.saveAsDoc },
+        }),
+      });
+      if (res.ok) {
+        setAutoSaveStatus('saved');
+        setTimeout(() => setAutoSaveStatus('idle'), 2000);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setSaveError(data.error || 'Error guardando');
+        setAutoSaveStatus('idle');
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tools, toolDirty, selectedTool, workspaceType]);
+
+  // Reset dirty al cambiar de herramienta
+  useEffect(() => { setToolDirty(false); setAutoSaveStatus('idle'); }, [selectedTool]);
 
   const saveProvider = async () => {
     if (!selectedProvider) return;
@@ -521,7 +563,6 @@ export default function AIConfigPanel({ userId, workspaceType, inline, isOpen, o
     if (!selectedTool) return null;
     const t = tools.find(x => x.tool === selectedTool)!;
     const suggestedList = SUGGESTED_MODELS[t.provider] ?? [];
-    const enabledProviders = providers.filter(p => p.enabled || p.hasKey);
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
@@ -550,15 +591,10 @@ export default function AIConfigPanel({ userId, workspaceType, inline, isOpen, o
             onFocus={e => { e.target.style.borderColor = 'var(--primary)'; }}
             onBlur={e => { e.target.style.borderColor = 'var(--border)'; }}
           >
-            {(enabledProviders.length > 0 ? enabledProviders : providers).map(p => (
+            {providers.map(p => (
               <option key={p.provider} value={p.provider}>{getProviderLabel(p.provider)}</option>
             ))}
           </select>
-          {enabledProviders.length === 0 && (
-            <p style={{ fontSize: '11px', color: '#92400e', marginTop: '4px', margin: '4px 0 0 0' }}>
-              ⚠ Configura un proveedor en la pestaña Ajustes primero.
-            </p>
-          )}
         </div>
 
         {/* Modelo — dropdown de sugeridos + input manual */}
@@ -645,16 +681,13 @@ export default function AIConfigPanel({ userId, workspaceType, inline, isOpen, o
           </div>
         )}
 
-        <button onClick={saveTool} disabled={saving}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-            width: '100%', padding: '9px', borderRadius: '8px',
-            background: 'var(--primary)', color: 'white', border: 'none',
-            fontSize: '13px', fontWeight: '600', cursor: saving ? 'wait' : 'pointer', opacity: saving ? 0.7 : 1,
-          }}>
-          {saving ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Save size={13} />}
-          {saving ? 'Guardando...' : 'Guardar'}
-        </button>
+        {/* Indicador auto-guardado */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '11px',
+          color: autoSaveStatus === 'saved' ? '#16a34a' : 'var(--muted-foreground)', minHeight: '24px' }}>
+          {autoSaveStatus === 'saving' && <><Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> Guardando...</>}
+          {autoSaveStatus === 'saved' && <><CheckCircle2 size={11} /> Guardado</>}
+          {autoSaveStatus === 'idle' && toolDirty && <span style={{ color: 'var(--muted-foreground)' }}>Guardando pronto...</span>}
+        </div>
       </div>
     );
   };

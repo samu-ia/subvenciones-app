@@ -4,7 +4,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import { useEffect, useCallback } from 'react';
-import { Bold, Italic, List, ListOrdered, Link as LinkIcon, Heading1, Heading2, Heading3 } from 'lucide-react';
+import { Bold, Italic, List, ListOrdered, Link as LinkIcon, Heading1, Heading2, Heading3, Undo2, Redo2 } from 'lucide-react';
 
 interface RichTextEditorProps {
   content: string;
@@ -96,6 +96,9 @@ export default function RichTextEditor({
       editor?.chain().focus().setLink({ href: url }).run();
     }
   }, [editor]);
+
+  const undo = useCallback(() => { editor?.chain().focus().undo().run(); }, [editor]);
+  const redo = useCallback(() => { editor?.chain().focus().redo().run(); }, [editor]);
 
   if (!editor) {
     return <div>Cargando editor...</div>;
@@ -271,25 +274,35 @@ export default function RichTextEditor({
           <LinkIcon size={16} />
         </button>
 
-        {lastSaved && (
-          <div style={{ 
-            marginLeft: 'auto', 
-            fontSize: '12px', 
-            color: 'var(--muted-foreground)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}>
-            <div style={{
-              width: '6px',
-              height: '6px',
-              borderRadius: '50%',
-              backgroundColor: 'var(--success)',
-              animation: 'pulse 2s ease-in-out infinite'
-            }} />
-            Guardado {formatLastSaved(lastSaved)}
-          </div>
-        )}
+        <div style={{ width: '1px', height: '20px', backgroundColor: 'var(--border)', margin: '0 4px' }} />
+
+        <button
+          onClick={undo}
+          disabled={!editor.can().undo()}
+          style={{
+            padding: '6px 8px', borderRadius: '4px', border: 'none',
+            backgroundColor: 'transparent', cursor: editor.can().undo() ? 'pointer' : 'default',
+            display: 'flex', alignItems: 'center',
+            opacity: editor.can().undo() ? 1 : 0.35,
+          }}
+          title="Deshacer (Ctrl+Z)"
+        >
+          <Undo2 size={16} />
+        </button>
+
+        <button
+          onClick={redo}
+          disabled={!editor.can().redo()}
+          style={{
+            padding: '6px 8px', borderRadius: '4px', border: 'none',
+            backgroundColor: 'transparent', cursor: editor.can().redo() ? 'pointer' : 'default',
+            display: 'flex', alignItems: 'center',
+            opacity: editor.can().redo() ? 1 : 0.35,
+          }}
+          title="Rehacer (Ctrl+Y)"
+        >
+          <Redo2 size={16} />
+        </button>
       </div>
 
       {/* Editor Content */}
