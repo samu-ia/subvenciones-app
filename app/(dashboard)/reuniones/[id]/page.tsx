@@ -55,6 +55,7 @@ export default function ReunionNotebookPage() {
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [archivos, setArchivos] = useState<Archivo[]>([]);
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+  const [selectedArchivoId, setSelectedArchivoId] = useState<string | null>(null);
   const [docContent, setDocContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -240,6 +241,13 @@ export default function ReunionNotebookPage() {
     );
   };
 
+  // Cambiar tipo de documento
+  const handleChangeTipoDoc = async (docId: string, tipo: string) => {
+    const supabase = createClient();
+    await supabase.from('documentos').update({ tipo_documento: tipo }).eq('id', docId);
+    setDocumentos(docs => docs.map(d => d.id === docId ? { ...d, tipo_documento: tipo } : d));
+  };
+
   // Eliminar documento
   const handleDeleteDoc = async (docId: string) => {
     const supabase = createClient();
@@ -259,7 +267,12 @@ export default function ReunionNotebookPage() {
 
   const handleSelectDoc = (docId: string) => {
     const doc = documentos.find(d => d.id === docId);
-    if (doc) { setSelectedDocId(docId); setDocContent(doc.contenido || ''); }
+    if (doc) { setSelectedDocId(docId); setSelectedArchivoId(null); setDocContent(doc.contenido || ''); }
+  };
+
+  const handleSelectArchivo = (archivoId: string) => {
+    setSelectedArchivoId(archivoId);
+    setSelectedDocId(null);
   };
 
   const handleGenerarDocumento = async (nombre: string, contenido: string, promptUsado: string) => {
@@ -407,6 +420,8 @@ export default function ReunionNotebookPage() {
           contextoTipo="reunion"
           nif={reunion.cliente_nif ?? undefined}
           onArchivoUploaded={archivo => setArchivos(prev => [...prev, archivo])}
+          onSelectArchivo={handleSelectArchivo}
+          selectedArchivoId={selectedArchivoId}
           contextSelections={contextSelections}
           onContextModeChange={(docId, mode) => setContextSelections(prev => ({ ...prev, [docId]: mode }))}
           investigacionEstado={investigacionEstado}
@@ -427,21 +442,140 @@ export default function ReunionNotebookPage() {
         />
       }
       editor={
-        selectedDoc ? (
-          <RichTextEditor
-            content={docContent}
-            onChange={setDocContent}
-            onSave={saveDocument}
-            lastSaved={lastSaved}
-            placeholder="Empieza a escribir..."
-          />
-        ) : (
-          <div style={{ textAlign: 'center', padding: '60px 40px', color: 'var(--muted-foreground)' }}>
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>📄</div>
-            <div style={{ fontSize: '14px', fontWeight: '500' }}>Selecciona un documento para empezar</div>
-            <div style={{ fontSize: '12px', marginTop: '6px' }}>O crea uno nuevo desde el panel izquierdo</div>
-          </div>
-        )
+        (() => {
+          const selectedArchivo = archivos.find(a => a.id === selectedArchivoId);
+          if (selectedArchivo) {
+            // Visor de archivo adjunto
+            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+            const fileUrl = selectedArchivo.storage_path
+              ? `${supabaseUrl}/storage/v1/object/public/archivos/${selectedArchivo.storage_path}`
+              : null;
+            const isPdf = selectedArchivo.mime_type === 'application/pdf';
+            const isImage = selectedArchivo.mime_type?.startsWith('image/');
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                {/* Header archivo */}
+                <div style={{
+                  padding: '10px 20px', borderBottom: '1px solid var(--border)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  background: 'var(--background)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--foreground)' }}>
+                      📎 {selectedArchivo.nombre}
+                    </span>
+                    {selectedArchivo.tamano_bytes && (
+                      <span style={{ fontSize: '11px', color: 'var(--muted-foreground)' }}>
+                        {Math.round(selectedArchivo.tamano_bytes / 1024)} KB
+                      </span>
+                    )}
+                  </div>
+                  {fileUrl && (
+                    <a href={fileUrl} target="_blank" rel="noopener noreferrer"
+                      style={{
+                        fontSize: '12px', fontWeight: '600', color: 'var(--primary)',
+                        textDecoration: 'none', padding: '4px 10px', borderRadius: '6px',
+                        border: '1px solid var(--primary)',
+                      }}>
+                      ↓ Descargar
+                    </a>
+                  )}
+                </div>
+                {/* Visor */}
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                  {fileUrl && isPdf ? (
+                    <iframe src={fileUrl} style={{ width: '100%', height: '100%', border: 'none' }} />
+                  ) : fileUrl && isImage ? (
+                    <div style={{ padding: '24px', display: 'flex', justifyContent: 'center', overflowY: 'auto', height: '100%' }}>
+                      <img src={fileUrl} alt={selectedArchivo.nombre}
+                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '8px' }} />
+                    </div>
+                  ) : fileUrl ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px', color: 'var(--muted-foreground)' }}>
+                      <div style={{ fontSize: '48px' }}>📄</div>
+                      <div style={{ fontSize: '14px', fontWeight: '500' }}>{selectedArchivo.nombre}</div>
+                      <a href={fileUrl} target="_blank" rel="noopener noreferrer"
+                        style={{
+                          padding: '8px 20px', borderRadius: '8px',
+                          background: 'var(--primary)', color: 'white',
+                          textDecoration: 'none', fontSize: '13px', fontWeight: '600',
+                        }}>
+                        Abrir archivo
+                      </a>
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '60px', color: 'var(--muted-foreground)' }}>
+                      Archivo no disponible
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+          if (selectedDoc) {
+            const TIPOS_DOC = [
+              { value: 'nota', label: 'Nota' },
+              { value: 'notas', label: 'Notas' },
+              { value: 'preparacion', label: 'Preparación' },
+              { value: 'guion', label: 'Guión' },
+              { value: 'resumen', label: 'Resumen' },
+              { value: 'email', label: 'Email' },
+              { value: 'checklist', label: 'Checklist' },
+              { value: 'informe', label: 'Informe' },
+              { value: 'propuesta', label: 'Propuesta' },
+              { value: 'otro', label: 'Otro' },
+            ];
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                {/* Header doc con selector de tipo */}
+                <div style={{
+                  padding: '8px 20px', borderBottom: '1px solid var(--border)',
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  background: 'var(--background)',
+                }}>
+                  <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--foreground)', flex: 1,
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {selectedDoc.nombre}
+                  </span>
+                  <select
+                    value={selectedDoc.tipo_documento ?? 'nota'}
+                    onChange={e => handleChangeTipoDoc(selectedDoc.id, e.target.value)}
+                    style={{
+                      fontSize: '11px', padding: '3px 6px', borderRadius: '6px',
+                      border: '1px solid var(--border)', background: 'var(--background)',
+                      color: 'var(--muted-foreground)', cursor: 'pointer', flexShrink: 0,
+                    }}
+                  >
+                    {TIPOS_DOC.map(t => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </select>
+                  {lastSaved && (
+                    <span style={{ fontSize: '10px', color: 'var(--muted-foreground)', flexShrink: 0 }}>
+                      Guardado {lastSaved.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
+                </div>
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                  <RichTextEditor
+                    content={docContent}
+                    onChange={setDocContent}
+                    onSave={saveDocument}
+                    lastSaved={lastSaved}
+                    placeholder="Empieza a escribir..."
+                  />
+                </div>
+              </div>
+            );
+          }
+          return (
+            <div style={{ textAlign: 'center', padding: '60px 40px', color: 'var(--muted-foreground)' }}>
+              <div style={{ fontSize: '32px', marginBottom: '12px' }}>📄</div>
+              <div style={{ fontSize: '14px', fontWeight: '500' }}>Selecciona un documento para empezar</div>
+              <div style={{ fontSize: '12px', marginTop: '6px' }}>O crea uno nuevo desde el panel izquierdo</div>
+            </div>
+          );
+        })()
       }
       aiPanel={
         userId ? (

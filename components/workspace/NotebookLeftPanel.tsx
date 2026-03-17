@@ -51,6 +51,8 @@ interface NotebookLeftPanelProps {
   contextoTipo: 'reunion' | 'expediente';
   nif?: string;
   onArchivoUploaded: (archivo: Archivo) => void;
+  onSelectArchivo?: (archivoId: string) => void;
+  selectedArchivoId?: string | null;
 
   // RAG context
   contextSelections?: Record<string, ContextMode>;
@@ -73,7 +75,7 @@ export default function NotebookLeftPanel({
   documentos, archivos,
   selectedDocId,
   onSelectDoc, onCreateDoc, onRenameDoc, onDeleteDoc,
-  contextoId, contextoTipo, nif, onArchivoUploaded,
+  contextoId, contextoTipo, nif, onArchivoUploaded, onSelectArchivo, selectedArchivoId,
   contextSelections, onContextModeChange,
   investigacionEstado,
   subvenciones, subvencionActivaId,
@@ -407,7 +409,18 @@ export default function NotebookLeftPanel({
                   Archivos adjuntos
                 </div>
                 {archivos.map(archivo => (
-                  <div key={archivo.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', borderRadius: '6px' }}>
+                  <div key={archivo.id}
+                    onClick={() => onSelectArchivo?.(archivo.id)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', borderRadius: '6px',
+                      cursor: onSelectArchivo ? 'pointer' : 'default',
+                      background: selectedArchivoId === archivo.id ? 'color-mix(in srgb, var(--primary) 8%, var(--background))' : 'none',
+                      border: selectedArchivoId === archivo.id ? '1px solid color-mix(in srgb, var(--primary) 25%, transparent)' : '1px solid transparent',
+                      transition: 'background 0.1s',
+                    }}
+                    onMouseEnter={e => { if (selectedArchivoId !== archivo.id) e.currentTarget.style.background = 'var(--accent)'; }}
+                    onMouseLeave={e => { if (selectedArchivoId !== archivo.id) e.currentTarget.style.background = 'none'; }}
+                  >
                     <FileText size={12} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
                     <span style={{ fontSize: '12px', color: 'var(--muted-foreground)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {archivo.nombre}
