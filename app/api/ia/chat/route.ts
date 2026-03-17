@@ -211,7 +211,9 @@ Estás ayudando con una ${tipo}.
     contexto.archivos.forEach((archivo: any) => {
       prompt += `- ${archivo.nombre}\n`;
       if (archivo.texto_extraido) {
-        prompt += `  Extracto: ${archivo.texto_extraido.substring(0, 200)}...\n`;
+        prompt += `  Contenido:\n${archivo.texto_extraido}\n`;
+      } else {
+        prompt += `  (sin texto extraído aún)\n`;
       }
     });
   }

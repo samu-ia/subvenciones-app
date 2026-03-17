@@ -117,7 +117,17 @@ export default function NotebookLeftPanel({
       else insertData.expediente_id = contextoId;
       const { data: archivoRec, error: dbErr } = await supabase.from('archivos').insert(insertData).select().single();
       if (dbErr) throw dbErr;
-      if (archivoRec) onArchivoUploaded(archivoRec);
+      if (archivoRec) {
+        onArchivoUploaded(archivoRec);
+        // Extraer texto en background (PDF/texto)
+        if (file.type.includes('pdf') || file.type.includes('text')) {
+          fetch('/api/archivos/extract-text', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ archivoId: archivoRec.id }),
+          }).catch(() => {}); // silencioso, no bloquea la UI
+        }
+      }
     } catch (err) {
       console.error('Upload error:', err);
       const msg = err instanceof Error ? err.message : String(err);

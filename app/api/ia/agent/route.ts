@@ -231,10 +231,22 @@ export async function POST(request: NextRequest) {
 
     // Construir system prompt con lista de documentos actuales
     const docsIndex = documentos.length > 0
-      ? `\n\n## DOCUMENTOS EXISTENTES EN EL NOTEBOOK\n${documentos.map((d, i) => `${i + 1}. [ID: ${d.id}] "${d.nombre}" (tipo: ${d.tipo_documento ?? 'nota'}${d.grupo ? `, carpeta: ${d.grupo}` : ''})`).join('\n')}`
+      ? `\n\n## DOCUMENTOS EXISTENTES EN EL NOTEBOOK\n${documentos.map((d, i) => `${i + 1}. [ID: ${d.id}] "${d.nombre}" (tipo: ${d.tipo_documento ?? 'nota'})`).join('\n')}`
       : '\n\n## DOCUMENTOS EXISTENTES EN EL NOTEBOOK\n(El notebook está vacío)';
 
-    const systemPrompt = AGENT_SYSTEM_PROMPT + docsIndex + (context ? `\n\n## CONTEXTO DE DOCUMENTOS\n${context}` : '');
+    // Leer archivos adjuntos con texto extraído
+    const { data: archivosData } = await supabase
+      .from('archivos')
+      .select('nombre, texto_extraido, mime_type')
+      .eq(contextoTipo === 'reunion' ? 'reunion_id' : 'expediente_id', contextoId)
+      .not('texto_extraido', 'is', null);
+
+    const archivosContext = archivosData && archivosData.length > 0
+      ? `\n\n## ARCHIVOS ADJUNTOS (contenido extraído)\n` +
+        archivosData.map(a => `### 📎 ${a.nombre}\n${a.texto_extraido}`).join('\n\n')
+      : '';
+
+    const systemPrompt = AGENT_SYSTEM_PROMPT + docsIndex + archivosContext + (context ? `\n\n## CONTEXTO DE DOCUMENTOS\n${context}` : '');
 
     // Añadir hint si el mensaje parece pedir generación de contenido
     const contentKeywords = /redact|escrib|generat|prepar|crea|elabor|haz|hace|desarrolla|hace\s+un|resume|resume|acta|informe|nota|document/i;

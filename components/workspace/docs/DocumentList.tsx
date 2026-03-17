@@ -173,6 +173,14 @@ export default function DocumentList({
 
         if (archivoRow) {
           onArchivoUploaded?.(archivoRow);
+          // Extraer texto en background
+          if (file.type.includes('pdf') || file.type.includes('text')) {
+            fetch('/api/archivos/extract-text', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ archivoId: archivoRow.id }),
+            }).catch(() => {});
+          }
         }
       } catch (err) {
         console.error('Upload error:', err);
