@@ -4,7 +4,7 @@ import { useState } from 'react';
 import {
   Building2, MapPin, Users, BarChart3, Hash, FileText, Bot,
   Upload, Plus, MoreVertical, Pencil, Trash2, Loader2,
-  ChevronDown, ChevronRight,
+  ChevronDown, ChevronRight, Brain,
 } from 'lucide-react';
 import type {
   SubvencionDetectada, ClienteSnapshot, EstadoExpediente,
@@ -31,6 +31,7 @@ interface Archivo {
   mime_type?: string | null;
   tamano_bytes?: number;
   storage_path?: string;
+  texto_extraido?: string | null;
 }
 
 interface NotebookLeftPanelProps {
@@ -88,6 +89,25 @@ export default function NotebookLeftPanel({
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [processingArchivoId, setProcessingArchivoId] = useState<string | null>(null);
+  const [processedIds, setProcessedIds] = useState<Set<string>>(new Set());
+
+  const processArchivo = async (e: React.MouseEvent, archivoId: string) => {
+    e.stopPropagation();
+    setProcessingArchivoId(archivoId);
+    try {
+      await fetch('/api/archivos/extract-text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archivoId }),
+      });
+      setProcessedIds(prev => new Set([...prev, archivoId]));
+    } catch {
+      // silencioso
+    } finally {
+      setProcessingArchivoId(null);
+    }
+  };
   const [creatingDoc, setCreatingDoc] = useState(false);
   const [newDocName, setNewDocName] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -426,37 +446,63 @@ export default function NotebookLeftPanel({
                 <div style={{ fontSize: '10px', fontWeight: '600', color: 'var(--muted-foreground)', letterSpacing: '0.4px', textTransform: 'uppercase', padding: '2px 0' }}>
                   Archivos adjuntos
                 </div>
-                {archivos.map(archivo => (
-                  <div key={archivo.id}
-                    onClick={() => onSelectArchivo?.(archivo.id)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', borderRadius: '6px',
-                      cursor: onSelectArchivo ? 'pointer' : 'default',
-                      background: selectedArchivoId === archivo.id ? 'color-mix(in srgb, var(--primary) 8%, var(--background))' : 'none',
-                      border: selectedArchivoId === archivo.id ? '1px solid color-mix(in srgb, var(--primary) 25%, transparent)' : '1px solid transparent',
-                      transition: 'background 0.1s',
-                    }}
-                    onMouseEnter={e => { if (selectedArchivoId !== archivo.id) e.currentTarget.style.background = 'var(--accent)'; }}
-                    onMouseLeave={e => { if (selectedArchivoId !== archivo.id) e.currentTarget.style.background = 'none'; }}
-                  >
-                    <FileText size={12} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
-                    <span style={{ fontSize: '12px', color: 'var(--muted-foreground)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {archivo.nombre}
-                    </span>
-                    {onContextModeChange && contextSelections && (
-                      <ContextToggle
-                        mode={contextSelections[archivo.id] ?? 'off'}
-                        onChange={mode => onContextModeChange(archivo.id, mode)}
-                        className="rag-toggle"
-                      />
-                    )}
-                    {archivo.tamano_bytes && (
-                      <span style={{ fontSize: '10px', color: 'var(--muted-foreground)', flexShrink: 0 }}>
-                        {Math.round(archivo.tamano_bytes / 1024)}K
+                {archivos.map(archivo => {
+                  const isPdf = archivo.mime_type?.includes('pdf') || archivo.mime_type?.includes('text');
+                  const yaProcessado = archivo.texto_extraido || processedIds.has(archivo.id);
+                  const isProcessing = processingArchivoId === archivo.id;
+                  return (
+                    <div key={archivo.id}
+                      onClick={() => onSelectArchivo?.(archivo.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', borderRadius: '6px',
+                        cursor: onSelectArchivo ? 'pointer' : 'default',
+                        background: selectedArchivoId === archivo.id ? 'color-mix(in srgb, var(--primary) 8%, var(--background))' : 'none',
+                        border: selectedArchivoId === archivo.id ? '1px solid color-mix(in srgb, var(--primary) 25%, transparent)' : '1px solid transparent',
+                        transition: 'background 0.1s',
+                      }}
+                      onMouseEnter={e => { if (selectedArchivoId !== archivo.id) e.currentTarget.style.background = 'var(--accent)'; }}
+                      onMouseLeave={e => { if (selectedArchivoId !== archivo.id) e.currentTarget.style.background = 'none'; }}
+                    >
+                      <FileText size={12} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
+                      <span style={{ fontSize: '12px', color: 'var(--muted-foreground)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {archivo.nombre}
                       </span>
-                    )}
-                  </div>
-                ))}
+                      {/* Botón procesar para IA */}
+                      {isPdf && !yaProcessado && (
+                        <button
+                          onClick={e => processArchivo(e, archivo.id)}
+                          disabled={isProcessing}
+                          title="Procesar para IA (extraer texto)"
+                          style={{
+                            flexShrink: 0, background: 'none', border: 'none', cursor: isProcessing ? 'wait' : 'pointer',
+                            padding: '2px', color: '#6366f1', display: 'flex', alignItems: 'center',
+                          }}
+                        >
+                          {isProcessing
+                            ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} />
+                            : <Brain size={11} />}
+                        </button>
+                      )}
+                      {yaProcessado && isPdf && (
+                        <span title="Texto extraído — la IA puede leerlo" style={{ display: 'flex', flexShrink: 0 }}>
+                          <Brain size={11} style={{ color: '#22c55e', opacity: 0.8 }} />
+                        </span>
+                      )}
+                      {onContextModeChange && contextSelections && (
+                        <ContextToggle
+                          mode={contextSelections[archivo.id] ?? 'off'}
+                          onChange={mode => onContextModeChange(archivo.id, mode)}
+                          className="rag-toggle"
+                        />
+                      )}
+                      {archivo.tamano_bytes && (
+                        <span style={{ fontSize: '10px', color: 'var(--muted-foreground)', flexShrink: 0 }}>
+                          {Math.round(archivo.tamano_bytes / 1024)}K
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </>
             )}
           </div>
