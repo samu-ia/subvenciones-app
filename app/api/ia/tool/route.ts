@@ -67,7 +67,14 @@ export async function POST(request: NextRequest) {
 
     if (!providerConfig || !providerConfig.enabled) {
       return NextResponse.json(
-        { error: `El proveedor ${toolConfig.provider} no está configurado` },
+        { error: `No hay API key configurada para ${toolConfig.provider}. Ve a Ajustes para añadirla.`, error_code: 'no_provider', provider: toolConfig.provider },
+        { status: 400 }
+      );
+    }
+
+    if (!providerConfig.api_key) {
+      return NextResponse.json(
+        { error: `La API key de ${toolConfig.provider} está vacía. Ve a Ajustes para configurarla.`, error_code: 'no_api_key', provider: toolConfig.provider },
         { status: 400 }
       );
     }
@@ -133,14 +140,29 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error en /api/ia/tool:', error);
-    
     const executionTime = Date.now() - startTime;
-    
-    // Log error de ejecución
+
+    let errorMessage = 'Error ejecutando la herramienta';
+    let errorCode = 'unknown';
+    if (error instanceof Error) errorMessage = error.message;
+    const anyErr = error as any;
+    if (anyErr?.response?.data?.error?.message) {
+      errorMessage = anyErr.response.data.error.message;
+      errorCode = anyErr.response.data.error.code || 'api_error';
+    } else if (anyErr?.response?.status === 401) {
+      errorMessage = 'API key inválida o sin permisos. Revisa los Ajustes.';
+      errorCode = 'invalid_api_key';
+    } else if (anyErr?.response?.status === 429) {
+      errorMessage = 'Límite de peticiones alcanzado. Espera un momento o revisa tu plan.';
+      errorCode = 'rate_limit';
+    } else if (anyErr?.response?.status === 402) {
+      errorMessage = 'Sin crédito en la cuenta del proveedor. Revisa tu saldo.';
+      errorCode = 'insufficient_quota';
+    }
+
     try {
       const supabase = await createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      
       await logToolExecution({
         userId: user?.id || 'unknown',
         workspaceId: 'unknown',
@@ -151,7 +173,7 @@ export async function POST(request: NextRequest) {
         inputText: '',
         outputText: '',
         success: false,
-        errorMessage: error instanceof Error ? error.message : 'Error desconocido',
+        errorMessage,
         tokensUsed: 0,
         executionTimeMs: executionTime
       });
@@ -160,7 +182,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Error ejecutando la herramienta' },
+      { error: errorMessage, error_code: errorCode },
       { status: 500 }
     );
   }

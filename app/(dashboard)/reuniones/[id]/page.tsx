@@ -14,6 +14,7 @@ import type {
   SubvencionDetectada, EstadoInvestigacion, EstadoExpediente,
   ClienteSnapshot,
 } from '@/lib/types/notebook';
+import type { ContextMode } from '@/components/workspace/ContextToggle';
 
 interface Reunion {
   id: string;
@@ -63,6 +64,7 @@ export default function ReunionNotebookPage() {
   const [subvencionActivaId, setSubvencionActivaId] = useState<string | null>(null);
   const [investigacionEstado, setInvestigacionEstado] = useState<EstadoInvestigacion>('pendiente');
   const [investigacionError, setInvestigacionError] = useState<string | null>(null);
+  const [contextSelections, setContextSelections] = useState<Record<string, ContextMode>>({});
 
   const selectedDoc = documentos.find(d => d.id === selectedDocId);
 
@@ -407,6 +409,8 @@ export default function ReunionNotebookPage() {
           contextoTipo="reunion"
           nif={reunion.cliente_nif ?? undefined}
           onArchivoUploaded={archivo => setArchivos(prev => [...prev, archivo])}
+          contextSelections={contextSelections}
+          onContextModeChange={(docId, mode) => setContextSelections(prev => ({ ...prev, [docId]: mode }))}
           investigacionEstado={investigacionEstado}
           subvenciones={subvenciones}
           subvencionActivaId={subvencionActivaId}
@@ -448,6 +452,7 @@ export default function ReunionNotebookPage() {
             contextoId={reunionId}
             contextoTipo="reunion"
             documentos={documentos}
+            contextSelections={contextSelections}
             clienteNombre={clienteSnapshot.nombre}
             onGenerarDocumento={handleGenerarDocumento}
             selectedDocId={selectedDocId}

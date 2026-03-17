@@ -11,6 +11,7 @@ import type {
   EstadoInvestigacion,
 } from '@/lib/types/notebook';
 import SubvencionFolder from './SubvencionFolder';
+import { ContextToggle, type ContextMode } from './ContextToggle';
 import { createClient } from '@/lib/supabase/client';
 import { useRef } from 'react';
 
@@ -51,6 +52,10 @@ interface NotebookLeftPanelProps {
   nif?: string;
   onArchivoUploaded: (archivo: Archivo) => void;
 
+  // RAG context
+  contextSelections?: Record<string, ContextMode>;
+  onContextModeChange?: (docId: string, mode: ContextMode) => void;
+
   // Subvenciones
   investigacionEstado: EstadoInvestigacion;
   subvenciones: SubvencionDetectada[];
@@ -69,6 +74,7 @@ export default function NotebookLeftPanel({
   selectedDocId,
   onSelectDoc, onCreateDoc, onRenameDoc, onDeleteDoc,
   contextoId, contextoTipo, nif, onArchivoUploaded,
+  contextSelections, onContextModeChange,
   investigacionEstado,
   subvenciones, subvencionActivaId,
   onSelectSubvencion, onChecklistItem, onChangeEstadoSubvencion, onDeleteSubvencion,
@@ -330,7 +336,7 @@ export default function NotebookLeftPanel({
                   <div
                     style={{
                       display: 'flex', alignItems: 'center', gap: '6px',
-                      padding: '6px 8px', borderRadius: '7px',
+                      padding: '4px 8px', borderRadius: '7px',
                       background: selectedDocId === doc.id ? 'color-mix(in srgb, var(--primary) 8%, var(--background))' : 'none',
                       border: selectedDocId === doc.id ? '1px solid color-mix(in srgb, var(--primary) 25%, transparent)' : '1px solid transparent',
                       cursor: 'pointer',
@@ -350,6 +356,16 @@ export default function NotebookLeftPanel({
                     }}>
                       {doc.nombre}
                     </span>
+                    {/* RAG context toggle */}
+                    {onContextModeChange && contextSelections && (
+                      <div onClick={e => e.stopPropagation()}>
+                        <ContextToggle
+                          mode={contextSelections[doc.id] ?? 'off'}
+                          onChange={mode => onContextModeChange(doc.id, mode)}
+                          className="rag-toggle"
+                        />
+                      </div>
+                    )}
                     {/* Menú */}
                     <button
                       onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId === doc.id ? null : doc.id); }}
@@ -393,13 +409,20 @@ export default function NotebookLeftPanel({
                   Archivos adjuntos
                 </div>
                 {archivos.map(archivo => (
-                  <div key={archivo.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 8px', borderRadius: '6px' }}>
+                  <div key={archivo.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', borderRadius: '6px' }}>
                     <FileText size={12} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
                     <span style={{ fontSize: '12px', color: 'var(--muted-foreground)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {archivo.nombre}
                     </span>
+                    {onContextModeChange && contextSelections && (
+                      <ContextToggle
+                        mode={contextSelections[archivo.id] ?? 'off'}
+                        onChange={mode => onContextModeChange(archivo.id, mode)}
+                        className="rag-toggle"
+                      />
+                    )}
                     {archivo.tamano_bytes && (
-                      <span style={{ fontSize: '10px', color: 'var(--muted-foreground)' }}>
+                      <span style={{ fontSize: '10px', color: 'var(--muted-foreground)', flexShrink: 0 }}>
                         {Math.round(archivo.tamano_bytes / 1024)}K
                       </span>
                     )}
@@ -414,6 +437,8 @@ export default function NotebookLeftPanel({
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         div:hover .menu-btn { opacity: 1 !important; }
+        .rag-toggle { opacity: 0.3; transition: opacity 0.15s; }
+        div:hover .rag-toggle { opacity: 1 !important; }
       `}</style>
     </div>
   );

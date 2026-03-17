@@ -82,6 +82,7 @@ export default function AIPanelV2({
   const [activeTab, setActiveTab] = useState<Tab>('chat');
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [loading, setLoading] = useState(false);
+  const [lastError, setLastError] = useState<{ message: string; code?: string } | null>(null);
   const [saveModal, setSaveModal] = useState<SaveModalState>({
     open: false, messageId: '', content: '', tool: 'summary', titulo: ''
   });
@@ -202,8 +203,18 @@ export default function AIPanelV2({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tool, context: contexto, contextoId, contextoTipo }),
       });
-      if (!response.ok) throw new Error('Error en la respuesta');
       const data = await response.json();
+      if (!response.ok) {
+        const errMsg = data.error || 'Error ejecutando la herramienta';
+        setLastError({ message: errMsg, code: data.error_code });
+        setMensajes(prev => [...prev, {
+          id: (Date.now() + 1).toString(), role: 'assistant',
+          content: `⚠️ ${errMsg}`,
+          timestamp: new Date(),
+        }]);
+        return;
+      }
+      setLastError(null);
       const msgId = Date.now().toString();
 
       const toolSourceRefs: SourceRef[] = documentos
@@ -221,9 +232,12 @@ export default function AIPanelV2({
         setSaveModal({ open: true, messageId: msgId, content: data.response, tool, titulo: `${TOOL_META[tool].label} — ${fechaHoy}` });
       }
     } catch {
+      const msg = 'Error de red. Comprueba tu conexión e inténtalo de nuevo.';
+      setLastError({ message: msg, code: 'network_error' });
       setMensajes(prev => [...prev, {
         id: (Date.now() + 1).toString(), role: 'assistant',
-        content: 'Error al ejecutar la herramienta.', timestamp: new Date(),
+        content: `⚠️ ${msg}`,
+        timestamp: new Date(),
       }]);
     } finally {
       setLoading(false);
@@ -314,7 +328,7 @@ export default function AIPanelV2({
           </div>
         </div>
 
-        {/* ── Feedback ────────────────────────────────────────────────── */}
+        {/* ── Feedback ──────────────────────────────────────────── */}
         {savedFeedback && (
           <div style={{
             flexShrink: 0, padding: '7px 16px', background: '#f0fdf4',
@@ -322,6 +336,39 @@ export default function AIPanelV2({
           }}>
             <CheckCircle2 size={13} style={{ color: '#16a34a' }} />
             <span style={{ fontSize: '12px', color: '#16a34a' }}>{savedFeedback}</span>
+          </div>
+        )}
+
+        {/* ── Error banner ────────────────────────────────────── */}
+        {lastError && (
+          <div style={{
+            flexShrink: 0, padding: '8px 14px',
+            background: 'color-mix(in srgb, #ef4444 8%, transparent)',
+            borderBottom: '1px solid color-mix(in srgb, #ef4444 20%, transparent)',
+            display: 'flex', alignItems: 'flex-start', gap: '8px',
+          }}>
+            <AlertCircle size={13} style={{ color: '#dc2626', flexShrink: 0, marginTop: '1px' }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: '11.5px', color: '#991b1b', margin: '0 0 4px 0', lineHeight: '1.4' }}>
+                {lastError.message}
+              </p>
+              {(lastError.code === 'no_provider' || lastError.code === 'no_api_key' || lastError.code === 'invalid_api_key') && (
+                <button
+                  onClick={() => { setActiveTab('settings'); setLastError(null); }}
+                  style={{
+                    fontSize: '11px', fontWeight: '600', color: '#dc2626',
+                    background: 'none', border: '1px solid color-mix(in srgb, #ef4444 35%, transparent)',
+                    borderRadius: '5px', padding: '2px 8px', cursor: 'pointer',
+                  }}
+                >
+                  Ir a Ajustes →
+                </button>
+              )}
+            </div>
+            <button onClick={() => setLastError(null)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', padding: '1px', flexShrink: 0 }}>
+              <X size={12} />
+            </button>
           </div>
         )}
 
