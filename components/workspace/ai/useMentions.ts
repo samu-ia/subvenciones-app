@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, type Dispatch, type SetStateAction } from 'react';
 
 export interface DocRef {
   id: string;
@@ -12,6 +12,8 @@ export interface DocRef {
 export interface MentionState {
   /** Texto actual del input incluyendo los @tokens */
   inputText: string;
+  /** Setter directo del texto del input */
+  setInputText: Dispatch<SetStateAction<string>>;
   /** Docs mencionados confirmados (sin duplicados) */
   mentions: DocRef[];
   /** Si el dropdown de sugerencias está abierto */
@@ -185,6 +187,7 @@ export function useMentions({ documentos, onSubmit }: UseMentionsOptions) {
 
   return {
     inputText,
+    setInputText,
     mentions,
     suggestionsOpen,
     suggestions,

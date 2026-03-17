@@ -136,7 +136,9 @@ async function executeActions(
         if (error) throw error;
         results.push({ action, success: true, documentId: newDoc.id, documentName: newDoc.nombre });
       } catch (err) {
-        results.push({ action, success: false, error: err instanceof Error ? err.message : String(err) });
+        console.error('[agent] create_document error:', JSON.stringify(err));
+        const msg = err instanceof Error ? err.message : (err as any)?.message ?? JSON.stringify(err);
+        results.push({ action, success: false, error: msg });
       }
       continue;
     }
@@ -175,7 +177,9 @@ async function executeActions(
         if (error) throw error;
         results.push({ action, success: true, documentId: docId, documentName: action.nombre });
       } catch (err) {
-        results.push({ action, success: false, error: err instanceof Error ? err.message : String(err) });
+        console.error('[agent] edit_document error:', JSON.stringify(err));
+        const msg = err instanceof Error ? err.message : (err as any)?.message ?? JSON.stringify(err);
+        results.push({ action, success: false, error: msg });
       }
       continue;
     }

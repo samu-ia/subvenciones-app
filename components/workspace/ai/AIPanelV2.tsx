@@ -94,7 +94,7 @@ export default function AIPanelV2({
   const [savingDoc, setSavingDoc] = useState(false);
   const [savedFeedback, setSavedFeedback] = useState<string | null>(null);
   const [executingTool, setExecutingTool] = useState<AITool | null>(null);
-  const [agentMode, setAgentMode] = useState(false);
+  const [agentMode, setAgentMode] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const tituloRef = useRef<HTMLInputElement>(null);
 
@@ -485,22 +485,57 @@ export default function AIPanelV2({
           <>
             <div style={{ flex: 1, overflowY: 'auto', padding: '14px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {mensajes.length === 0 ? (
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px 20px' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '32px 16px' }}>
                   <div style={{
                     width: '38px', height: '38px', borderRadius: '50%',
-                    background: 'color-mix(in srgb, var(--primary) 10%, transparent)',
+                    background: agentMode
+                      ? 'color-mix(in srgb, #6366f1 12%, transparent)'
+                      : 'color-mix(in srgb, var(--primary) 10%, transparent)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px',
                   }}>
-                    <Sparkles size={16} style={{ color: 'var(--primary)', opacity: 0.7 }} />
-                  </div>
-                  <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--foreground)', margin: '0 0 6px 0' }}>
-                    Notebook contextual
-                  </p>
-                  <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', lineHeight: '1.6', maxWidth: '210px', margin: 0 }}>
                     {agentMode
-                      ? <>Modo <strong>Agente</strong> activo. Pídele que organice, cree o rellene documentos del {contextoTipo}.</>
-                      : <>Pregunta sobre este {contextoTipo}. Escribe <strong>@</strong> para citar un documento.</>}
+                      ? <Zap size={16} style={{ color: '#6366f1', fill: '#6366f1' }} />
+                      : <Sparkles size={16} style={{ color: 'var(--primary)', opacity: 0.7 }} />}
+                  </div>
+                  <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--foreground)', margin: '0 0 5px 0' }}>
+                    {agentMode ? 'Agente IA' : 'Notebook contextual'}
                   </p>
+                  <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', lineHeight: '1.6', maxWidth: '210px', margin: '0 0 16px 0' }}>
+                    {agentMode
+                      ? <>Puede <strong>crear y editar documentos</strong> directamente en el notebook.<br />Escríbele lo que necesitas.</>
+                      : <>Pregunta sobre este {contextoTipo}. Escribe <strong>@</strong> para citar un documento.</>
+                    }
+                  </p>
+                  {agentMode && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%', maxWidth: '220px' }}>
+                      {[
+                        { emoji: '📝', label: 'Crear notas de reunión' },
+                        { emoji: '✅', label: 'Hacer checklist de tareas' },
+                        { emoji: '📄', label: 'Redactar informe' },
+                        { emoji: '📋', label: 'Preparar acta' },
+                      ].map(({ emoji, label }) => (
+                        <button
+                          key={label}
+                          onClick={() => {
+                            mentionsHook.setInputText(label);
+                            setTimeout(() => mentionsHook.handleSubmit(), 50);
+                          }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            padding: '8px 12px', borderRadius: '8px',
+                            border: '1px solid var(--border)', background: 'var(--background)',
+                            cursor: 'pointer', fontSize: '12px', color: 'var(--foreground)',
+                            textAlign: 'left', transition: 'background 0.12s',
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'var(--background)'; }}
+                        >
+                          <span style={{ fontSize: '15px' }}>{emoji}</span>
+                          <span>{label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 mensajes.map(msg => (
