@@ -96,6 +96,44 @@ export default function ReunionNotebookPage() {
     return () => window.removeEventListener('doc-created', handler);
   }, []);
 
+  // Escuchar acciones del agente (crear/editar documentos)
+  useEffect(() => {
+    const handler = async (e: Event) => {
+      const detail = (e as CustomEvent).detail as {
+        type: string;
+        documentId: string;
+        documentName?: string;
+        contenido?: string;
+      };
+      if (detail.type === 'create_document') {
+        const supabase = createClient();
+        const { data: newDoc } = await supabase
+          .from('documentos')
+          .select('*')
+          .eq('id', detail.documentId)
+          .single();
+        if (newDoc) {
+          setDocumentos(prev => {
+            if (prev.find(d => d.id === newDoc.id)) return prev;
+            return [...prev, newDoc];
+          });
+          setSelectedDocId(newDoc.id);
+          setDocContent(newDoc.contenido || '');
+        }
+      } else if (detail.type === 'edit_document') {
+        setDocumentos(prev => prev.map(d =>
+          d.id === detail.documentId ? { ...d, contenido: detail.contenido ?? d.contenido } : d
+        ));
+        setSelectedDocId(id => {
+          if (id === detail.documentId) setDocContent(detail.contenido ?? '');
+          return id;
+        });
+      }
+    };
+    window.addEventListener('agent-doc-action', handler);
+    return () => window.removeEventListener('agent-doc-action', handler);
+  }, []);
+
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => setUserId(user?.id ?? null));

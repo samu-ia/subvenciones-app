@@ -4,12 +4,14 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   Send, Sparkles, FileText, Save, FilePlus, Replace,
   CheckCircle2, X, AtSign, BookOpen, ExternalLink, AlertCircle,
-  Loader2, ChevronDown, ChevronUp,
+  Loader2, ChevronDown, ChevronUp, Zap,
 } from 'lucide-react';
 import { useMentions } from './useMentions';
 import AIConfigPanel from './AIConfigPanel';
+import AgentActionFeed from './AgentActionFeed';
 import type { ContextMode } from './ContextToggle';
 import type { AITool } from '@/lib/types/ai-config';
+import type { AgentActionResult } from '@/lib/types/agent-actions';
 
 // ─── Metadata de herramientas ───────────────────────────────────────────────
 const SAVEABLE_TOOLS: AITool[] = ['summary', 'missing-info', 'checklist', 'email', 'deep-search'];
@@ -40,6 +42,9 @@ interface Mensaje {
   tool?: AITool;
   timestamp: Date;
   saved?: boolean;
+  /** Acciones ejecutadas por el agente (solo en modo agente) */
+  agentActions?: AgentActionResult[];
+  isAgentMessage?: boolean;
 }
 
 interface SaveModalState {
@@ -89,6 +94,7 @@ export default function AIPanelV2({
   const [savingDoc, setSavingDoc] = useState(false);
   const [savedFeedback, setSavedFeedback] = useState<string | null>(null);
   const [executingTool, setExecutingTool] = useState<AITool | null>(null);
+  const [agentMode, setAgentMode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const tituloRef = useRef<HTMLInputElement>(null);
 
@@ -197,7 +203,80 @@ export default function AIPanelV2({
       setLoading(false);
     }
   };
-  submitRef.current = submitMensaje;
+
+  // ─── Enviar mensaje al AGENTE ────────────────────────────────────────────
+  const submitAgente = async (text: string, mentionedDocs: DocRefMin[]) => {
+    if (loading) return;
+    const validMentions = mentionedDocs.filter(m => documentos.some(d => d.id === m.id));
+
+    setMensajes(prev => [...prev, {
+      id: Date.now().toString(), role: 'user', content: text,
+      mentionedDocIds: validMentions.map(m => m.id), timestamp: new Date(),
+    }]);
+    setLoading(true);
+
+    try {
+      const contexto = prepareContext(validMentions);
+      const response = await fetch('/api/ia/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: text,
+          context: contexto,
+          contextoId,
+          contextoTipo,
+          documentos: documentos.map(d => ({ id: d.id, nombre: d.nombre })),
+          history: mensajes.slice(-6),
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setLastError({ message: data.error || `Error ${response.status}`, code: data.error_code });
+        setMensajes(prev => [...prev, {
+          id: (Date.now() + 1).toString(), role: 'assistant',
+          content: `⚠️ ${data.error || 'Error al procesar el mensaje'}`,
+          timestamp: new Date(),
+        }]);
+        return;
+      }
+      setLastError(null);
+
+      // Notificar al workspace de los docs creados/editados para que actualice la lista
+      data.actions
+        .filter((r: AgentActionResult) => r.success && (r.action.type === 'create_document' || r.action.type === 'edit_document') && r.documentId)
+        .forEach((r: AgentActionResult) => {
+          window.dispatchEvent(new CustomEvent('agent-doc-action', {
+            detail: {
+              type: r.action.type,
+              documentId: r.documentId,
+              documentName: r.documentName,
+              contenido: (r.action as any).contenido,
+            },
+          }));
+        });
+
+      setMensajes(prev => [...prev, {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: data.chatMessage,
+        tool: 'notebook',
+        timestamp: new Date(),
+        isAgentMessage: true,
+        agentActions: data.actions,
+      }]);
+    } catch {
+      setMensajes(prev => [...prev, {
+        id: (Date.now() + 1).toString(), role: 'assistant',
+        content: 'Error al procesar el mensaje. Por favor inténtalo de nuevo.',
+        timestamp: new Date(),
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Asignar la función correcta al ref según el modo activo
+  submitRef.current = agentMode ? submitAgente : submitMensaje;
 
   // ─── Ejecutar herramienta ────────────────────────────────────────────────
   const ejecutarHerramienta = async (tool: AITool) => {
@@ -314,7 +393,27 @@ export default function AIPanelV2({
                 </span>
               )}
             </div>
-            {collapseButton}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {/* Toggle Modo Agente */}
+              <button
+                onClick={() => setAgentMode(v => !v)}
+                title={agentMode ? 'Modo Agente activo — click para desactivar' : 'Activar Modo Agente'}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  padding: '3px 8px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                  fontSize: 11, fontWeight: 600,
+                  background: agentMode
+                    ? 'color-mix(in srgb, #6366f1 15%, transparent)'
+                    : 'var(--muted)',
+                  color: agentMode ? '#6366f1' : 'var(--muted-foreground)',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <Zap size={11} style={{ fill: agentMode ? '#6366f1' : 'none', stroke: agentMode ? '#6366f1' : 'currentColor' }} />
+                Agente
+              </button>
+              {collapseButton}
+            </div>
           </div>
 
           {/* Tabs */}
@@ -398,7 +497,9 @@ export default function AIPanelV2({
                     Notebook contextual
                   </p>
                   <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', lineHeight: '1.6', maxWidth: '210px', margin: 0 }}>
-                    Pregunta sobre este {contextoTipo}. Escribe <strong>@</strong> para citar un documento.
+                    {agentMode
+                      ? <>Modo <strong>Agente</strong> activo. Pídele que organice, cree o rellene documentos del {contextoTipo}.</>
+                      : <>Pregunta sobre este {contextoTipo}. Escribe <strong>@</strong> para citar un documento.</>}
                   </p>
                 </div>
               ) : (
@@ -421,7 +522,7 @@ export default function AIPanelV2({
                   }}>
                     <Loader2 size={12} style={{ animation: 'spin 1s linear infinite', color: 'var(--muted-foreground)' }} />
                     <span style={{ fontSize: '12px', color: 'var(--muted-foreground)' }}>
-                      {executingTool ? `Ejecutando ${TOOL_META[executingTool]?.label}...` : 'Pensando...'}
+                      {agentMode ? 'Agente trabajando…' : executingTool ? `Ejecutando ${TOOL_META[executingTool]?.label}...` : 'Pensando...'}
                     </span>
                   </div>
                 </div>
@@ -490,7 +591,7 @@ export default function AIPanelV2({
                       onChange={e => mentionsHook.handleInputChange(e.target.value)}
                       onKeyDown={mentionsHook.handleKeyDown}
                       onBlur={mentionsHook.closeSuggestions}
-                      placeholder={`Pregunta sobre este ${contextoTipo}…`}
+                      placeholder={agentMode ? `Pide al agente que organice el ${contextoTipo}…` : `Pregunta sobre este ${contextoTipo}…`}
                       disabled={loading}
                       style={{
                         width: '100%', padding: '9px 32px 9px 12px',
@@ -708,6 +809,21 @@ function MensajeRow({ msg, documentos, onSelectDoc, onGuardar, onInsertar }: Men
               · <CheckCircle2 size={10} /> guardado
             </span>
           )}
+        </div>
+      )}
+
+      {/* Etiqueta agente */}
+      {msg.isAgentMessage && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#6366f1', paddingLeft: 2 }}>
+          <Zap size={10} style={{ fill: '#6366f1' }} />
+          <span style={{ fontWeight: 600 }}>Agente</span>
+        </div>
+      )}
+
+      {/* Feed de acciones del agente */}
+      {msg.isAgentMessage && msg.agentActions && msg.agentActions.length > 0 && (
+        <div style={{ width: '100%', maxWidth: '92%' }}>
+          <AgentActionFeed actions={msg.agentActions} />
         </div>
       )}
 
