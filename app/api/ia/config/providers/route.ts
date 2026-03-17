@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
   const success = await saveProviderConfig(user.id, {
     provider: provider as AIProvider,
-    apiKey: apiKey || '',
+    apiKey: apiKey || undefined,   // undefined = no sobrescribir key existente
     baseUrl,
     organization,
     enabled: enabled ?? true,

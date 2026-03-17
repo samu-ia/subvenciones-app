@@ -66,8 +66,20 @@ export default function ReunionNotebookPage() {
   const [investigacionEstado, setInvestigacionEstado] = useState<EstadoInvestigacion>('pendiente');
   const [investigacionError, setInvestigacionError] = useState<string | null>(null);
   const [contextSelections, setContextSelections] = useState<Record<string, ContextMode>>({});
+  const [archivoSignedUrl, setArchivoSignedUrl] = useState<string | null>(null);
 
   const selectedDoc = documentos.find(d => d.id === selectedDocId);
+
+  // Generar signed URL cuando se selecciona un archivo
+  useEffect(() => {
+    if (!selectedArchivoId) { setArchivoSignedUrl(null); return; }
+    const archivo = archivos.find(a => a.id === selectedArchivoId);
+    if (!archivo?.storage_path) { setArchivoSignedUrl(null); return; }
+    const supabase = createClient();
+    supabase.storage.from('archivos').createSignedUrl(archivo.storage_path, 3600)
+      .then(({ data }) => setArchivoSignedUrl(data?.signedUrl ?? null))
+      .catch(() => setArchivoSignedUrl(null));
+  }, [selectedArchivoId, archivos]);
 
   // Escuchar evento doc-created para actualizar lista sin prompt()
   useEffect(() => {
@@ -445,11 +457,7 @@ export default function ReunionNotebookPage() {
         (() => {
           const selectedArchivo = archivos.find(a => a.id === selectedArchivoId);
           if (selectedArchivo) {
-            // Visor de archivo adjunto
-            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-            const fileUrl = selectedArchivo.storage_path
-              ? `${supabaseUrl}/storage/v1/object/public/archivos/${selectedArchivo.storage_path}`
-              : null;
+            const fileUrl = archivoSignedUrl;
             const isPdf = selectedArchivo.mime_type === 'application/pdf';
             const isImage = selectedArchivo.mime_type?.startsWith('image/');
             return (

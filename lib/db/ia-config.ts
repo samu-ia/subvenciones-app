@@ -72,13 +72,41 @@ export async function saveProviderConfig(
   userId: string,
   config: {
     provider: AIProvider;
-    apiKey: string;
+    apiKey?: string;          // undefined = no tocar la key existente
     baseUrl?: string;
     organization?: string;
     enabled: boolean;
   }
 ): Promise<boolean> {
   const supabase = await createClient();
+
+  // Si no se proporciona apiKey, solo actualizar metadata (no sobrescribir key)
+  if (!config.apiKey) {
+    // Intentar update primero; si no existe la fila, insert sin key
+    const { data: existing } = await supabase
+      .from('ia_providers')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('provider', config.provider)
+      .maybeSingle();
+
+    if (existing) {
+      const { error } = await supabase
+        .from('ia_providers')
+        .update({
+          base_url: config.baseUrl,
+          organization: config.organization,
+          enabled: config.enabled,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId)
+        .eq('provider', config.provider);
+      if (error) { console.error('Error actualizando config proveedor:', error); return false; }
+      return true;
+    }
+    // No existe aún — no tiene sentido guardar sin key
+    return true;
+  }
 
   const { error } = await supabase
     .from('ia_providers')
