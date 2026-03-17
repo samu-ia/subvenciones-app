@@ -272,7 +272,7 @@ Organiza por fases, incluye deadlines estimados cuando sea relevante.`
     tool: 'email',
     enabled: true,
     provider: 'anthropic',
-    model: 'claude-3-sonnet',
+    model: 'claude-3-5-sonnet',
     temperature: 0.5,
     systemPrompt: `Redacta emails profesionales basados en la información del expediente.
 Mantén un tono formal pero cercano. Estructura clara con introducción, cuerpo y cierre.`
@@ -281,7 +281,7 @@ Mantén un tono formal pero cercano. Estructura clara con introducción, cuerpo 
     tool: 'deep-search',
     enabled: true,
     provider: 'google',
-    model: 'gemini-pro',
+    model: 'gemini-2.0-flash',
     temperature: 0.3,
     deepSearchConfig: {
       maxDepth: 3,

@@ -31,16 +31,37 @@ export class GoogleProvider extends BaseAIProvider {
     ];
   }
 
+  // Normaliza nombres de modelo: convierte display names y IDs antiguos a IDs correctos de la API
+  private normalizeModel(model: string): string {
+    const m = model.trim();
+    const map: Record<string, string> = {
+      // Display names que el usuario puede haber escrito
+      'Gemini 2.5 Pro':        'gemini-2.5-pro-preview-03-25',
+      'Gemini 2.0 Flash':      'gemini-2.0-flash',
+      'Gemini 1.5 Pro':        'gemini-1.5-pro-latest',
+      'Gemini 1.5 Flash':      'gemini-1.5-flash-latest',
+      // IDs antiguos sin -latest
+      'gemini-1.5-pro':        'gemini-1.5-pro-latest',
+      'gemini-1.5-flash':      'gemini-1.5-flash-latest',
+      'gemini-2.5-pro':        'gemini-2.5-pro-preview-03-25',
+      // IDs obsoletos
+      'gemini-pro':            'gemini-1.5-pro-latest',
+      'gemini-pro-vision':     'gemini-1.5-pro-latest',
+    };
+    return map[m] ?? m;
+  }
+
   async complete(
     messages: Message[],
     options: CompletionOptions
   ): Promise<CompletionResponse> {
+    const model = this.normalizeModel(options.model || 'gemini-2.0-flash');
     try {
       const url = this.baseUrl || 'https://generativelanguage.googleapis.com/v1beta';
       const { contents, systemInstruction } = this.prepareMessages(messages, options.systemPrompt);
 
       const response = await fetch(
-        `${url}/models/${options.model}:generateContent?key=${this.apiKey}`,
+        `${url}/models/${model}:generateContent?key=${this.apiKey}`,
         {
           method: 'POST',
           headers: {
@@ -101,10 +122,11 @@ export class GoogleProvider extends BaseAIProvider {
   ): AsyncGenerator<StreamChunk, void, unknown> {
     try {
       const url = this.baseUrl || 'https://generativelanguage.googleapis.com/v1beta';
+      const model = this.normalizeModel(options.model || 'gemini-2.0-flash');
       const { contents, systemInstruction } = this.prepareMessages(messages, options.systemPrompt);
 
       const response = await fetch(
-        `${url}/models/${options.model}:streamGenerateContent?key=${this.apiKey}&alt=sse`,
+        `${url}/models/${model}:streamGenerateContent?key=${this.apiKey}&alt=sse`,
         {
           method: 'POST',
           headers: {

@@ -3,7 +3,7 @@
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { Bold, Italic, List, ListOrdered, Link as LinkIcon, Heading1, Heading2, Heading3, Undo2, Redo2 } from 'lucide-react';
 
 interface RichTextEditorProps {
@@ -20,9 +20,19 @@ export default function RichTextEditor({
   onChange,
   onSave,
   placeholder = 'Empieza a escribir...',
-  autoSaveDelay = 1000,
+  autoSaveDelay = 1200,
   lastSaved
 }: RichTextEditorProps) {
+  // Ref to always have latest onSave without it being a useEffect dependency
+  const onSaveRef = useRef(onSave);
+  useEffect(() => { onSaveRef.current = onSave; }, [onSave]);
+
+  // Track whether the last content change was from user typing (dirty) or external set
+  const isDirtyRef = useRef(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track content being set externally so we don't trigger saves
+  const isExternalUpdateRef = useRef(false);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -44,29 +54,38 @@ export default function RichTextEditor({
       }
     },
     onUpdate: ({ editor }) => {
+      if (isExternalUpdateRef.current) return; // skip saves for programmatic updates
       const html = editor.getHTML();
       onChange(html);
+      isDirtyRef.current = true;
+      // Debounced auto-save
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        if (isDirtyRef.current && onSaveRef.current) {
+          isDirtyRef.current = false;
+          onSaveRef.current(html);
+        }
+      }, autoSaveDelay);
     }
   });
 
-  // Auto-save con debounce
+  // Cleanup save timer on unmount
   useEffect(() => {
-    if (!onSave || !editor) return;
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
 
-    const timeoutId = setTimeout(() => {
-      const html = editor.getHTML();
-      if (html !== content) {
-        onSave(html);
-      }
-    }, autoSaveDelay);
-
-    return () => clearTimeout(timeoutId);
-  }, [content, onSave, autoSaveDelay, editor]);
-
-  // Actualizar contenido cuando cambia externamente
+  // Sync external content changes (e.g. switching docs, AI generated text)
   useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content);
+    if (!editor) return;
+    const currentHtml = editor.getHTML();
+    if (content !== currentHtml) {
+      isExternalUpdateRef.current = true;
+      isDirtyRef.current = false;
+      editor.commands.setContent(content || '', { emitUpdate: false });
+      // Reset flag after TipTap processes the update
+      requestAnimationFrame(() => { isExternalUpdateRef.current = false; });
     }
   }, [editor, content]);
 

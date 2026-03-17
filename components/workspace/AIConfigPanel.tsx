@@ -66,10 +66,10 @@ const SUGGESTED_MODELS: Record<AIProvider, { id: string; label: string }[]> = {
     { id: 'claude-3-haiku',     label: 'Claude 3 Haiku' },
   ],
   google: [
-    { id: 'gemini-2.5-pro',      label: 'Gemini 2.5 Pro' },
-    { id: 'gemini-2.0-flash',    label: 'Gemini 2.0 Flash' },
-    { id: 'gemini-1.5-pro',      label: 'Gemini 1.5 Pro' },
-    { id: 'gemini-1.5-flash',    label: 'Gemini 1.5 Flash' },
+    { id: 'gemini-2.5-pro-preview-03-25', label: 'Gemini 2.5 Pro' },
+    { id: 'gemini-2.0-flash',             label: 'Gemini 2.0 Flash' },
+    { id: 'gemini-1.5-pro-latest',        label: 'Gemini 1.5 Pro' },
+    { id: 'gemini-1.5-flash-latest',      label: 'Gemini 1.5 Flash' },
   ],
   openrouter: [
     { id: 'auto',                                    label: 'Auto (mejor disponible)' },
