@@ -281,7 +281,7 @@ Mantén un tono formal pero cercano. Estructura clara con introducción, cuerpo 
     tool: 'deep-search',
     enabled: true,
     provider: 'google',
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.5-flash',
     temperature: 0.3,
     deepSearchConfig: {
       maxDepth: 3,

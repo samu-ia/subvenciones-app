@@ -24,10 +24,9 @@ export class GoogleProvider extends BaseAIProvider {
 
   getAvailableModels(): string[] {
     return [
-      'gemini-1.5-pro-latest',
-      'gemini-1.5-flash-latest',
-      'gemini-pro',
-      'gemini-pro-vision'
+      'gemini-2.5-pro',
+      'gemini-2.5-flash',
+      'gemini-2.5-flash-lite',
     ];
   }
 
@@ -35,18 +34,23 @@ export class GoogleProvider extends BaseAIProvider {
   private normalizeModel(model: string): string {
     const m = model.trim();
     const map: Record<string, string> = {
-      // Display names que el usuario puede haber escrito
-      'Gemini 2.5 Pro':        'gemini-2.5-pro-preview-03-25',
-      'Gemini 2.0 Flash':      'gemini-2.0-flash',
-      'Gemini 1.5 Pro':        'gemini-1.5-pro-latest',
-      'Gemini 1.5 Flash':      'gemini-1.5-flash-latest',
-      // IDs antiguos sin -latest
-      'gemini-1.5-pro':        'gemini-1.5-pro-latest',
-      'gemini-1.5-flash':      'gemini-1.5-flash-latest',
-      'gemini-2.5-pro':        'gemini-2.5-pro-preview-03-25',
-      // IDs obsoletos
-      'gemini-pro':            'gemini-1.5-pro-latest',
-      'gemini-pro-vision':     'gemini-1.5-pro-latest',
+      // Display names
+      'Gemini 2.5 Pro':          'gemini-2.5-pro',
+      'Gemini 2.5 Flash':        'gemini-2.5-flash',
+      'Gemini 2.5 Flash-Lite':   'gemini-2.5-flash-lite',
+      // IDs antiguos → equivalente actual
+      'gemini-2.5-pro-preview-03-25': 'gemini-2.5-pro',
+      'gemini-2.0-flash':        'gemini-2.5-flash',
+      'gemini-2.0-flash-lite':   'gemini-2.5-flash-lite',
+      'gemini-1.5-pro-latest':   'gemini-2.5-pro',
+      'gemini-1.5-pro':          'gemini-2.5-pro',
+      'gemini-1.5-flash-latest': 'gemini-2.5-flash',
+      'gemini-1.5-flash':        'gemini-2.5-flash',
+      'gemini-pro':              'gemini-2.5-flash',
+      'gemini-pro-vision':       'gemini-2.5-flash',
+      'Gemini 1.5 Pro':          'gemini-2.5-pro',
+      'Gemini 1.5 Flash':        'gemini-2.5-flash',
+      'Gemini 2.0 Flash':        'gemini-2.5-flash',
     };
     return map[m] ?? m;
   }
