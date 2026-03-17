@@ -161,8 +161,17 @@ export default function AIPanelV2({
           history: mensajes.slice(-5),
         }),
       });
-      if (!response.ok) throw new Error('Error en la respuesta');
       const data = await response.json();
+      if (!response.ok) {
+        setLastError({ message: data.error || `Error ${response.status}`, code: data.error_code });
+        setMensajes(prev => [...prev, {
+          id: (Date.now() + 1).toString(), role: 'assistant',
+          content: `⚠️ ${data.error || 'Error al procesar el mensaje'}`,
+          timestamp: new Date(),
+        }]);
+        return;
+      }
+      setLastError(null);
 
       const mentionedIds = new Set(validMentions.map(m => m.id));
       const sourceRefs: SourceRef[] = [

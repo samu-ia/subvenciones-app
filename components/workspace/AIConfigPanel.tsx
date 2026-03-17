@@ -104,6 +104,7 @@ export default function AIConfigPanel({ userId, workspaceType, inline, isOpen, o
   const [testStatus, setTestStatus] = useState<TestStatus>('idle');
   const [testMessage, setTestMessage] = useState('');
   const [showKey, setShowKey] = useState(false);
+  const [keyDirty, setKeyDirty] = useState(false);  // true = usuario tecleó algo nuevo
   const [savedFeedback, setSavedFeedback] = useState(false);
 
   const [providers, setProviders] = useState<ProviderState[]>(
@@ -200,13 +201,21 @@ export default function AIConfigPanel({ userId, workspaceType, inline, isOpen, o
     setSaving(true);
     setSaveError(null);
     const p = providers.find(x => x.provider === selectedProvider)!;
+    // Solo enviar apiKey si el usuario realmente la tecleó (keyDirty)
+    // Si no es dirty, NO tocar la key guardada en BD
+    const body: Record<string, unknown> = {
+      provider: p.provider,
+      baseUrl: p.baseUrl,
+      organization: p.organization,
+      enabled: p.enabled,
+    };
+    if (keyDirty && p.apiKey.trim()) {
+      body.apiKey = p.apiKey.trim();
+    }
     const res = await fetch('/api/ia/config/providers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        provider: p.provider, apiKey: p.apiKey || undefined,
-        baseUrl: p.baseUrl, organization: p.organization, enabled: p.enabled,
-      }),
+      body: JSON.stringify(body),
     });
     setSaving(false);
     if (!res.ok) {
@@ -214,6 +223,7 @@ export default function AIConfigPanel({ userId, workspaceType, inline, isOpen, o
       setSaveError(data.error || `Error ${res.status} guardando`);
       return;
     }
+    setKeyDirty(false);
     await loadConfigs();
     setView('main');
     showFeedback();
@@ -315,7 +325,7 @@ export default function AIConfigPanel({ userId, workspaceType, inline, isOpen, o
             const statusColor = p.enabled && p.hasKey ? '#22c55e' : p.hasKey ? '#f59e0b' : 'var(--border)';
             return (
               <button key={provId}
-                onClick={() => { setSelectedProvider(provId); setView('provider'); setTestStatus('idle'); setShowKey(false); }}
+                onClick={() => { setSelectedProvider(provId); setView('provider'); setTestStatus('idle'); setShowKey(false); setKeyDirty(false); }}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border)',
@@ -406,19 +416,29 @@ export default function AIConfigPanel({ userId, workspaceType, inline, isOpen, o
             API Key {p.hasKey && <span style={{ color: '#22c55e', fontWeight: '400' }}>— guardada</span>}
           </label>
           <div style={{ position: 'relative' }}>
-            <input type={showKey ? 'text' : 'password'} value={p.apiKey}
-              onChange={e => updateProvider({ apiKey: e.target.value })}
-              placeholder={p.hasKey ? p.maskedKey : selectedProvider === 'openai' ? 'sk-...' : selectedProvider === 'anthropic' ? 'sk-ant-...' : 'API key'}
-              style={{ ...inputStyle, paddingRight: '36px', fontFamily: 'monospace' }}
+            <input
+              type={showKey ? 'text' : 'password'}
+              value={p.apiKey}
+              autoComplete="new-password"
+              name="api-key-field"
+              onChange={e => { updateProvider({ apiKey: e.target.value }); setKeyDirty(true); }}
+              placeholder={p.hasKey ? (keyDirty ? '' : p.maskedKey) : selectedProvider === 'openai' ? 'sk-...' : selectedProvider === 'anthropic' ? 'sk-ant-...' : 'API key'}
+              style={{ ...inputStyle, paddingRight: '36px', fontFamily: 'monospace',
+                background: keyDirty ? 'color-mix(in srgb, var(--primary) 4%, var(--background))' : 'var(--background)',
+                borderColor: keyDirty ? 'var(--primary)' : undefined,
+              }}
               onFocus={e => { e.target.style.borderColor = 'var(--primary)'; }}
-              onBlur={e => { e.target.style.borderColor = 'var(--border)'; }}
+              onBlur={e => { if (!keyDirty) e.target.style.borderColor = 'var(--border)'; }}
             />
             <button onClick={() => setShowKey(v => !v)}
               style={{ position: 'absolute', right: '9px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted-foreground)' }}>
               {showKey ? <EyeOff size={13} /> : <Eye size={13} />}
             </button>
           </div>
-          <p style={{ fontSize: '11px', color: 'var(--muted-foreground)', marginTop: '4px', margin: '4px 0 0 0' }}>Guardada de forma segura.</p>
+          <p style={{ fontSize: '11px', marginTop: '4px', margin: '4px 0 0 0',
+            color: keyDirty ? 'var(--primary)' : 'var(--muted-foreground)' }}>
+            {keyDirty ? '✏️ Nueva key — pulsa Guardar para aplicar' : p.hasKey ? '🔒 Key guardada. Escribe para reemplazarla.' : 'Introduce tu API key.'}
+          </p>
         </div>
 
         {selectedProvider === 'openai' && (
