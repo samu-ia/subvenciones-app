@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { FileText, Plus, Upload, MoreVertical, Pencil, Trash2, Bot, Loader2 } from 'lucide-react';
-import { ContextToggle, type ContextMode } from './ContextToggle';
+import { ContextToggle, type ContextMode } from '../ai/ContextToggle';
 import { Badge } from '@/components/ui/badge';
 import { createClient } from '@/lib/supabase/client';
 

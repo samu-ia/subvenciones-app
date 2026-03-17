@@ -6,10 +6,10 @@ import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { ArrowLeft, Briefcase, User } from 'lucide-react';
 import WorkspaceLayout from '@/components/workspace/WorkspaceLayout';
-import NotebookLeftPanel from '@/components/workspace/NotebookLeftPanel';
-import RichTextEditor from '@/components/workspace/RichTextEditor';
-import AIPanelV2 from '@/components/workspace/AIPanelV2';
-import type { ContextMode } from '@/components/workspace/ContextToggle';
+import NotebookLeftPanel from '@/components/workspace/docs/NotebookLeftPanel';
+import RichTextEditor from '@/components/workspace/editor/RichTextEditor';
+import AIPanelV2 from '@/components/workspace/ai/AIPanelV2';
+import type { ContextMode } from '@/components/workspace/ai/ContextToggle';
 
 interface Expediente {
   id: string;

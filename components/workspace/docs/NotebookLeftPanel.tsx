@@ -11,7 +11,7 @@ import type {
   EstadoInvestigacion,
 } from '@/lib/types/notebook';
 import SubvencionFolder from './SubvencionFolder';
-import { ContextToggle, type ContextMode } from './ContextToggle';
+import { ContextToggle, type ContextMode } from '../ai/ContextToggle';
 import { createClient } from '@/lib/supabase/client';
 import { useRef } from 'react';
 
