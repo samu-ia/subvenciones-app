@@ -348,10 +348,16 @@ export default function NotebookLeftPanel({
                     onMouseEnter={e => { if (selectedDocId !== doc.id) e.currentTarget.style.background = 'var(--accent)'; }}
                     onMouseLeave={e => { if (selectedDocId !== doc.id) e.currentTarget.style.background = 'none'; }}
                   >
-                    {doc.generado_por_ia
-                      ? <Bot size={12} style={{ color: 'var(--primary)', flexShrink: 0 }} />
-                      : <FileText size={12} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
-                    }
+                    {(() => {
+                      const ragMode = contextSelections?.[doc.id];
+                      if (ragMode === 'full' || ragMode === 'insights') {
+                        return <Bot size={12} style={{ color: 'var(--primary)', flexShrink: 0 }} />;
+                      }
+                      if (doc.generado_por_ia) {
+                        return <Bot size={12} style={{ color: 'var(--muted-foreground)', flexShrink: 0, opacity: 0.4 }} />;
+                      }
+                      return <FileText size={12} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />;
+                    })()}
                     <span style={{
                       flex: 1, fontSize: '12px', color: 'var(--foreground)',
                       whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
