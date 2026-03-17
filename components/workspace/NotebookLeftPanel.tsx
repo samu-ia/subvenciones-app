@@ -83,6 +83,7 @@ export default function NotebookLeftPanel({
   const [creatingDoc, setCreatingDoc] = useState(false);
   const [newDocName, setNewDocName] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ─── Subir archivo ──────────────────────────────────────────────────────
@@ -90,10 +91,12 @@ export default function NotebookLeftPanel({
     const file = e.target.files?.[0];
     if (!file || !contextoId) return;
     setUploading(true);
+    setUploadError(null);
     try {
       const supabase = createClient();
       const ext = file.name.split('.').pop();
-      const path = `${contextoTipo}s/${contextoId}/${Date.now()}.${ext}`;
+      // Mismo path que DocumentList: reunion/ (sin plural)
+      const path = `${contextoTipo}/${contextoId}/${Date.now()}-${file.name}`;
       const { error: upErr } = await supabase.storage.from('archivos').upload(path, file);
       if (upErr) throw upErr;
       const insertData: Record<string, unknown> = {
@@ -105,10 +108,13 @@ export default function NotebookLeftPanel({
       };
       if (contextoTipo === 'reunion') insertData.reunion_id = contextoId;
       else insertData.expediente_id = contextoId;
-      const { data: archivoRec } = await supabase.from('archivos').insert(insertData).select().single();
+      const { data: archivoRec, error: dbErr } = await supabase.from('archivos').insert(insertData).select().single();
+      if (dbErr) throw dbErr;
       if (archivoRec) onArchivoUploaded(archivoRec);
     } catch (err) {
       console.error('Upload error:', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      setUploadError(msg);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -131,7 +137,12 @@ export default function NotebookLeftPanel({
     };
     if (contextoTipo === 'reunion') docData.reunion_id = contextoId;
     else docData.expediente_id = contextoId;
-    const { data: newDoc } = await supabase.from('documentos').insert(docData).select().single();
+    const { data: newDoc, error: dbErr } = await supabase.from('documentos').insert(docData).select().single();
+    if (dbErr) {
+      console.error('Create doc error:', dbErr);
+      setUploadError(dbErr.message);
+      return;
+    }
     if (newDoc) {
       window.dispatchEvent(new CustomEvent('doc-created', { detail: newDoc }));
     }
@@ -228,7 +239,7 @@ export default function NotebookLeftPanel({
         {sectionFuentes && (
           <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
             {/* Botones de acción */}
-            <div style={{ display: 'flex', gap: '5px', marginBottom: '6px' }}>
+            <div style={{ display: 'flex', gap: '5px', marginBottom: uploadError ? '4px' : '6px' }}>
               <button
                 onClick={() => setCreatingDoc(true)}
                 style={{
@@ -259,6 +270,23 @@ export default function NotebookLeftPanel({
                 {uploading ? 'Subiendo...' : 'Subir'}
               </button>
             </div>
+
+            {/* Error de upload/create */}
+            {uploadError && (
+              <div style={{
+                padding: '6px 8px', borderRadius: '6px', marginBottom: '4px',
+                background: '#fef2f2', border: '1px solid #fecaca',
+                fontSize: '11px', color: '#dc2626', lineHeight: '1.4',
+                display: 'flex', alignItems: 'flex-start', gap: '6px',
+              }}>
+                <span style={{ flexShrink: 0 }}>⚠</span>
+                <span style={{ flex: 1 }}>{uploadError}</span>
+                <button onClick={() => setUploadError(null)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', padding: 0, fontSize: '13px', flexShrink: 0 }}>
+                  ×
+                </button>
+              </div>
+            )}
 
             {/* Crear doc inline */}
             {creatingDoc && (
