@@ -32,7 +32,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'provider is required' }, { status: 400 });
   }
 
-  const success = await saveProviderConfig(user.id, {
+  console.log('[POST /api/ia/config/providers] provider:', provider, 'hasKey:', !!apiKey, 'userId:', user.id);
+
+  const result = await saveProviderConfig(user.id, {
     provider: provider as AIProvider,
     apiKey: apiKey || undefined,   // undefined = no sobrescribir key existente
     baseUrl,
@@ -40,8 +42,9 @@ export async function POST(req: NextRequest) {
     enabled: enabled ?? true,
   });
 
-  if (!success) {
-    return NextResponse.json({ error: 'Error saving provider config' }, { status: 500 });
+  if (!result.success) {
+    console.error('[POST /api/ia/config/providers] save failed:', result.error);
+    return NextResponse.json({ error: result.error ?? 'Error saving provider config' }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

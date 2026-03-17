@@ -77,7 +77,7 @@ export async function saveProviderConfig(
     organization?: string;
     enabled: boolean;
   }
-): Promise<boolean> {
+): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient();
 
   // Si no se proporciona apiKey, solo actualizar metadata (no sobrescribir key)
@@ -101,12 +101,17 @@ export async function saveProviderConfig(
         })
         .eq('user_id', userId)
         .eq('provider', config.provider);
-      if (error) { console.error('Error actualizando config proveedor:', error); return false; }
-      return true;
+      if (error) {
+        console.error('Error actualizando config proveedor:', error);
+        return { success: false, error: error.message };
+      }
+      return { success: true };
     }
     // No existe aún — no tiene sentido guardar sin key
-    return true;
+    return { success: true };
   }
+
+  console.log('[saveProviderConfig] upserting provider:', config.provider, 'for user:', userId);
 
   const { error } = await supabase
     .from('ia_providers')
@@ -123,11 +128,12 @@ export async function saveProviderConfig(
     });
 
   if (error) {
-    console.error('Error guardando config de proveedor:', error);
-    return false;
+    console.error('Error guardando config de proveedor:', JSON.stringify(error));
+    return { success: false, error: error.message };
   }
 
-  return true;
+  console.log('[saveProviderConfig] upsert OK for provider:', config.provider);
+  return { success: true };
 }
 
 export async function deleteProviderConfig(
