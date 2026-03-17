@@ -35,7 +35,7 @@ interface Archivo {
 
 interface NotebookLeftPanelProps {
   // Datos del cliente
-  clienteSnapshot: ClienteSnapshot;
+  clienteSnapshot?: ClienteSnapshot;
 
   // Documentos del notebook
   documentos: Documento[];
@@ -58,14 +58,14 @@ interface NotebookLeftPanelProps {
   contextSelections?: Record<string, ContextMode>;
   onContextModeChange?: (docId: string, mode: ContextMode) => void;
 
-  // Subvenciones
-  investigacionEstado: EstadoInvestigacion;
-  subvenciones: SubvencionDetectada[];
-  subvencionActivaId: string | null;
-  onSelectSubvencion: (id: string) => void;
-  onChecklistItem: (checklistId: string, done: boolean) => void;
-  onChangeEstadoSubvencion: (id: string, estado: EstadoExpediente) => void;
-  onDeleteSubvencion: (id: string) => void;
+  // Subvenciones (opcionales — solo en reuniones)
+  investigacionEstado?: EstadoInvestigacion;
+  subvenciones?: SubvencionDetectada[];
+  subvencionActivaId?: string | null;
+  onSelectSubvencion?: (id: string) => void;
+  onChecklistItem?: (checklistId: string, done: boolean) => void;
+  onChangeEstadoSubvencion?: (id: string, estado: EstadoExpediente) => void;
+  onDeleteSubvencion?: (id: string) => void;
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -186,6 +186,7 @@ export default function NotebookLeftPanel({
         accept=".pdf,.doc,.docx,.txt,.md,.xlsx,.csv" />
 
       {/* ── SECCIÓN CLIENTE ─────────────────────────────────────────────── */}
+      {clienteSnapshot && (
       <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
         {sectionHeader('Cliente', sectionCliente, () => setSectionCliente(v => !v))}
         {sectionCliente && (
@@ -204,11 +205,12 @@ export default function NotebookLeftPanel({
           </div>
         )}
       </div>
+      )}
 
       {/* ── SECCIÓN SUBVENCIONES ────────────────────────────────────────── */}
-      {(investigacionEstado !== 'pendiente' || subvenciones.length > 0) && (
+      {(investigacionEstado && investigacionEstado !== 'pendiente' || (subvenciones?.length ?? 0) > 0) && (
         <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
-          {sectionHeader('Subvenciones', sectionSubvenciones, () => setSectionSubvenciones(v => !v), subvenciones.length)}
+          {sectionHeader('Subvenciones', sectionSubvenciones, () => setSectionSubvenciones(v => !v), subvenciones?.length)}
           {sectionSubvenciones && (
             <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {investigacionEstado === 'ejecutando' && (
@@ -217,20 +219,20 @@ export default function NotebookLeftPanel({
                   <span style={{ fontSize: '12px', color: 'var(--muted-foreground)' }}>Investigando subvenciones...</span>
                 </div>
               )}
-              {subvenciones.length === 0 && investigacionEstado === 'completada' && (
+              {(subvenciones?.length ?? 0) === 0 && investigacionEstado === 'completada' && (
                 <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', padding: '4px 0' }}>
                   No se encontraron subvenciones relevantes.
                 </p>
               )}
-              {subvenciones.map(sv => (
+              {subvenciones?.map(sv => (
                 <SubvencionFolder
                   key={sv.id}
                   subvencion={sv}
                   isActive={subvencionActivaId === sv.id}
-                  onSelect={onSelectSubvencion}
-                  onCheckItem={onChecklistItem}
-                  onChangeEstado={onChangeEstadoSubvencion}
-                  onDelete={onDeleteSubvencion}
+                  onSelect={onSelectSubvencion ?? (() => {})}
+                  onCheckItem={onChecklistItem ?? (() => {})}
+                  onChangeEstado={onChangeEstadoSubvencion ?? (() => {})}
+                  onDelete={onDeleteSubvencion ?? (() => {})}
                   onOpenDocumento={onSelectDoc}
                 />
               ))}

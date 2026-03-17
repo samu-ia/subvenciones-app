@@ -566,6 +566,7 @@ export default function ReunionNotebookPage() {
                 </div>
                 <div style={{ flex: 1, overflow: 'hidden' }}>
                   <RichTextEditor
+                    key={selectedDocId ?? 'empty'}
                     content={docContent}
                     onChange={setDocContent}
                     onSave={saveDocument}

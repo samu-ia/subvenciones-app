@@ -111,28 +111,52 @@ export async function saveProviderConfig(
     return { success: true };
   }
 
-  console.log('[saveProviderConfig] upserting provider:', config.provider, 'for user:', userId);
+  console.log('[saveProviderConfig] saving provider:', config.provider, 'for user:', userId);
 
-  const { error } = await supabase
+  // Comprobar si ya existe la fila
+  const { data: existing } = await supabase
     .from('ia_providers')
-    .upsert({
-      user_id: userId,
-      provider: config.provider,
-      api_key: config.apiKey,
-      base_url: config.baseUrl,
-      organization: config.organization,
-      enabled: config.enabled,
-      updated_at: new Date().toISOString()
-    }, {
-      onConflict: 'user_id,provider'
-    });
+    .select('id')
+    .eq('user_id', userId)
+    .eq('provider', config.provider)
+    .maybeSingle();
+
+  let error;
+  if (existing) {
+    // UPDATE
+    const result = await supabase
+      .from('ia_providers')
+      .update({
+        api_key: config.apiKey,
+        base_url: config.baseUrl,
+        organization: config.organization,
+        enabled: config.enabled,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId)
+      .eq('provider', config.provider);
+    error = result.error;
+  } else {
+    // INSERT
+    const result = await supabase
+      .from('ia_providers')
+      .insert({
+        user_id: userId,
+        provider: config.provider,
+        api_key: config.apiKey,
+        base_url: config.baseUrl,
+        organization: config.organization,
+        enabled: config.enabled,
+      });
+    error = result.error;
+  }
 
   if (error) {
-    console.error('Error guardando config de proveedor:', JSON.stringify(error));
+    console.error('[saveProviderConfig] error:', JSON.stringify(error));
     return { success: false, error: error.message };
   }
 
-  console.log('[saveProviderConfig] upsert OK for provider:', config.provider);
+  console.log('[saveProviderConfig] OK for provider:', config.provider);
   return { success: true };
 }
 
