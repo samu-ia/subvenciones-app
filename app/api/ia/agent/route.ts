@@ -119,7 +119,6 @@ async function executeActions(
           tipo_documento: action.tipo_documento ?? 'nota',
           generado_por_ia: true,
           orden: orden++,
-          grupo: action.folder_name ?? null,
         };
         if (contextoTipo === 'reunion') docData.reunion_id = contextoId;
         else {
