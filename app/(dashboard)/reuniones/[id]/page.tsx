@@ -156,7 +156,6 @@ export default function ReunionNotebookPage() {
           defaultDocs.map((doc, idx) => ({
             ...doc,
             reunion_id: reunionId,
-            nif: reunionData?.cliente_nif,
             orden: idx
           }))
         )
@@ -215,7 +214,6 @@ export default function ReunionNotebookPage() {
       .insert({
         nombre,
         reunion_id: reunionId,
-        nif: reunion?.cliente_nif,
         contenido: '',
         orden: documentos.length
       })
@@ -275,7 +273,7 @@ export default function ReunionNotebookPage() {
       return;
     }
     const { data: newDoc } = await supabase.from('documentos').insert({
-      nombre, contenido, reunion_id: reunionId, nif: reunion?.cliente_nif,
+      nombre, contenido, reunion_id: reunionId,
       generado_por_ia: true, prompt_usado: promptUsado, orden: documentos.length,
     }).select().single();
     if (newDoc) {

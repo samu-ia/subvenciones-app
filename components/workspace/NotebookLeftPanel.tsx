@@ -106,7 +106,6 @@ export default function NotebookLeftPanel({
       const { error: upErr } = await supabase.storage.from('archivos').upload(path, file);
       if (upErr) throw upErr;
       const insertData: Record<string, unknown> = {
-        nif,
         nombre: file.name,
         storage_path: path,
         mime_type: file.type,
@@ -136,7 +135,6 @@ export default function NotebookLeftPanel({
     const supabase = createClient();
     const docData: Record<string, unknown> = {
       nombre: name,
-      nif,
       contenido: '',
       tipo_documento: 'nota',
       orden: documentos.length,

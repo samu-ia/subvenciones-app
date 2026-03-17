@@ -193,11 +193,14 @@ export default function AIConfigPanel({ userId, workspaceType, inline, isOpen, o
   // El modelo efectivo: si hay texto manual, usa ese; si no, el del dropdown
   const effectiveModel = (t: ToolState) => t.modelManual.trim() || t.model;
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const saveProvider = async () => {
     if (!selectedProvider) return;
     setSaving(true);
+    setSaveError(null);
     const p = providers.find(x => x.provider === selectedProvider)!;
-    await fetch('/api/ia/config/providers', {
+    const res = await fetch('/api/ia/config/providers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -206,6 +209,11 @@ export default function AIConfigPanel({ userId, workspaceType, inline, isOpen, o
       }),
     });
     setSaving(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setSaveError(data.error || `Error ${res.status} guardando`);
+      return;
+    }
     await loadConfigs();
     setView('main');
     showFeedback();
@@ -214,8 +222,9 @@ export default function AIConfigPanel({ userId, workspaceType, inline, isOpen, o
   const saveTool = async () => {
     if (!selectedTool) return;
     setSaving(true);
+    setSaveError(null);
     const t = tools.find(x => x.tool === selectedTool)!;
-    await fetch('/api/ia/config/tools', {
+    const res = await fetch('/api/ia/config/tools', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -230,6 +239,11 @@ export default function AIConfigPanel({ userId, workspaceType, inline, isOpen, o
       }),
     });
     setSaving(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setSaveError(data.error || `Error ${res.status} guardando`);
+      return;
+    }
     setView('main');
     showFeedback();
   };
@@ -462,6 +476,12 @@ export default function AIConfigPanel({ userId, workspaceType, inline, isOpen, o
           )}
         </div>
 
+        {saveError && (
+          <div style={{ padding: '8px 10px', borderRadius: '7px', background: '#fef2f2', border: '1px solid #fecaca', fontSize: '12px', color: '#dc2626' }}>
+            ⚠️ {saveError}
+          </div>
+        )}
+
         <button onClick={saveProvider} disabled={saving}
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
@@ -596,6 +616,12 @@ export default function AIConfigPanel({ userId, workspaceType, inline, isOpen, o
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.saveAsDoc ? '#22c55e' : 'var(--border)', padding: '2px' }}>
               {t.saveAsDoc ? <ToggleRight size={26} /> : <ToggleLeft size={26} />}
             </button>
+          </div>
+        )}
+
+        {saveError && (
+          <div style={{ padding: '8px 10px', borderRadius: '7px', background: '#fef2f2', border: '1px solid #fecaca', fontSize: '12px', color: '#dc2626' }}>
+            ⚠️ {saveError}
           </div>
         )}
 
