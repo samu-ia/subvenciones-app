@@ -35,9 +35,25 @@ export async function middleware(request: NextRequest) {
   }
 
   // Rutas públicas: landing page y páginas legales
-  const PUBLIC_PATHS = ["/", "/contacto", "/privacidad", "/terminos"];
+  const PUBLIC_PATHS = ["/contacto", "/privacidad", "/terminos"];
   const isPublicPath = PUBLIC_PATHS.includes(request.nextUrl.pathname);
   if (isPublicPath) {
+    return supabaseResponse;
+  }
+
+  // Si el usuario ya está logueado y entra a /, redirigir a su área
+  if (user && request.nextUrl.pathname === "/") {
+    const { data: perfil } = await supabase
+      .from('perfiles')
+      .select('rol')
+      .eq('id', user.id)
+      .maybeSingle();
+    const destino = perfil?.rol === 'admin' ? '/clientes' : '/portal';
+    return NextResponse.redirect(new URL(destino, request.url));
+  }
+
+  // Si no está logueado, / es pública (muestra landing con modal login)
+  if (!user && request.nextUrl.pathname === "/") {
     return supabaseResponse;
   }
 
