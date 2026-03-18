@@ -139,9 +139,32 @@ async function procesarConvocatoria(
     // ── PASO 1: Guardar raw ───────────────────────────────────────────────────
     const { rawId, esNuevo, hashCambio } = await guardarRaw(supabase, conv, 'bdns');
 
-    // Actualizar pipeline_estado en subvenciones si ya existe
     if (!esNuevo && !hashCambio && !opciones.forzarReextraccion && !opciones.forzarReanalisis) {
       return { resultado: 'sin_cambio', bdnsId };
+    }
+
+    // ── PASO 1b: Asegurar que existe registro en subvenciones (estado 'raw') ──
+    // Esto permite que los UPDATE de pipeline_estado del paso 2 y 3 tengan fila destino.
+    const { data: subExistente } = await supabase
+      .from('subvenciones')
+      .select('id')
+      .eq('bdns_id', bdnsId)
+      .maybeSingle();
+
+    if (!subExistente) {
+      await supabase.from('subvenciones').insert({
+        bdns_id: bdnsId,
+        raw_id: rawId,
+        titulo: conv.titulo ?? `Convocatoria ${bdnsId}`,
+        organismo: conv.organo ?? null,
+        fecha_publicacion: conv.fechaPublicacion ? conv.fechaPublicacion.split('T')[0] : null,
+        url_oficial: conv.urlConvocatoria ?? null,
+        url_pdf: conv.urlPdf ?? null,
+        estado_convocatoria: 'desconocido',
+        pipeline_estado: 'raw',
+        fuente: 'bdns',
+        version: 1,
+      });
     }
 
     // ── PASO 2: PDF ───────────────────────────────────────────────────────────
@@ -229,10 +252,13 @@ async function procesarConvocatoria(
         }, iaConfig);
       }
     } else {
-      // Modo básico sin IA: rellenar con datos directos de BDNS
+      // Sin IA: solo datos de BDNS como placeholder.
+      // La BD queda en estado 'raw' hasta que se configure IA y se reprocese.
+      // Los campos de PDF se dejan null para no confundir datos BDNS con datos reales.
+      const tienePdf = !!(textoParaIa && textoParaIa.trim().length > 50);
       iaResult = {
-        objeto: conv.descripcionObjetivo ?? null,
-        beneficiarios: conv.descripcionBeneficiarios ? [conv.descripcionBeneficiarios] : null,
+        objeto: tienePdf ? null : (conv.descripcionObjetivo ?? null),
+        beneficiarios: null,
         requisitos: null,
         gastos_subvencionables: null,
         documentacion_exigida: null,
@@ -249,10 +275,11 @@ async function procesarConvocatoria(
         sectores: null,
         tipos_empresa: null,
         estado_convocatoria: null,
-        resumen_ia: conv.descripcionObjetivo ?? null,
+        // resumen_ia null: los datos vienen del PDF, no de BDNS
+        resumen_ia: null,
         puntos_clave: null,
-        para_quien: conv.descripcionBeneficiarios ?? null,
-        observaciones: null,
+        para_quien: null,
+        observaciones: 'Pendiente de análisis IA. Datos básicos de BDNS.',
         confidence_score: 0,
       };
     }
