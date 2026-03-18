@@ -23,17 +23,16 @@ export async function POST(request: NextRequest) {
   const authHeader = request.headers.get('authorization') ?? '';
   const secret = process.env.INGEST_SECRET;
 
-  if (secret) {
-    const token = authHeader.replace('Bearer ', '').trim();
-    if (token !== secret) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-  } else {
-    // Si no hay INGEST_SECRET, solo admins autenticados pueden lanzarlo
+  // Aceptar: (1) Bearer <INGEST_SECRET> para cron jobs, o (2) sesión autenticada para UI
+  const token = authHeader.replace('Bearer ', '').trim();
+  const secretOk = secret && token === secret;
+
+  if (!secretOk) {
+    // Si no viene el secret (o es incorrecto), verificar sesión de usuario
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
   }
 
