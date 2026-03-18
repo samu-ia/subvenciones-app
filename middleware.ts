@@ -39,10 +39,7 @@ export async function middleware(request: NextRequest) {
           .from("perfiles").select("rol").eq("id", user.id).maybeSingle();
         const rol = perfil?.rol || user.user_metadata?.rol || "cliente";
         const destino = rol === "admin" ? "/clientes" : "/portal";
-        // Evitar redirect si ya estamos en el destino
-        if (pathname !== destino) {
-          return NextResponse.redirect(new URL(destino, request.url));
-        }
+        return NextResponse.redirect(new URL(destino, request.url));
       } catch {
         // Si falla la query, dejamos pasar sin redirigir
       }
