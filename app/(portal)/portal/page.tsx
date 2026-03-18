@@ -76,24 +76,26 @@ export default function PortalClientePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login'); return; }
 
-      // Perfil
+      // Perfil — fallback a metadata si la tabla perfiles no existe aún
       const { data: p } = await supabase
         .from('perfiles')
         .select('rol, nif')
         .eq('id', user.id)
         .maybeSingle();
 
-      if (!p) { router.push('/login'); return; }
-      if (p.rol === 'admin') { router.push('/clientes'); return; }
-      setPerfil(p);
+      const rol = p?.rol ?? (user.user_metadata?.rol as string) ?? 'cliente';
+      const nif = p?.nif ?? (user.user_metadata?.nif as string) ?? null;
 
-      if (!p.nif) { setLoading(false); return; }
+      if (rol === 'admin') { router.push('/clientes'); return; }
+      setPerfil({ rol, nif });
+
+      if (!nif) { setLoading(false); return; }
 
       // Datos del cliente
       const { data: c } = await supabase
         .from('cliente')
         .select('nif, nombre_normalizado, actividad, tamano_empresa, ciudad, email_normalizado')
-        .eq('nif', p.nif)
+        .eq('nif', nif)
         .maybeSingle();
       setCliente(c);
 
@@ -103,7 +105,7 @@ export default function PortalClientePage() {
         .select(`
           id, estado, created_at, numero_bdns
         `)
-        .eq('nif', p.nif)
+        .eq('nif', nif)
         .order('created_at', { ascending: false });
       setExpedientes(exps ?? []);
 
@@ -116,7 +118,7 @@ export default function PortalClientePage() {
             id, titulo, organismo, importe_maximo, plazo_fin, resumen_ia, ambito_geografico
           )
         `)
-        .eq('nif', p.nif)
+        .eq('nif', nif)
         .neq('estado', 'descartado')
         .order('score', { ascending: false })
         .limit(20);
