@@ -34,15 +34,18 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
+  // Rutas públicas: landing page y páginas legales
+  const PUBLIC_PATHS = ["/", "/contacto", "/privacidad", "/terminos"];
+  const isPublicPath = PUBLIC_PATHS.includes(request.nextUrl.pathname);
+  if (isPublicPath) {
+    return supabaseResponse;
+  }
+
   if (!user && !request.nextUrl.pathname.startsWith("/login")) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
   if (user && request.nextUrl.pathname === "/login") {
-    return NextResponse.redirect(new URL("/clientes", request.url));
-  }
-
-  if (user && request.nextUrl.pathname === "/") {
     return NextResponse.redirect(new URL("/clientes", request.url));
   }
 

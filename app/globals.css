@@ -2,6 +2,9 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* ─── Google Fonts para la landing pública ─────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap');
+
 @custom-variant dark (&:is(.dark *));
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -84,3 +87,231 @@ body {
     @apply bg-background text-foreground; }
   html {
     @apply font-sans; } }
+/* ---------------------------------------------------------------------------
+   LANDING PAGE STYLES (AyudaPyme public site)
+   Todos estos estilos est�n scoped bajo .landing para no interferir
+   con el dashboard interno.
+   --------------------------------------------------------------------------- */
+
+.landing {
+  /* -- Tokens de color (paleta azul/teal profesional) ------------------- */
+  --background: hsl(210 20% 98%);
+  --foreground: hsl(215 25% 15%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(215 25% 15%);
+  --primary: hsl(215 70% 35%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(210 25% 93%);
+  --secondary-foreground: hsl(215 25% 25%);
+  --muted: hsl(210 20% 96%);
+  --muted-foreground: hsl(215 15% 50%);
+  --accent: hsl(175 60% 40%);
+  --accent-foreground: hsl(0 0% 100%);
+  --destructive: hsl(0 72% 51%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(210 20% 88%);
+  --input: hsl(210 20% 88%);
+  --ring: hsl(215 70% 35%);
+  --radius: 0.75rem;
+  --hero-gradient: linear-gradient(135deg, hsl(210 100% 5%) 0%, hsl(205 100% 12%) 50%, hsl(195 90% 18%) 100%);
+  --card-shadow: 0 4px 20px -4px hsl(215 70% 35% / 0.1);
+  --card-shadow-hover: 0 8px 30px -4px hsl(215 70% 35% / 0.15);
+  --font-heading: 'Montserrat', sans-serif;
+  --font-body: 'Inter', sans-serif;
+
+  font-family: var(--font-body);
+  background-color: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
+}
+
+.landing h1, .landing h2, .landing h3, .landing h4, .landing h5, .landing h6 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+/* Utility aliases usadas en los componentes */
+.landing .font-heading { font-family: var(--font-heading); }
+.landing .font-body { font-family: var(--font-body); }
+.landing .bg-background { background-color: var(--background); }
+.landing .bg-card { background-color: var(--card); }
+.landing .bg-muted { background-color: var(--muted); }
+.landing .bg-secondary { background-color: var(--secondary); }
+.landing .bg-foreground { background-color: var(--foreground); }
+.landing .text-foreground { color: var(--foreground); }
+.landing .text-primary { color: var(--primary); }
+.landing .text-primary-foreground { color: var(--primary-foreground); }
+.landing .text-muted-foreground { color: var(--muted-foreground); }
+.landing .text-accent { color: var(--accent); }
+.landing .text-accent-foreground { color: var(--accent-foreground); }
+.landing .text-background { color: var(--background); }
+.landing .text-destructive { color: var(--destructive); }
+.landing .border-border { border-color: var(--border); }
+.landing .bg-primary\/10 { background-color: hsl(215 70% 35% / 0.1); }
+.landing .bg-primary\/5 { background-color: hsl(215 70% 35% / 0.05); }
+.landing .bg-accent\/20 { background-color: hsl(175 60% 40% / 0.2); }
+.landing .text-background\/70 { color: hsl(210 20% 98% / 0.7); }
+.landing .text-background\/60 { color: hsl(210 20% 98% / 0.6); }
+.landing .border-background\/20 { border-color: hsl(210 20% 98% / 0.2); }
+.landing .text-primary-foreground\/80 { color: hsl(0 0% 100% / 0.8); }
+.landing .text-primary-foreground\/90 { color: hsl(0 0% 100% / 0.9); }
+.landing .bg-primary { background-color: var(--primary); }
+.landing .bg-accent { background-color: var(--accent); }
+.landing .hover\:text-primary:hover { color: var(--primary); }
+.landing .hover\:text-white:hover { color: #fff; }
+.landing .hover\:text-white\/80:hover { color: hsl(0 0% 100% / 0.8); }
+.landing .hover\:text-background:hover { color: var(--background); }
+.landing .hover\:border-primary:hover { border-color: var(--primary); }
+.landing .focus\:ring-ring:focus { --tw-ring-color: var(--ring); }
+.landing .focus\:ring-primary:focus { --tw-ring-color: var(--primary); }
+.landing .border-input { border-color: var(--input); }
+.landing .border-primary { border-color: var(--primary); }
+.landing .border-2 { border-width: 2px; }
+.landing .text-accent { color: var(--accent); }
+
+/* -- Componentes de la landing ------------------------------------------- */
+.landing .hero-gradient {
+  background: var(--hero-gradient);
+}
+
+.landing .card-elevated {
+  box-shadow: var(--card-shadow);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+.landing .card-elevated:hover {
+  box-shadow: var(--card-shadow-hover);
+}
+
+.landing .step-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+.landing .step-indicator.active {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  transform: scale(1.1);
+}
+.landing .step-indicator.completed {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+}
+.landing .step-indicator.pending {
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+}
+
+.landing .company-size-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  border: 2px solid var(--border);
+  background-color: var(--card);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.landing .company-size-option:hover {
+  border-color: var(--primary);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+}
+.landing .company-size-option.selected {
+  border-color: var(--primary);
+  background-color: hsl(215 70% 35% / 0.05);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+}
+
+.landing .input-field {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--input);
+  background-color: var(--card);
+  color: var(--foreground);
+  transition: all 0.2s;
+  outline: none;
+}
+.landing .input-field::placeholder { color: var(--muted-foreground); }
+.landing .input-field:focus {
+  border-color: transparent;
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.landing .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+  transition: all 0.3s;
+  cursor: pointer;
+  border: none;
+}
+.landing .btn-primary:hover { opacity: 0.9; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+.landing .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.landing .btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+  font-weight: 600;
+  transition: all 0.3s;
+  cursor: pointer;
+  border: none;
+}
+.landing .btn-secondary:hover { opacity: 0.8; }
+
+.landing .btn-hero {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 2rem;
+  border-radius: 0.75rem;
+  background-color: var(--card);
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 1.125rem;
+  transition: all 0.3s;
+  border: none;
+  cursor: pointer;
+}
+.landing .btn-hero:hover { box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25); transform: scale(1.05); }
+
+.landing .section-padding { padding-top: 4rem; padding-bottom: 4rem; }
+@media (min-width: 768px) {
+  .landing .section-padding { padding-top: 6rem; padding-bottom: 6rem; }
+}
+
+.landing .container-custom {
+  max-width: 72rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+@media (min-width: 640px) { .landing .container-custom { padding-left: 1.5rem; padding-right: 1.5rem; } }
+@media (min-width: 1024px) { .landing .container-custom { padding-left: 2rem; padding-right: 2rem; } }
+
+/* -- Animaciones -------------------------------------------------------- */
+.landing .animate-fade-in { animation: landingFadeIn 0.5s ease-out forwards; }
+.landing .animate-slide-up { animation: landingSlidup 0.6s ease-out forwards; }
+
+@keyframes landingFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes landingSlidup {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
