@@ -89,7 +89,7 @@ body {
     @apply font-sans; } }
 /* ---------------------------------------------------------------------------
    LANDING PAGE STYLES (AyudaPyme public site)
-   Todos estos estilos están scoped bajo .landing para no interferir
+   Todos estos estilos estan scoped bajo .landing para no interferir
    con el dashboard interno.
    --------------------------------------------------------------------------- */
 
