@@ -56,6 +56,16 @@ export default function LandingHeader() {
                 {link.label}
               </a>
             ))}
+            <Link
+              href="/login"
+              className={`font-semibold px-4 py-2 rounded-full border transition-all text-sm ${
+                isScrolled
+                  ? 'border-primary text-primary hover:bg-primary hover:text-primary-foreground'
+                  : 'border-white/60 text-white hover:bg-white/15'
+              }`}
+            >
+              Acceder
+            </Link>
           </nav>
 
           {/* Mobile toggle */}
@@ -84,6 +94,15 @@ export default function LandingHeader() {
                   {link.label}
                 </a>
               ))}
+              <Link
+                href="/login"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`font-semibold py-2 transition-colors ${
+                  isScrolled ? 'text-primary' : 'text-white'
+                }`}
+              >
+                Acceder →
+              </Link>
             </div>
           </nav>
         )}

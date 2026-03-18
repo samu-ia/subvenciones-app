@@ -17,15 +17,24 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (error) {
+    if (authError || !authData.user) {
       setError("Email o contraseña incorrectos");
       setLoading(false);
-    } else {
-      router.push("/dashboard");
-      router.refresh();
+      return;
     }
+
+    // Consultar rol del usuario
+    const { data: perfil } = await supabase
+      .from('perfiles')
+      .select('rol')
+      .eq('id', authData.user.id)
+      .maybeSingle();
+
+    const rol = perfil?.rol ?? 'cliente';
+    router.push(rol === 'admin' ? '/clientes' : '/portal');
+    router.refresh();
   }
 
   return (
@@ -61,10 +70,10 @@ export default function LoginPage() {
         </div>
 
         <h1 style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--ink)", marginBottom: 6 }}>
-          Acceso interno
+          Bienvenido a AyudaPyme
         </h1>
         <p style={{ fontSize: "0.83rem", color: "var(--muted)", marginBottom: 24 }}>
-          Solo para uso del equipo
+          Introduce tus credenciales para acceder
         </p>
 
         <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 14 }}>

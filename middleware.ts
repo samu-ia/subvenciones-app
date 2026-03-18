@@ -41,12 +41,24 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
+  // /portal solo accesible con sesión activa (cliente o admin)
+  if (!user && request.nextUrl.pathname.startsWith("/portal")) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
   if (!user && !request.nextUrl.pathname.startsWith("/login")) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
   if (user && request.nextUrl.pathname === "/login") {
-    return NextResponse.redirect(new URL("/clientes", request.url));
+    // Redirigir según rol
+    const { data: perfil } = await supabase
+      .from('perfiles')
+      .select('rol')
+      .eq('id', user.id)
+      .maybeSingle();
+    const destino = perfil?.rol === 'admin' ? '/clientes' : '/portal';
+    return NextResponse.redirect(new URL(destino, request.url));
   }
 
   return supabaseResponse;
