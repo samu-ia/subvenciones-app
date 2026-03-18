@@ -10,7 +10,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Database, RefreshCw, Play, CheckCircle2, Clock, AlertCircle,
-  ExternalLink, ChevronLeft, ChevronRight, Search, Filter, Loader2,
+  ExternalLink, ChevronLeft, ChevronRight, Search, Loader2, Settings,
 } from "lucide-react";
 
 interface Subvencion {
@@ -93,6 +93,7 @@ export default function SubvencionsBdPage() {
   const [filtroPipeline, setFiltroPipeline] = useState("");
   const [expandida, setExpandida] = useState<string | null>(null);
   const [feedbackIngesta, setFeedbackIngesta] = useState<string | null>(null);
+  const [sinIa, setSinIa] = useState(false);
   const tamanio = 20;
 
   const cargarSubvenciones = useCallback(async () => {
@@ -131,12 +132,15 @@ export default function SubvencionsBdPage() {
       const res = await fetch("/api/subvenciones/ingest", { method: "POST" });
       const data = await res.json();
       if (data.ok) {
+        setSinIa(false);
         setFeedbackIngesta(
           `✅ ${data.resultado?.nuevas ?? 0} nuevas · ${data.resultado?.actualizadas ?? 0} actualizadas · ${data.resultado?.errores ?? 0} errores`
         );
         await cargarSubvenciones();
         await cargarLogs();
       } else {
+        const sinIaError = data.error?.includes('IA') || data.error?.includes('proveedor');
+        if (sinIaError) setSinIa(true);
         setFeedbackIngesta(`❌ Error: ${data.error}`);
       }
     } catch (e) {
@@ -197,6 +201,24 @@ export default function SubvencionsBdPage() {
           </button>
         </div>
       </div>
+
+      {/* ── Aviso sin IA ─────────────────────────────────────────────── */}
+      {sinIa && (
+        <div style={{
+          padding: "12px 16px", borderRadius: 8, marginBottom: 16,
+          background: "#fffbeb", border: "1px solid #fde68a",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          fontSize: "0.83rem", color: "#92400e",
+        }}>
+          <span>⚠️ No hay proveedor de IA configurado. La ingesta funciona en modo básico (sin análisis IA).</span>
+          <a href="/ajustes" style={{
+            display: "flex", alignItems: "center", gap: 5, color: "#d97706",
+            fontWeight: 600, textDecoration: "none",
+          }}>
+            <Settings size={14} /> Configurar IA
+          </a>
+        </div>
+      )}
 
       {/* ── Feedback ingesta ────────────────────────────────────────── */}
       {feedbackIngesta && (

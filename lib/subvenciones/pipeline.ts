@@ -129,7 +129,7 @@ async function guardarRaw(
 async function procesarConvocatoria(
   supabase: SupabaseClient,
   conv: BdnsConvocatoria,
-  iaConfig: IaConfig,
+  iaConfig: IaConfig | null,
   opciones: PipelineOptions,
   logId: string,
 ): Promise<{ resultado: 'nueva' | 'actualizada' | 'sin_cambio' | 'error'; bdnsId: string; error?: string }> {
@@ -204,29 +204,57 @@ async function procesarConvocatoria(
       }
     }
 
-    // ── PASO 3: IA ────────────────────────────────────────────────────────────
+    // ── PASO 3: IA (opcional) ────────────────────────────────────────────────
     let iaResult;
-    let iaModelo = iaConfig.model ?? 'gpt-4o-mini';
+    let iaModelo = 'sin-ia';
 
-    if (textoParaIa && textoParaIa.trim().length > 100) {
-      // Tenemos texto del PDF → análisis completo
-      const { resultado, modelo, tokensUsados: _ } = await extraerConIa(
-        textoParaIa,
-        { titulo: conv.titulo, organismo: conv.organo },
-        iaConfig
-      );
-      iaResult = resultado;
-      iaModelo = modelo;
+    if (iaConfig) {
+      iaModelo = iaConfig.model ?? 'gpt-4o-mini';
+      if (textoParaIa && textoParaIa.trim().length > 100) {
+        const { resultado, modelo, tokensUsados: _ } = await extraerConIa(
+          textoParaIa,
+          { titulo: conv.titulo, organismo: conv.organo },
+          iaConfig
+        );
+        iaResult = resultado;
+        iaModelo = modelo;
+      } else {
+        iaResult = await extraerResumenRapido({
+          titulo: conv.titulo,
+          organismo: conv.organo,
+          descripcion: conv.descripcionObjetivo,
+          beneficiarios: conv.descripcionBeneficiarios,
+          importeMaximo: conv.importeMaximo,
+          fechaFin: conv.fechaFinSolicitud,
+        }, iaConfig);
+      }
     } else {
-      // Sin PDF → resumen rápido con datos del raw
-      iaResult = await extraerResumenRapido({
-        titulo: conv.titulo,
-        organismo: conv.organo,
-        descripcion: conv.descripcionObjetivo,
-        beneficiarios: conv.descripcionBeneficiarios,
-        importeMaximo: conv.importeMaximo,
-        fechaFin: conv.fechaFinSolicitud,
-      }, iaConfig);
+      // Modo básico sin IA: rellenar con datos directos de BDNS
+      iaResult = {
+        objeto: conv.descripcionObjetivo ?? null,
+        beneficiarios: conv.descripcionBeneficiarios ? [conv.descripcionBeneficiarios] : null,
+        requisitos: null,
+        gastos_subvencionables: null,
+        documentacion_exigida: null,
+        importe_maximo: typeof conv.importeMaximo === 'number' ? conv.importeMaximo : null,
+        importe_minimo: null,
+        porcentaje_financiacion: typeof conv.porcentajeCofinanciacion === 'number' ? conv.porcentajeCofinanciacion : null,
+        presupuesto_total: typeof conv.importeTotal === 'number' ? conv.importeTotal : null,
+        plazo_inicio: conv.fechaInicioSolicitud ?? null,
+        plazo_fin: conv.fechaFinSolicitud ?? null,
+        plazo_presentacion_texto: null,
+        ambito_geografico: null,
+        comunidad_autonoma: null,
+        provincia: null,
+        sectores: null,
+        tipos_empresa: null,
+        estado_convocatoria: null,
+        resumen_ia: conv.descripcionObjetivo ?? null,
+        puntos_clave: null,
+        para_quien: conv.descripcionBeneficiarios ?? null,
+        observaciones: null,
+        confidence_score: 0,
+      };
     }
 
     await supabase.from('subvenciones')
@@ -297,10 +325,11 @@ export async function ejecutarPipeline(
   let nuevas = 0, actualizadas = 0, sinCambios = 0, errores = 0, totalConsultadas = 0;
 
   try {
-    // Obtener config IA
+    // Obtener config IA (opcional — si no hay, se guarda solo con datos BDNS)
     const iaConfig = await obtenerConfigIa(supabase);
-    if (!iaConfig) {
-      throw new Error('No hay configuración de IA disponible. Configura un proveedor en Ajustes.');
+    const modoBasico = !iaConfig;
+    if (modoBasico) {
+      console.warn('[Pipeline] Sin proveedor IA — modo básico (solo datos BDNS, sin análisis IA)');
     }
 
     // Inicializar fuente
