@@ -225,7 +225,7 @@ export default function PortalPage() {
           .select('id, score, subvencion:subvenciones(id,titulo,organismo,importe_max,fecha_fin,descripcion)')
           .eq('cliente_id', perfil.id)
           .order('score', { ascending: false });
-        setMatches((mts || []) as Match[]);
+        setMatches((mts || []) as unknown as Match[]);
       }
 
       setLoading(false);
