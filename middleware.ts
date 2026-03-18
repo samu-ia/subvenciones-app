@@ -32,18 +32,6 @@ export async function middleware(request: NextRequest) {
   // ── 2. Rutas completamente públicas ─────────────────────────────────────
   const PUBLIC = ["/", "/login", "/contacto", "/privacidad", "/terminos"];
   if (PUBLIC.includes(pathname)) {
-    // Si ya está logueado y entra a / o /login → mandarlo a su área
-    if (user && (pathname === "/" || pathname === "/login")) {
-      try {
-        const { data: perfil } = await supabase
-          .from("perfiles").select("rol").eq("id", user.id).maybeSingle();
-        const rol = perfil?.rol || user.user_metadata?.rol || "cliente";
-        const destino = rol === "admin" ? "/clientes" : "/portal";
-        return NextResponse.redirect(new URL(destino, request.url));
-      } catch {
-        // Si falla la query, dejamos pasar sin redirigir
-      }
-    }
     return supabaseResponse;
   }
 
