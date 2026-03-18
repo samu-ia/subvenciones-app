@@ -236,16 +236,16 @@ async function procesarConvocatoria(
       if (textoParaIa && textoParaIa.trim().length > 100) {
         const { resultado, modelo, tokensUsados: _ } = await extraerConIa(
           textoParaIa,
-          { titulo: conv.titulo, organismo: conv.organo },
+          { titulo: conv.descripcion ?? conv.titulo ?? '', organismo: conv.nivel3 ?? conv.organo ?? '' },
           iaConfig
         );
         iaResult = resultado;
         iaModelo = modelo;
       } else {
         iaResult = await extraerResumenRapido({
-          titulo: conv.titulo,
-          organismo: conv.organo,
-          descripcion: conv.descripcionObjetivo,
+          titulo: conv.descripcion ?? conv.titulo ?? '',
+          organismo: conv.nivel3 ?? conv.organo ?? '',
+          descripcion: conv.descripcionObjetivo ?? conv.descripcion,
           beneficiarios: conv.descripcionBeneficiarios,
           importeMaximo: conv.importeMaximo,
           fechaFin: conv.fechaFinSolicitud,

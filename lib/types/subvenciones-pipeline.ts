@@ -7,13 +7,30 @@
 
 // ─── BDNS API raw ─────────────────────────────────────────────────────────────
 
-/** Convocatoria tal cual devuelve la API BDNS */
+/**
+ * Convocatoria tal cual devuelve la API BDNS /convocatorias/busqueda.
+ * Campos reales confirmados: id, numeroConvocatoria, descripcion, nivel1-3, fechaRecepcion.
+ * La URL del PDF se construye como:
+ *   https://www.infosubvenciones.es/bdnstrans/GE/es/convocatorias/{numeroConvocatoria}/extracto
+ */
 export interface BdnsConvocatoria {
-  numeroConvocatoria: number | string;
-  titulo: string;
+  // ── Campos reales de la API BDNS ──────────────────────────────────────────
+  id?: number;                     // ID interno BDNS (numérico)
+  numeroConvocatoria: number | string;  // ID público (ej: "893737")
+  descripcion?: string;            // Título/descripción de la convocatoria
+  descripcionLeng?: string;        // Descripción en lengua cooficial
+  fechaRecepcion?: string;         // Fecha de publicación (YYYY-MM-DD)
+  nivel1?: string;                 // Ámbito: ESTATAL / AUTONOMICA / LOCAL
+  nivel2?: string;                 // Comunidad autónoma o ministerio
+  nivel3?: string;                 // Organismo convocante
+  codigoInvente?: string | null;
+  mrr?: boolean;                   // ¿Es fondo MRR/NextGen?
+
+  // ── Campos legacy / compatibilidad (pueden venir vacíos) ─────────────────
+  titulo?: string;
   organo?: string;
   descripcionObjetivo?: string;
-  fechaPublicacion?: string;       // ISO date string
+  fechaPublicacion?: string;
   fechaInicioSolicitud?: string;
   fechaFinSolicitud?: string;
   importeTotal?: number;
@@ -24,7 +41,7 @@ export interface BdnsConvocatoria {
   estadoConvocatoria?: string;
   ambitoGeografico?: string;
   descripcionBeneficiarios?: string;
-  // campos extra que pueden venir
+
   [key: string]: unknown;
 }
 

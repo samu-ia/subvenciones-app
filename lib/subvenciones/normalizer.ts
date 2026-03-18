@@ -78,7 +78,14 @@ function construirPayloadPrincipal(input: NormalizarInput) {
 
   const plazoInicio = parseDate(ia.plazo_inicio ?? raw.fechaInicioSolicitud);
   const plazoFin = parseDate(ia.plazo_fin ?? raw.fechaFinSolicitud);
-  const fechaPublicacion = parseDate(raw.fechaPublicacion);
+  // fechaRecepcion es el campo real de BDNS, fechaPublicacion es legacy
+  const fechaPublicacion = parseDate(raw.fechaRecepcion ?? raw.fechaPublicacion);
+  // URL del PDF: construida a partir del numeroConvocatoria si no viene explícita
+  const numConv = String(raw.numeroConvocatoria);
+  const urlPdfFinal = raw.urlPdf
+    ?? `https://www.infosubvenciones.es/bdnstrans/GE/es/convocatorias/${numConv}/extracto`;
+  const urlConvFinal = raw.urlConvocatoria
+    ?? `https://www.infosubvenciones.es/bdnstrans/GE/es/convocatorias/${numConv}`;
 
   const estadoConvocatoria = ia.estado_convocatoria
     ? ia.estado_convocatoria
@@ -89,14 +96,15 @@ function construirPayloadPrincipal(input: NormalizarInput) {
     bdns_id,
     fuente,
 
-    titulo: raw.titulo ?? '',
-    organismo: raw.organo ?? null,
-    departamento: null,
-    ambito_geografico: ia.ambito_geografico ?? null,
-    comunidad_autonoma: ia.comunidad_autonoma ?? null,
+    // Mapeo campos reales BDNS: descripcion=titulo, nivel3=organismo
+    titulo: raw.descripcion ?? raw.titulo ?? `Convocatoria ${bdns_id}`,
+    organismo: raw.nivel3 ?? raw.organo ?? null,
+    departamento: raw.nivel2 ?? null,
+    ambito_geografico: ia.ambito_geografico ?? raw.nivel1 ?? null,
+    comunidad_autonoma: ia.comunidad_autonoma ?? raw.nivel2 ?? null,
     provincia: ia.provincia ?? null,
 
-    objeto: ia.objeto ?? raw.descripcionObjetivo ?? null,
+    objeto: ia.objeto ?? raw.descripcionObjetivo ?? raw.descripcion ?? null,
     resumen_ia: ia.resumen_ia ?? null,
     puntos_clave: ia.puntos_clave ?? null,
     para_quien: ia.para_quien ?? null,
@@ -111,8 +119,8 @@ function construirPayloadPrincipal(input: NormalizarInput) {
     porcentaje_financiacion: ia.porcentaje_financiacion ?? raw.porcentajeCofinanciacion ?? null,
     presupuesto_total: ia.presupuesto_total ?? raw.importeTotal ?? null,
 
-    url_oficial: raw.urlConvocatoria ?? null,
-    url_pdf: raw.urlPdf ?? null,
+    url_oficial: urlConvFinal,
+    url_pdf: urlPdfFinal,
 
     estado_convocatoria: estadoConvocatoria,
     pipeline_estado: 'normalizado',
