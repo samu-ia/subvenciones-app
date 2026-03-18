@@ -183,6 +183,54 @@ async function executeActions(
       }
       continue;
     }
+
+    if (action.type === 'edit_section') {
+      try {
+        // Buscar el documento por ID o por nombre
+        let docId = action.document_id;
+        let docNombre = action.nombre;
+        if (!docId && action.nombre) {
+          const match = documentos.find(
+            d => d.nombre.toLowerCase() === action.nombre!.toLowerCase()
+          );
+          docId = match?.id;
+          docNombre = match?.nombre ?? action.nombre;
+        }
+        if (!docId) {
+          results.push({ action, success: false, error: `Documento "${action.nombre}" no encontrado` });
+          continue;
+        }
+
+        // Leer contenido actual de la BD (fuente de verdad)
+        const { data: existing, error: readError } = await supabase
+          .from('documentos')
+          .select('contenido')
+          .eq('id', docId)
+          .single();
+        if (readError) throw readError;
+
+        const contenidoActual = existing?.contenido ?? '';
+        if (!contenidoActual.includes(action.buscar)) {
+          results.push({ action, success: false, error: `No se encontró el fragmento a reemplazar en "${docNombre}". Verifica que el texto coincide exactamente.` });
+          continue;
+        }
+
+        const nuevoContenido = contenidoActual.replace(action.buscar, action.reemplazar);
+
+        const { error } = await supabase
+          .from('documentos')
+          .update({ contenido: nuevoContenido, updated_at: new Date().toISOString() })
+          .eq('id', docId);
+
+        if (error) throw error;
+        results.push({ action, success: true, documentId: docId, documentName: docNombre });
+      } catch (err) {
+        console.error('[agent] edit_section error:', JSON.stringify(err));
+        const msg = err instanceof Error ? err.message : (err as any)?.message ?? JSON.stringify(err);
+        results.push({ action, success: false, error: msg });
+      }
+      continue;
+    }
   }
 
   return results;
@@ -230,9 +278,15 @@ export async function POST(request: NextRequest) {
       nif = exp?.nif ?? null;
     }
 
-    // Construir system prompt con lista de documentos actuales
+    // Construir system prompt con lista de documentos actuales (con contenido)
     const docsIndex = documentos.length > 0
-      ? `\n\n## DOCUMENTOS EXISTENTES EN EL NOTEBOOK\n${documentos.map((d, i) => `${i + 1}. [ID: ${d.id}] "${d.nombre}" (tipo: ${d.tipo_documento ?? 'nota'})`).join('\n')}`
+      ? `\n\n## DOCUMENTOS EXISTENTES EN EL NOTEBOOK\n` +
+        documentos.map((d, i) => {
+          const preview = d.contenido
+            ? `\n\`\`\`\n${d.contenido.slice(0, 2000)}${d.contenido.length > 2000 ? '\n...[contenido truncado]' : ''}\n\`\`\``
+            : ' (sin contenido)';
+          return `${i + 1}. [ID: ${d.id}] "${d.nombre}" (tipo: ${d.tipo_documento ?? 'nota'})${preview}`;
+        }).join('\n\n')
       : '\n\n## DOCUMENTOS EXISTENTES EN EL NOTEBOOK\n(El notebook está vacío)';
 
     // Leer archivos adjuntos con texto extraído

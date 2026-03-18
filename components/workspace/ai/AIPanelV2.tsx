@@ -59,7 +59,7 @@ interface AIPanelProps {
   userId: string;
   contextoId: string;
   contextoTipo: 'reunion' | 'expediente';
-  documentos: Array<{ id: string; nombre: string; generado_por_ia?: boolean; contenido?: string | null }>;
+  documentos: Array<{ id: string; nombre: string; generado_por_ia?: boolean; contenido?: string | null; tipo_documento?: string | null }>;
   contextSelections?: Record<string, ContextMode>;
   clienteNombre?: string;
   onGenerarDocumento?: (nombre: string, contenido: string, prompt: string) => void;
@@ -225,7 +225,12 @@ export default function AIPanelV2({
           context: contexto,
           contextoId,
           contextoTipo,
-          documentos: documentos.map(d => ({ id: d.id, nombre: d.nombre })),
+          documentos: documentos.map(d => ({
+            id: d.id,
+            nombre: d.nombre,
+            tipo_documento: d.tipo_documento,
+            contenido: d.contenido,
+          })),
           history: mensajes.slice(-6),
         }),
       });
@@ -243,7 +248,7 @@ export default function AIPanelV2({
 
       // Notificar al workspace de los docs creados/editados para que actualice la lista
       data.actions
-        .filter((r: AgentActionResult) => r.success && (r.action.type === 'create_document' || r.action.type === 'edit_document') && r.documentId)
+        .filter((r: AgentActionResult) => r.success && (r.action.type === 'create_document' || r.action.type === 'edit_document' || r.action.type === 'edit_section') && r.documentId)
         .forEach((r: AgentActionResult) => {
           window.dispatchEvent(new CustomEvent('agent-doc-action', {
             detail: {
@@ -820,7 +825,7 @@ export default function AIPanelV2({
 // ═══════════════════════════════════════════════════════════════════════════
 interface MensajeRowProps {
   msg: Mensaje;
-  documentos: Array<{ id: string; nombre: string; generado_por_ia?: boolean; contenido?: string | null }>;
+  documentos: Array<{ id: string; nombre: string; generado_por_ia?: boolean; contenido?: string | null; tipo_documento?: string | null }>;
   onSelectDoc?: (id: string) => void;
   onGuardar?: (msg: Mensaje) => void;
   onInsertar?: (msg: Mensaje) => void;

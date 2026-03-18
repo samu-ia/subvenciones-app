@@ -31,6 +31,18 @@ export interface AgentActionEditDocument {
   append?: boolean;       // si true → añadir al final en vez de reemplazar
 }
 
+/**
+ * Edición quirúrgica: busca `buscar` en el documento y lo reemplaza con `reemplazar`.
+ * Útil para modificar solo una sección sin tocar el resto del contenido.
+ */
+export interface AgentActionEditSection {
+  type: 'edit_section';
+  document_id?: string;
+  nombre?: string;         // buscar doc por nombre si no hay ID
+  buscar: string;          // fragmento exacto a reemplazar (puede ser un título de sección)
+  reemplazar: string;      // nuevo contenido para ese fragmento
+}
+
 /** Respuesta pura de chat (sin acciones sobre documentos) */
 export interface AgentActionRespond {
   type: 'respond';
@@ -41,6 +53,7 @@ export type AgentAction =
   | AgentActionCreateFolder
   | AgentActionCreateDocument
   | AgentActionEditDocument
+  | AgentActionEditSection
   | AgentActionRespond;
 
 // ─── Resultado de ejecutar una acción ─────────────────────────────────────────
@@ -68,6 +81,8 @@ export interface AgentRequest {
     nombre: string;
     tipo_documento?: string | null;
     grupo?: string | null;
+    /** Contenido actual del documento (para que el agente pueda editarlo parcialmente) */
+    contenido?: string | null;
   }>;
   history: Array<{ role: string; content: string }>;
 }
