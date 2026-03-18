@@ -24,20 +24,18 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   const { pathname } = request.nextUrl;
 
-  // ── 1. APIs con Bearer token: siempre pasar ─────────────────────────────
-  if (pathname.startsWith("/api/") && request.headers.get("authorization")?.startsWith("Bearer ")) {
+  // APIs: siempre pasar
+  if (pathname.startsWith('/api/')) return supabaseResponse;
+
+  // Rutas públicas: siempre pasar
+  const PUBLIC = ['/', '/login', '/contacto', '/privacidad', '/terminos'];
+  if (PUBLIC.some(p => pathname === p || pathname.startsWith(p + '/'))) {
     return supabaseResponse;
   }
 
-  // ── 2. Rutas completamente públicas ─────────────────────────────────────
-  const PUBLIC = ["/", "/login", "/contacto", "/privacidad", "/terminos"];
-  if (PUBLIC.includes(pathname)) {
-    return supabaseResponse;
-  }
-
-  // ── 3. Rutas protegidas: requieren sesión ────────────────────────────────
+  // Rutas privadas sin sesión: volver a landing
   if (!user) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL('/', request.url));
   }
 
   return supabaseResponse;
