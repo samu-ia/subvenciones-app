@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
-  Building2, Calendar, FolderOpen, LogOut, Database,
+  Building2, Calendar, FolderOpen, LogOut, Database, Settings,
 } from "lucide-react";
 
 const nav = [
@@ -12,6 +12,10 @@ const nav = [
   { href: "/reuniones", label: "Reuniones", icon: Calendar },
   { href: "/expedientes", label: "Expedientes", icon: FolderOpen },
   { href: "/subvenciones-bd", label: "Subvenciones BD", icon: Database },
+];
+
+const navBottom = [
+  { href: "/ajustes", label: "Ajustes", icon: Settings },
 ];
 
 export default function Sidebar() {
@@ -66,6 +70,25 @@ export default function Sidebar() {
       </div>
 
       <div style={{ padding: "0 14px 10px" }}>
+        {navBottom.map(({ href, label, icon: Icon }) => {
+          const active = pathname === href || pathname.startsWith(href + "/");
+          return (
+            <Link key={href} href={href} style={{ textDecoration: "none" }}>
+              <div style={{
+                display: "flex", alignItems: "center", gap: 9,
+                padding: "8px 10px", borderRadius: 8,
+                fontSize: "0.82rem", fontWeight: active ? 600 : 500,
+                color: active ? "var(--blue)" : "var(--ink2)",
+                background: active ? "var(--blue-bg)" : "transparent",
+                marginBottom: 4, cursor: "pointer",
+                transition: "all 0.15s",
+              }}>
+                <Icon size={16} />
+                {label}
+              </div>
+            </Link>
+          );
+        })}
         <button
           onClick={handleLogout}
           style={{

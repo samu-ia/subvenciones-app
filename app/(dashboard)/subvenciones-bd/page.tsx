@@ -129,7 +129,33 @@ export default function SubvencionsBdPage() {
     setIngestando(true);
     setFeedbackIngesta("Lanzando pipeline de ingestión BDNS...");
     try {
-      const res = await fetch("/api/subvenciones/ingest", { method: "POST" });
+      // Leer configuración guardada desde Ajustes
+      let pipelineConfig: Record<string, unknown> = {};
+      try {
+        const raw = localStorage.getItem("subvenciones_pipeline_config");
+        if (raw) pipelineConfig = JSON.parse(raw);
+      } catch { /* sin config guardada */ }
+
+      const body: Record<string, unknown> = {
+        limite: pipelineConfig.limite_diario ?? 30,
+        soloNuevas: true,
+      };
+
+      // Aplicar días atrás de la config
+      const diasAtras = Number(pipelineConfig.dias_atras ?? 1);
+      if (diasAtras > 0) {
+        const hoy = new Date();
+        const desde = new Date(hoy);
+        desde.setDate(desde.getDate() - diasAtras);
+        body.fechaHasta = hoy.toISOString().split("T")[0];
+        body.fechaDesde = desde.toISOString().split("T")[0];
+      }
+
+      const res = await fetch("/api/subvenciones/ingest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
       const data = await res.json();
       if (data.ok) {
         setSinIa(false);

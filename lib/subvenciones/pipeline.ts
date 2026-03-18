@@ -64,23 +64,23 @@ interface IaConfig {
 }
 
 async function obtenerConfigIa(supabase: SupabaseClient): Promise<IaConfig | null> {
-  // Buscar configuración del primer proveedor habilitado con api_key
+  // La tabla ia_providers tiene user_id — buscamos cualquier proveedor habilitado con key
   const { data } = await supabase
-    .from('ia_proveedores')
-    .select('proveedor, api_key, base_url, modelo_default')
-    .eq('habilitado', true)
+    .from('ia_providers')
+    .select('provider, api_key, base_url, enabled')
+    .eq('enabled', true)
     .not('api_key', 'is', null)
-    .order('proveedor', { ascending: true })
+    .order('provider', { ascending: true })
     .limit(1)
     .maybeSingle();
 
   if (!data?.api_key) return null;
 
   return {
-    provider: data.proveedor,
+    provider: data.provider,
     apiKey: data.api_key,
     baseUrl: data.base_url,
-    model: data.modelo_default,
+    model: undefined, // usa el default del extractor según proveedor
   };
 }
 

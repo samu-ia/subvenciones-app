@@ -79,63 +79,111 @@ export class BdnsClient implements FuenteSubvenciones {
     const pagina = params.pagina ?? 0;
     const tamanio = params.tamanio ?? 50;
 
-    // La API BDNS usa el endpoint /convocatorias con filtros de fecha
-    // Parámetros documentados en su Swagger
-    const queryParams: Record<string, string> = {
-      'fechaDesde': params.fechaDesde,
-      'fechaHasta': params.fechaHasta,
-      'page': String(pagina),
-      'size': String(tamanio),
-      'sort': 'fechaPublicacion,desc',
-    };
-
-    if (params.organo) {
-      queryParams['organo'] = params.organo;
-    }
-
+    // ── Estrategia 1: /convocatorias/busqueda (Swagger oficial BDNS) ─────────
     try {
-      const data = await this.fetchJson<BdnsListResponse>('/convocatorias', queryParams);
-
-      return {
-        items: data.content ?? [],
-        totalPaginas: data.totalPages ?? 1,
-        totalItems: data.totalElements ?? 0,
-      };
-    } catch (err) {
-      // Si la API cambia de formato, intentar con el endpoint alternativo
-      console.warn('[BdnsClient] Error en /convocatorias, probando /convocatorias/search:', err);
-      return this.listarConvocatoriasAlternativo(params, pagina, tamanio);
+      return await this.buscarPorBusqueda(params, pagina, tamanio);
+    } catch (err1) {
+      console.warn('[BdnsClient] /convocatorias/busqueda falló:', (err1 as Error).message);
     }
+
+    // ── Estrategia 2: /convocatorias con page/size Spring ────────────────────
+    try {
+      return await this.buscarPorConvocatoriasSpring(params, pagina, tamanio);
+    } catch (err2) {
+      console.warn('[BdnsClient] /convocatorias Spring falló:', (err2 as Error).message);
+    }
+
+    // ── Estrategia 3: /convocatorias/ultimas (sin filtros de fecha) ──────────
+    try {
+      return await this.buscarUltimas(tamanio);
+    } catch (err3) {
+      console.warn('[BdnsClient] /convocatorias/ultimas falló:', (err3 as Error).message);
+    }
+
+    // Sin datos — devolver vacío para no bloquear el pipeline
+    console.error('[BdnsClient] Todos los endpoints BDNS fallaron. Devolviendo resultado vacío.');
+    return { items: [], totalPaginas: 0, totalItems: 0 };
   }
 
-  /** Endpoint alternativo usado por algunas versiones de la API BDNS */
-  private async listarConvocatoriasAlternativo(
+  /**
+   * /convocatorias/busqueda — endpoint documentado en Swagger BDNS
+   * GET https://www.infosubvenciones.es/bdnstrans/api/convocatorias/busqueda
+   * Parámetros: vpd, anunciadaDesde, anunciadaHasta, page, pageSize
+   */
+  private async buscarPorBusqueda(
     params: { fechaDesde: string; fechaHasta: string; organo?: string },
     pagina: number,
     tamanio: number
   ): Promise<{ items: BdnsConvocatoria[]; totalPaginas: number; totalItems: number }> {
     const queryParams: Record<string, string> = {
+      'vpd': 'GE',                       // Gobierno de España
       'anunciadaDesde': params.fechaDesde,
       'anunciadaHasta': params.fechaHasta,
       'page': String(pagina),
       'pageSize': String(tamanio),
     };
-
     if (params.organo) queryParams['codigoOrgano'] = params.organo;
 
     const data = await this.fetchJson<{
       listaConvocatorias?: BdnsConvocatoria[];
       numTotalConvocatorias?: number;
-    }>('/convocatorias/search', queryParams);
+      content?: BdnsConvocatoria[];
+      totalElements?: number;
+      totalPages?: number;
+    }>('/convocatorias/busqueda', queryParams);
 
-    const items = data.listaConvocatorias ?? [];
-    const total = data.numTotalConvocatorias ?? items.length;
+    const items = data.listaConvocatorias ?? data.content ?? [];
+    const total = data.numTotalConvocatorias ?? data.totalElements ?? items.length;
 
     return {
       items,
-      totalPaginas: Math.ceil(total / tamanio),
+      totalPaginas: data.totalPages ?? Math.ceil(total / tamanio),
       totalItems: total,
     };
+  }
+
+  /**
+   * /convocatorias — paginación estilo Spring (page/size/sort)
+   */
+  private async buscarPorConvocatoriasSpring(
+    params: { fechaDesde: string; fechaHasta: string; organo?: string },
+    pagina: number,
+    tamanio: number
+  ): Promise<{ items: BdnsConvocatoria[]; totalPaginas: number; totalItems: number }> {
+    const queryParams: Record<string, string> = {
+      'vpd': 'GE',
+      'anunciadaDesde': params.fechaDesde,
+      'anunciadaHasta': params.fechaHasta,
+      'page': String(pagina),
+      'size': String(tamanio),
+    };
+    if (params.organo) queryParams['organo'] = params.organo;
+
+    const data = await this.fetchJson<BdnsListResponse>('/convocatorias', queryParams);
+
+    return {
+      items: data.content ?? [],
+      totalPaginas: data.totalPages ?? 1,
+      totalItems: data.totalElements ?? 0,
+    };
+  }
+
+  /**
+   * /convocatorias/ultimas — últimas publicadas, sin filtros
+   */
+  private async buscarUltimas(
+    tamanio: number
+  ): Promise<{ items: BdnsConvocatoria[]; totalPaginas: number; totalItems: number }> {
+    const data = await this.fetchJson<{
+      listaConvocatorias?: BdnsConvocatoria[];
+      content?: BdnsConvocatoria[];
+    }>('/convocatorias/ultimas', {
+      'vpd': 'GE',
+      'pageSize': String(tamanio),
+    });
+
+    const items = data.listaConvocatorias ?? data.content ?? [];
+    return { items, totalPaginas: 1, totalItems: items.length };
   }
 
   async obtenerDetalle(bdnsId: string): Promise<BdnsConvocatoria | null> {
