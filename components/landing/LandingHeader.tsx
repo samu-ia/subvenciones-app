@@ -12,7 +12,7 @@ const navLinks = [
   { href: '#contacto', label: 'Contacto' },
 ];
 
-export default function LandingHeader() {
+export default function LandingHeader({ onAuthClick }: { onAuthClick?: () => void }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -56,16 +56,16 @@ export default function LandingHeader() {
                 {link.label}
               </a>
             ))}
-            <Link
-              href="/login"
-              className={`font-semibold px-4 py-2 rounded-full border transition-all text-sm ${
+            <button
+              onClick={onAuthClick}
+              className={`font-semibold px-4 py-2 rounded-full border transition-all text-sm cursor-pointer ${
                 isScrolled
                   ? 'border-primary text-primary hover:bg-primary hover:text-primary-foreground'
                   : 'border-white/60 text-white hover:bg-white/15'
               }`}
             >
               Acceder
-            </Link>
+            </button>
           </nav>
 
           {/* Mobile toggle */}
@@ -94,15 +94,14 @@ export default function LandingHeader() {
                   {link.label}
                 </a>
               ))}
-              <Link
-                href="/login"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={`font-semibold py-2 transition-colors ${
+              <button
+                onClick={() => { setIsMobileMenuOpen(false); onAuthClick?.(); }}
+                className={`font-semibold py-2 transition-colors text-left cursor-pointer bg-transparent border-none ${
                   isScrolled ? 'text-primary' : 'text-white'
                 }`}
               >
                 Acceder →
-              </Link>
+              </button>
             </div>
           </nav>
         )}

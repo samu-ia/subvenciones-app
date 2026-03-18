@@ -2,7 +2,8 @@ import { CheckCircle } from 'lucide-react';
 
 const benefits = ['Sin riesgo', 'Hacemos todo por ti', 'Solo pagas si ganamos'];
 
-export default function Hero() {
+export default function Hero({ onAuthClick }: { onAuthClick?: () => void }) {
+  void onAuthClick; // disponible para uso futuro
   return (
     <section id="inicio" className="relative min-h-screen flex items-center hero-gradient overflow-hidden">
       {/* Background blobs */}
