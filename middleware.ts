@@ -27,6 +27,13 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
+  // Permitir rutas API con Bearer token (cron jobs, scripts) sin sesión
+  const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
+  const hasBearerToken = request.headers.get("authorization")?.startsWith("Bearer ");
+  if (isApiRoute && hasBearerToken) {
+    return supabaseResponse;
+  }
+
   if (!user && !request.nextUrl.pathname.startsWith("/login")) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
