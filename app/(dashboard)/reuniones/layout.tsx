@@ -1,17 +1,7 @@
-import { createClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
-
-export default async function ReunionesLayout({
+export default function ReunionesLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect('/login');
-  }
-
-  return <div style={{ padding: 'var(--s2)' }}>{children}</div>;
+  return <>{children}</>;
 }

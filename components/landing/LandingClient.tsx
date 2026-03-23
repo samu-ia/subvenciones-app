@@ -30,6 +30,7 @@ export default function LandingClient() {
       }
       setChecking(false);
     })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (checking) {
