@@ -13,28 +13,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { createProvider } from '@/lib/ai/providers/factory';
 
 export const maxDuration = 60;
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Modelos baratos por proveedor (para procesamiento masivo) ────────────────
+const MODELO_BARATO: Record<string, string> = {
+  openai:     'gpt-4o-mini',
+  anthropic:  'claude-3-haiku-20240307',
+  google:     'gemini-2.0-flash',
+  openrouter: 'openai/gpt-4o-mini',
+};
 
-async function callAI(prompt: string, system: string, apiKey: string): Promise<string> {
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      temperature: 0.3,
-      max_tokens: 2000,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: prompt },
-      ],
-    }),
-  });
-  if (!res.ok) throw new Error(`OpenAI error: ${res.status}`);
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content ?? '';
+// ─── Carga proveedor IA desde ia_providers (igual que la ingestión) ───────────
+async function obtenerIA(sb: ReturnType<typeof createServiceClient>) {
+  const { data } = await sb
+    .from('ia_providers')
+    .select('provider, api_key, base_url')
+    .eq('enabled', true)
+    .not('api_key', 'is', null)
+    .limit(1)
+    .maybeSingle();
+  if (!data?.api_key) return null;
+  return {
+    provider: createProvider({ provider: data.provider, apiKey: data.api_key, baseUrl: data.base_url, enabled: true }),
+    modelo: MODELO_BARATO[data.provider] ?? 'gpt-4o-mini',
+  };
+}
+
+async function callAI(prompt: string, system: string, sb: ReturnType<typeof createServiceClient>): Promise<string> {
+  const ia = await obtenerIA(sb);
+  if (!ia) throw new Error('Sin proveedor IA configurado');
+  const res = await ia.provider.complete(
+    [{ role: 'user', content: prompt }],
+    { model: ia.modelo, temperature: 0.3, maxTokens: 2000, systemPrompt: system, stream: false }
+  );
+  return res.content;
 }
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
@@ -102,9 +116,9 @@ export async function POST(
     }
   }
 
-  // ── Obtener API key ────────────────────────────────────────────────────────
-  const apiKey = process.env.OPENAI_API_KEY ?? '';
-  const hasAI = apiKey && !apiKey.includes('placeholder') && apiKey.startsWith('sk-');
+  // ── Verificar que hay proveedor IA ────────────────────────────────────────
+  const iaDisponible = await obtenerIA(sb);
+  const hasAI = iaDisponible !== null;
 
   // ── Generar checklist ──────────────────────────────────────────────────────
   const checklistItems: Array<{
@@ -128,7 +142,7 @@ Formato: [{"nombre":"...","descripcion":"...","tipo":"documento|accion|verificac
 Incluye entre 10 y 15 elementos. Sé específico con la subvención.`;
 
     try {
-      const raw = await callAI(promptChecklist, systemChecklist, apiKey);
+      const raw = await callAI(promptChecklist, systemChecklist, sb);
       const jsonMatch = raw.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]) as Array<Record<string, unknown>>;
@@ -195,7 +209,7 @@ Información de la subvención: ${subvTexto.slice(0, 1500)}
 
 La memoria debe incluir secciones: Datos del solicitante, Descripción del proyecto, Objetivos, Necesidad de la ayuda, Impacto esperado. En Markdown.`;
     try {
-      const aiMemoria = await callAI(promptMemoria, systemMemoria, apiKey);
+      const aiMemoria = await callAI(promptMemoria, systemMemoria, sb);
       if (aiMemoria.length > 200) memoriaContenido = aiMemoria;
     } catch {
       // usar fallback
@@ -253,7 +267,7 @@ Responde con JSON exactamente así (array de 3):
 [{"id":"UUID_DEL_PROVEEDOR","score":0.85,"motivo":"Por qué encaja en 1 frase","propuesta":"Propuesta personalizada de 2-3 frases para este cliente"}]`;
 
       try {
-        const rawProvs = await callAI(promptProvs, systemProvs, apiKey);
+        const rawProvs = await callAI(promptProvs, systemProvs, sb);
         const jsonMatch = rawProvs.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]) as Array<Record<string, unknown>>;
