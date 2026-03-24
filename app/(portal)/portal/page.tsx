@@ -7,7 +7,7 @@ import {
   Bell, LogOut, ChevronRight, ExternalLink, FileText,
   CheckCircle, AlertTriangle, Clock, Zap, Star,
   CreditCard, Landmark, ArrowRight, ArrowLeft,
-  Shield, X, Check, Loader2, User,
+  Shield, X, Check, Loader2, User, Building2, Save,
 } from 'lucide-react';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -635,9 +635,290 @@ function MatchCard({
   );
 }
 
+// ─── Vista perfil empresa ──────────────────────────────────────────────────────
+
+const CCAA = [
+  'Andalucía','Aragón','Asturias','Baleares','Canarias','Cantabria','Castilla-La Mancha',
+  'Castilla y León','Cataluña','Ceuta','Extremadura','Galicia','La Rioja','Madrid',
+  'Melilla','Murcia','Navarra','País Vasco','Valencia',
+];
+
+const FORMAS_JURIDICAS = [
+  { value: 'SL', label: 'Sociedad Limitada (SL)' },
+  { value: 'SA', label: 'Sociedad Anónima (SA)' },
+  { value: 'autonomo', label: 'Autónomo / Freelance' },
+  { value: 'cooperativa', label: 'Cooperativa' },
+  { value: 'asociacion', label: 'Asociación / Fundación' },
+  { value: 'otro', label: 'Otro' },
+];
+
+function VistaPerfilEmpresa({
+  cliente,
+  onGuardado,
+}: {
+  cliente: ClienteData | null;
+  onGuardado: (actualizado: Partial<ClienteData>) => void;
+}) {
+  const [form, setForm] = useState({
+    nombre_empresa: cliente?.nombre_empresa ?? '',
+    cnae_codigo: (cliente as any)?.cnae_codigo ?? '',
+    cnae_descripcion: cliente?.cnae_descripcion ?? '',
+    comunidad_autonoma: cliente?.comunidad_autonoma ?? '',
+    provincia: (cliente as any)?.provincia ?? '',
+    ciudad: cliente?.ciudad ?? '',
+    num_empleados: String(cliente?.num_empleados ?? ''),
+    facturacion_anual: String(cliente?.facturacion_anual ?? ''),
+    forma_juridica: (cliente as any)?.forma_juridica ?? '',
+    anos_antiguedad: String((cliente as any)?.anos_antiguedad ?? ''),
+    descripcion_actividad: (cliente as any)?.descripcion_actividad ?? '',
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [error, setError] = useState('');
+
+  function set(k: string, v: string) {
+    setForm(prev => ({ ...prev, [k]: v }));
+  }
+
+  async function guardar(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true); setMsg(''); setError('');
+
+    const body: Record<string, unknown> = { ...form };
+    if (body.num_empleados) body.num_empleados = parseInt(body.num_empleados as string, 10) || null;
+    else body.num_empleados = null;
+    if (body.facturacion_anual) body.facturacion_anual = parseFloat(body.facturacion_anual as string) || null;
+    else body.facturacion_anual = null;
+    if (body.anos_antiguedad) body.anos_antiguedad = parseInt(body.anos_antiguedad as string, 10) || null;
+    else body.anos_antiguedad = null;
+
+    const res = await fetch('/api/cliente/perfil', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) { setError(data.error ?? 'Error al guardar'); }
+    else {
+      setMsg('Guardado');
+      onGuardado({
+        nombre_empresa: form.nombre_empresa,
+        cnae_descripcion: form.cnae_descripcion,
+        comunidad_autonoma: form.comunidad_autonoma,
+        ciudad: form.ciudad,
+        num_empleados: form.num_empleados ? parseInt(form.num_empleados) : undefined,
+      });
+    }
+    setLoading(false);
+  }
+
+  const completitud = [
+    form.nombre_empresa, form.cnae_codigo, form.comunidad_autonoma,
+    form.num_empleados, form.facturacion_anual, form.forma_juridica,
+  ].filter(Boolean).length;
+
+  return (
+    <div style={{ maxWidth: 680, margin: '0 auto' }}>
+      <div style={{ marginBottom: 28 }}>
+        <h1 style={{ fontSize: '1.3rem', fontWeight: 800, color: C.navy, margin: 0 }}>Mi empresa</h1>
+        <p style={{ color: C.ink2, fontSize: '0.85rem', marginTop: 4 }}>
+          Cuantos más datos completes, más precisos serán tus matches de subvenciones.
+        </p>
+        {/* Barra de completitud */}
+        <div style={{ marginTop: 12, background: '#f1f5f9', borderRadius: 8, height: 8, overflow: 'hidden' }}>
+          <div style={{
+            height: '100%', borderRadius: 8,
+            width: `${Math.round((completitud / 6) * 100)}%`,
+            background: completitud === 6 ? '#059669' : completitud >= 4 ? '#0d9488' : '#3b82f6',
+            transition: 'width 0.3s ease',
+          }} />
+        </div>
+        <div style={{ fontSize: '0.72rem', color: C.muted, marginTop: 4 }}>
+          {completitud}/6 campos clave completados
+        </div>
+      </div>
+
+      <form onSubmit={guardar}>
+        {/* Datos básicos */}
+        <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${C.border}`, padding: '20px 24px', marginBottom: 16 }}>
+          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16 }}>
+            Datos básicos
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div style={{ gridColumn: '1/-1' }}>
+              <label style={{ fontSize: '0.78rem', fontWeight: 600, color: C.ink2, display: 'block', marginBottom: 5 }}>Nombre de la empresa</label>
+              <input
+                value={form.nombre_empresa}
+                onChange={e => set('nombre_empresa', e.target.value)}
+                placeholder="Ej: TechNova SL"
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.85rem', boxSizing: 'border-box', fontFamily: 'inherit' }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.78rem', fontWeight: 600, color: C.ink2, display: 'block', marginBottom: 5 }}>Forma jurídica</label>
+              <select
+                value={form.forma_juridica}
+                onChange={e => set('forma_juridica', e.target.value)}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.85rem', background: '#fff', fontFamily: 'inherit' }}
+              >
+                <option value="">Seleccionar…</option>
+                {FORMAS_JURIDICAS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: '0.78rem', fontWeight: 600, color: C.ink2, display: 'block', marginBottom: 5 }}>Años de antigüedad</label>
+              <input
+                type="number" min="0" max="100"
+                value={form.anos_antiguedad}
+                onChange={e => set('anos_antiguedad', e.target.value)}
+                placeholder="Ej: 5"
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.85rem', boxSizing: 'border-box', fontFamily: 'inherit' }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Actividad */}
+        <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${C.border}`, padding: '20px 24px', marginBottom: 16 }}>
+          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16 }}>
+            Actividad y sector
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 14, marginBottom: 14 }}>
+            <div>
+              <label style={{ fontSize: '0.78rem', fontWeight: 600, color: C.ink2, display: 'block', marginBottom: 5 }}>
+                Código CNAE
+                <span style={{ fontWeight: 400, color: C.muted }}> (4 dígitos)</span>
+              </label>
+              <input
+                value={form.cnae_codigo}
+                onChange={e => set('cnae_codigo', e.target.value.slice(0, 4))}
+                placeholder="6201"
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.85rem', boxSizing: 'border-box', fontFamily: 'inherit' }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.78rem', fontWeight: 600, color: C.ink2, display: 'block', marginBottom: 5 }}>Descripción actividad (CNAE)</label>
+              <input
+                value={form.cnae_descripcion}
+                onChange={e => set('cnae_descripcion', e.target.value)}
+                placeholder="Ej: Programación informática"
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.85rem', boxSizing: 'border-box', fontFamily: 'inherit' }}
+              />
+            </div>
+          </div>
+          <div>
+            <label style={{ fontSize: '0.78rem', fontWeight: 600, color: C.ink2, display: 'block', marginBottom: 5 }}>Descripción libre de la actividad</label>
+            <textarea
+              value={form.descripcion_actividad}
+              onChange={e => set('descripcion_actividad', e.target.value)}
+              rows={3}
+              placeholder="Describe brevemente a qué se dedica tu empresa..."
+              style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.85rem', boxSizing: 'border-box', fontFamily: 'inherit', resize: 'vertical' }}
+            />
+          </div>
+        </div>
+
+        {/* Localización */}
+        <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${C.border}`, padding: '20px 24px', marginBottom: 16 }}>
+          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16 }}>
+            Localización
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+            <div>
+              <label style={{ fontSize: '0.78rem', fontWeight: 600, color: C.ink2, display: 'block', marginBottom: 5 }}>Comunidad autónoma</label>
+              <select
+                value={form.comunidad_autonoma}
+                onChange={e => set('comunidad_autonoma', e.target.value)}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.82rem', background: '#fff', fontFamily: 'inherit' }}
+              >
+                <option value="">Seleccionar…</option>
+                {CCAA.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: '0.78rem', fontWeight: 600, color: C.ink2, display: 'block', marginBottom: 5 }}>Provincia</label>
+              <input
+                value={form.provincia}
+                onChange={e => set('provincia', e.target.value)}
+                placeholder="Ej: Madrid"
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.85rem', boxSizing: 'border-box', fontFamily: 'inherit' }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.78rem', fontWeight: 600, color: C.ink2, display: 'block', marginBottom: 5 }}>Ciudad</label>
+              <input
+                value={form.ciudad}
+                onChange={e => set('ciudad', e.target.value)}
+                placeholder="Ej: Madrid"
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.85rem', boxSizing: 'border-box', fontFamily: 'inherit' }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Tamaño */}
+        <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${C.border}`, padding: '20px 24px', marginBottom: 24 }}>
+          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16 }}>
+            Tamaño y finanzas
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div>
+              <label style={{ fontSize: '0.78rem', fontWeight: 600, color: C.ink2, display: 'block', marginBottom: 5 }}>Número de empleados</label>
+              <input
+                type="number" min="0"
+                value={form.num_empleados}
+                onChange={e => set('num_empleados', e.target.value)}
+                placeholder="Ej: 15"
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.85rem', boxSizing: 'border-box', fontFamily: 'inherit' }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.78rem', fontWeight: 600, color: C.ink2, display: 'block', marginBottom: 5 }}>
+                Facturación anual (€)
+                <span style={{ fontWeight: 400, color: C.muted }}> aprox.</span>
+              </label>
+              <input
+                type="number" min="0"
+                value={form.facturacion_anual}
+                onChange={e => set('facturacion_anual', e.target.value)}
+                placeholder="Ej: 1500000"
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.85rem', boxSizing: 'border-box', fontFamily: 'inherit' }}
+              />
+            </div>
+          </div>
+          <p style={{ fontSize: '0.72rem', color: C.muted, marginTop: 10, marginBottom: 0 }}>
+            Estos datos son confidenciales y solo se usan para calcular elegibilidad en subvenciones.
+          </p>
+        </div>
+
+        {/* Submit */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '11px 24px', borderRadius: 10, cursor: 'pointer',
+              background: 'linear-gradient(90deg,#0d1f3c,#1d4ed8)',
+              color: '#fff', border: 'none', fontSize: '0.9rem', fontWeight: 700, fontFamily: 'inherit',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+            }}
+          >
+            {loading ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <Save size={15} />}
+            Guardar cambios
+          </button>
+          {msg && <span style={{ color: '#059669', fontWeight: 700, fontSize: '0.85rem' }}>✓ {msg}</span>}
+          {error && <span style={{ color: '#dc2626', fontSize: '0.82rem' }}>{error}</span>}
+        </div>
+      </form>
+    </div>
+  );
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
-type Vista = 'dashboard' | 'ayudas' | 'expedientes';
+type Vista = 'dashboard' | 'ayudas' | 'expedientes' | 'perfil';
 
 export default function PortalPage() {
   const router = useRouter();
@@ -801,6 +1082,7 @@ export default function PortalPage() {
             { key: 'dashboard', label: 'Inicio', icon: <Star size={15} /> },
             { key: 'ayudas', label: 'Mis subvenciones', icon: <FileText size={15} />, badge: matchesActivos.length || undefined },
             { key: 'expedientes', label: 'Expedientes', icon: <CheckCircle size={15} />, badge: expedientes.length || undefined },
+            { key: 'perfil', label: 'Mi empresa', icon: <Building2 size={15} />, badge: !cliente?.cnae_descripcion ? '!' : undefined },
           ].map(item => (
             <button key={item.key} onClick={() => setVista(item.key as Vista)}
               style={{
@@ -825,12 +1107,14 @@ export default function PortalPage() {
 
           {/* Perfil incompleto */}
           {!cliente?.cnae_descripcion && (
-            <div style={{ margin: 12, background: '#fffbeb', borderRadius: 12, padding: '12px 14px', border: '1px solid #fde68a' }}>
+            <button
+              onClick={() => setVista('perfil')}
+              style={{ margin: '0 12px 12px', background: '#fffbeb', borderRadius: 12, padding: '12px 14px', border: '1px solid #fde68a', textAlign: 'left', cursor: 'pointer', width: 'calc(100% - 24px)', fontFamily: 'inherit' }}>
               <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#92400e', marginBottom: 4 }}>Completa tu perfil</p>
               <p style={{ fontSize: '0.7rem', color: '#92400e', margin: 0, lineHeight: 1.5 }}>
-                Añade tu CNAE y comunidad autónoma para obtener matches más precisos.
+                Añade tu CNAE y comunidad autónoma para mejores matches.
               </p>
-            </div>
+            </button>
           )}
 
           <div style={{ padding: '12px 20px', borderTop: `1px solid ${C.border}` }}>
@@ -981,6 +1265,18 @@ export default function PortalPage() {
               )}
             </div>
           )}
+          {/* ── PERFIL ── */}
+          {vista === 'perfil' && (
+            <VistaPerfilEmpresa
+              cliente={cliente}
+              onGuardado={(actualizado) => {
+                setCliente(prev => prev ? { ...prev, ...actualizado } : null);
+                setToast('✓ Perfil actualizado. Recalculando matches…');
+                setTimeout(() => setToast(''), 5000);
+              }}
+            />
+          )}
+
         </main>
       </div>
 

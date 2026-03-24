@@ -4,13 +4,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
-  Building2, Calendar, FolderOpen, LogOut, Database, Settings,
+  Building2, Calendar, FolderOpen, LogOut, Database, Settings, ClipboardList,
 } from "lucide-react";
 
 const nav = [
   { href: "/clientes", label: "Clientes", icon: Building2 },
   { href: "/reuniones", label: "Reuniones", icon: Calendar },
   { href: "/expedientes", label: "Expedientes", icon: FolderOpen },
+  { href: "/solicitudes", label: "Solicitudes", icon: ClipboardList },
   { href: "/subvenciones-bd", label: "Subvenciones BD", icon: Database },
 ];
 
