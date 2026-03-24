@@ -42,14 +42,29 @@ export default function AuthModal({ onClose }: AuthModalProps) {
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true); setError('');
-    const { error: regError } = await supabase.auth.signUp({
+    const { data: regData, error: regError } = await supabase.auth.signUp({
       email, password,
       options: { data: { nombre_completo: nombre, rol: 'cliente' } },
     });
     if (regError) {
-      setError(regError.message); setLoading(false); return;
+      // Mensaje más claro para errores comunes
+      if (regError.message.includes('already registered') || regError.message.includes('already been registered')) {
+        setError('Este email ya está registrado. Prueba a iniciar sesión.');
+      } else if (regError.message.includes('Password should be')) {
+        setError('La contraseña debe tener al menos 6 caracteres.');
+      } else {
+        setError(regError.message);
+      }
+      setLoading(false); return;
     }
-    setSuccess('¡Cuenta creada! Revisa tu email para confirmar tu registro.');
+    // Si Supabase devuelve sesión directamente (confirmación de email desactivada)
+    if (regData?.session) {
+      router.push('/portal');
+      router.refresh();
+      return;
+    }
+    // Si requiere confirmación de email
+    setSuccess('¡Cuenta creada! Revisa tu bandeja de entrada para confirmar tu email y poder acceder.');
     setLoading(false);
   }
 

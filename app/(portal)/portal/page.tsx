@@ -1,124 +1,286 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
-/* ─────────────── TIPOS ─────────────── */
-interface Cliente { id: string; nombre: string; nif: string; sector?: string; }
-interface Expediente { id: string; titulo: string; estado: string; fecha_solicitud?: string; importe?: number; }
-interface Match { id: string; score: number; subvencion: { id: string; titulo: string; organismo?: string; importe_max?: number; fecha_fin?: string; descripcion?: string; }; }
-
-/* ─────────────── SUB-COMPONENTES ─────────────── */
-function SidebarItem({ icon, label, active, badge, onClick }: { icon: string; label: string; active?: boolean; badge?: number; onClick: () => void; }) {
-  return (
-    <div onClick={onClick} className={`p-sb-item${active ? ' p-sb-active' : ''}`} style={{
-      display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', borderRadius: 8, cursor: 'pointer',
-      background: active ? '#1a3561' : 'transparent', color: active ? '#fff' : '#c8d6ef',
-      fontWeight: active ? 600 : 400, fontSize: 14, marginBottom: 2, userSelect: 'none', transition: 'background .15s',
-    }}>
-      <span style={{ fontSize: 16 }}>{icon}</span>
-      <span style={{ flex: 1 }}>{label}</span>
-      {badge ? <span style={{ background: '#e53e3e', color: '#fff', borderRadius: 99, fontSize: 11, padding: '1px 7px', fontWeight: 700 }}>{badge}</span> : null}
-    </div>
-  );
+/* ─── TIPOS ─────────────────────────────────────────────────────────────────── */
+interface ClienteData {
+  id?: string;
+  nombre?: string;
+  nif?: string;
+  sector?: string;
+  tamano_empresa?: string;
+  ciudad?: string;
+  cnae?: string;
 }
 
-function SummaryCard({ label, value, color, icon }: { label: string; value: string | number; color: string; icon: string; }) {
-  return (
-    <div className="p-card-anim" style={{
-      background: '#fff', borderRadius: 12, padding: '20px 24px', boxShadow: '0 1px 6px rgba(13,31,60,.07)',
-      borderTop: `4px solid ${color}`, flex: 1, minWidth: 160,
-    }}>
-      <div style={{ fontSize: 28, marginBottom: 4 }}>{icon}</div>
-      <div style={{ fontSize: 28, fontWeight: 700, color: '#0d1f3c', lineHeight: 1.1 }}>{value}</div>
-      <div style={{ fontSize: 13, color: '#6b7a99', marginTop: 4 }}>{label}</div>
-    </div>
-  );
+interface MatchSubvencion {
+  id: string;
+  titulo: string;
+  organismo?: string;
+  importe_max?: number;
+  fecha_fin?: string;
+  objeto?: string;
+  bdns_id?: string;
 }
 
-function SubvCard({ match, onEncaje }: { match: Match; onEncaje: (m: Match) => void; }) {
+interface Match {
+  id: string;
+  score: number;
+  razon_encaje?: string;
+  requisitos_ok?: string[];
+  requisitos_riesgo?: string[];
+  subvencion: MatchSubvencion;
+}
+
+interface Expediente {
+  id: string;
+  titulo?: string;
+  estado: string;
+  created_at: string;
+  numero_bdns?: number;
+}
+
+/* ─── COLORES ────────────────────────────────────────────────────────────────── */
+const C = {
+  navy: '#0d1f3c',
+  navy2: '#162d52',
+  teal: '#0d7377',
+  bg: '#f4f6fb',
+  surface: '#fff',
+  border: '#e8ecf4',
+  ink: '#0d1f3c',
+  ink2: '#4a5568',
+  muted: '#94a3b8',
+  green: '#059669',
+  greenBg: '#ecfdf5',
+  greenBorder: '#a7f3d0',
+  amber: '#d97706',
+  amberBg: '#fffbeb',
+  amberBorder: '#fcd34d',
+  red: '#dc2626',
+  redBg: '#fef2f2',
+  blue: '#1d4ed8',
+  blueBg: '#eff4ff',
+  blueBorder: '#bfdbfe',
+  fire: '#f97316',
+};
+
+/* ─── UTILIDADES ────────────────────────────────────────────────────────────── */
+function getScoreStyle(score: number) {
+  if (score >= 0.7) return { text: '🔥 Muy recomendable', bg: '#fff7ed', color: C.fire, border: '#fed7aa' };
+  if (score >= 0.4) return { text: '👍 Posible encaje',   bg: C.greenBg, color: C.green, border: C.greenBorder };
+  return                 { text: '⚠️ Encaje bajo',        bg: '#f8fafc',  color: C.muted, border: C.border };
+}
+
+function getStrip(score: number) {
+  if (score >= 0.7) return 'linear-gradient(90deg,#f97316,#fbbf24)';
+  if (score >= 0.4) return `linear-gradient(90deg,${C.green},#34d399)`;
+  return 'linear-gradient(90deg,#94a3b8,#cbd5e1)';
+}
+
+function getDias(fechaFin?: string): number | null {
+  if (!fechaFin) return null;
+  return Math.ceil((new Date(fechaFin).getTime() - Date.now()) / 86400000);
+}
+
+function fmtImporte(n?: number): string {
+  if (!n) return '';
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1).replace('.0', '')} M€`;
+  if (n >= 1000) return `${Math.round(n / 1000).toLocaleString('es-ES')}k €`;
+  return `${n.toLocaleString('es-ES')} €`;
+}
+
+function initials(nombre: string): string {
+  return nombre.split(' ').slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase() || 'U';
+}
+
+/* ─── COMPONENTE: MATCH CARD ────────────────────────────────────────────────── */
+function MatchCard({ match, onEncaje }: { match: Match; onEncaje: (m: Match) => void }) {
   const [expanded, setExpanded] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const s = match.subvencion;
-  const score = match.score;
-  const isHot = score >= 0.7;
-  const stripColor = isHot
-    ? 'linear-gradient(90deg,#f97316,#facc15)'
-    : score >= 0.4
-      ? 'linear-gradient(90deg,#22c55e,#84cc16)'
-      : 'linear-gradient(90deg,#94a3b8,#cbd5e1)';
-
-  const badgeColor = isHot ? '#f97316' : score >= 0.4 ? '#22c55e' : '#94a3b8';
-  const scoreLabel = isHot ? '🔥 Alta' : score >= 0.4 ? '✅ Media' : '⚠️ Baja';
-
-  const fechaFin = s.fecha_fin ? new Date(s.fecha_fin) : null;
-  const diasRestantes = fechaFin ? Math.ceil((fechaFin.getTime() - Date.now()) / 86400000) : null;
+  const sl = getScoreStyle(match.score);
+  const dias = getDias(s.fecha_fin);
+  const reqOk = match.requisitos_ok ?? [];
+  const reqRiesgo = match.requisitos_riesgo ?? [];
 
   return (
-    <div className="p-subv-card" style={{
-      background: '#fff', borderRadius: 12, boxShadow: '0 1px 6px rgba(13,31,60,.07)',
-      overflow: 'hidden', marginBottom: 16,
-    }}>
-      <div style={{ height: 5, background: stripColor }} />
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: C.surface, border: `1px solid ${hovered ? '#d0d5e8' : C.border}`,
+        borderRadius: 14, overflow: 'hidden',
+        boxShadow: hovered ? '0 4px 16px rgba(13,31,60,.1)' : '0 1px 3px rgba(13,31,60,.06)',
+        marginBottom: 12, transform: hovered ? 'translateY(-2px)' : 'none',
+        transition: 'all .25s cubic-bezier(.4,0,.2,1)',
+      }}
+    >
+      {/* Strip */}
+      <div style={{ height: 3, background: getStrip(match.score) }} />
+
+      {/* Main */}
       <div style={{ padding: '16px 20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 15, color: '#0d1f3c', lineHeight: 1.3, marginBottom: 4 }}>{s.titulo}</div>
-            {s.organismo && <div style={{ fontSize: 12, color: '#6b7a99' }}>{s.organismo}</div>}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-            <span style={{ background: badgeColor, color: '#fff', borderRadius: 99, fontSize: 12, padding: '3px 10px', fontWeight: 700, whiteSpace: 'nowrap' }}>
-              {scoreLabel} {Math.round(score * 100)}%
-            </span>
-            {diasRestantes !== null && (
-              <span style={{ fontSize: 11, color: diasRestantes < 15 ? '#e53e3e' : '#6b7a99', fontWeight: diasRestantes < 15 ? 700 : 400 }}>
-                {diasRestantes > 0 ? `⏳ ${diasRestantes}d restantes` : '⚠️ Plazo vencido'}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {s.importe_max && (
-          <div style={{ marginTop: 8, fontSize: 13, color: '#1a3561', fontWeight: 600 }}>
-            💰 Hasta {s.importe_max.toLocaleString('es-ES')}€
-          </div>
-        )}
-
-        {s.descripcion && (
-          <div style={{ marginTop: 8, fontSize: 13, color: '#4a5568', lineHeight: 1.5 }}>
-            <strong style={{ color: '#1a3561' }}>Por qué encaja:</strong>{' '}
-            {expanded ? s.descripcion : s.descripcion.slice(0, 120) + (s.descripcion.length > 120 ? '…' : '')}
-            {s.descripcion.length > 120 && (
-              <button onClick={() => setExpanded(!expanded)} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: 12, marginLeft: 4 }}>
-                {expanded ? 'Ver menos' : 'Ver más'}
-              </button>
-            )}
-          </div>
-        )}
-
-        <div style={{ marginTop: 14, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button className="p-btn-enc" onClick={() => onEncaje(match)} style={{
-            background: '#0d1f3c', color: '#fff', border: 'none', borderRadius: 8,
-            padding: '8px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all .15s',
+        {/* Badges row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginBottom: 10 }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12,
+            fontWeight: 700, padding: '3px 10px', borderRadius: 100,
+            background: sl.bg, color: sl.color, border: `1px solid ${sl.border}`,
           }}>
-            🎯 Ver encaje
-          </button>
+            {sl.text}
+          </span>
+          {s.fecha_fin && new Date(s.fecha_fin) > new Date() && (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12,
+              fontWeight: 600, padding: '3px 9px', borderRadius: 100,
+              background: C.greenBg, color: C.green,
+            }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: C.green, display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
+              Abierta
+            </span>
+          )}
+          {dias !== null && dias >= 0 && dias <= 30 && (
+            <span style={{
+              fontSize: 12, fontWeight: 700, padding: '3px 9px', borderRadius: 100,
+              background: C.redBg, color: C.red,
+            }}>
+              ⏰ {dias} días
+            </span>
+          )}
         </div>
+
+        {/* Título */}
+        <div style={{ fontWeight: 700, fontSize: 15, color: C.ink, lineHeight: 1.3, marginBottom: 8, letterSpacing: '-0.01em' }}>
+          {s.titulo}
+        </div>
+
+        {/* Why box */}
+        {match.razon_encaje && (
+          <div style={{ background: '#f0f7ff', border: '1px solid #dbeafe', borderRadius: 9, padding: '10px 13px', marginBottom: 10 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#3b82f6', marginBottom: 3 }}>
+              Por qué encaja con tu empresa
+            </div>
+            <div style={{ fontSize: 13, color: C.ink2, lineHeight: 1.55 }}>{match.razon_encaje}</div>
+          </div>
+        )}
+
+        {/* Importe */}
+        {s.importe_max ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+            <span style={{ fontSize: 18, fontWeight: 800, color: C.teal, letterSpacing: '-0.02em' }}>
+              Hasta {fmtImporte(s.importe_max)}
+            </span>
+            <span style={{ fontSize: 12, color: C.muted, fontWeight: 500 }}>importe máximo</span>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Toggle */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6, width: '100%',
+          padding: '10px 20px', background: 'none', border: 'none',
+          borderTop: `1px solid ${C.border}`, fontFamily: "'Plus Jakarta Sans', sans-serif",
+          fontSize: 12, fontWeight: 600, color: expanded ? C.ink2 : C.muted,
+          cursor: 'pointer', textAlign: 'left', transition: 'color .15s',
+        }}
+      >
+        <span style={{
+          width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
+          background: expanded ? C.navy : C.bg, border: `1px solid ${expanded ? C.navy : C.border}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 10, color: expanded ? '#fff' : C.muted,
+          transform: expanded ? 'rotate(180deg)' : 'none', transition: 'all .25s',
+        }}>↓</span>
+        {expanded ? 'Ocultar detalles' : 'Ver detalles y análisis de riesgos'}
+      </button>
+
+      {/* Detalles expandibles */}
+      {expanded && (
+        <div style={{ borderTop: `1px solid ${C.border}`, padding: '12px 20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {s.objeto && (
+            <div style={{ fontSize: 13, color: C.ink2, lineHeight: 1.65 }}>{s.objeto}</div>
+          )}
+
+          {(reqOk.length > 0 || reqRiesgo.length > 0) && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.muted, marginBottom: 6 }}>
+                Checklist de elegibilidad
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                {reqOk.map((r, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: C.ink2 }}>
+                    <span>✅</span> {r}
+                  </div>
+                ))}
+                {reqRiesgo.map((r, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: C.ink2 }}>
+                    <span>⚠️</span> {r}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
+            {s.importe_max && (
+              <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 12px' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.muted, marginBottom: 2 }}>Importe máx.</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: C.teal }}>{fmtImporte(s.importe_max)}</div>
+              </div>
+            )}
+            {s.fecha_fin && (
+              <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 12px' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.muted, marginBottom: 2 }}>Fin de plazo</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>
+                  {new Date(s.fecha_fin).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </div>
+              </div>
+            )}
+            {s.organismo && (
+              <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 12px', gridColumn: '1 / -1' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.muted, marginBottom: 2 }}>Organismo</div>
+                <div style={{ fontSize: 12, fontWeight: 500, color: C.ink }}>{s.organismo}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+        padding: '10px 20px 14px', borderTop: `1px solid ${C.border}`, background: '#fafbfd', flexWrap: 'wrap',
+      }}>
+        <span style={{ fontSize: 11, color: C.muted, fontWeight: 500 }}>
+          {s.bdns_id ? `BDNS #${s.bdns_id}` : ''}
+        </span>
+        <button
+          onClick={() => onEncaje(match)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5, padding: '8px 18px',
+            background: C.navy, color: '#fff', fontFamily: "'Plus Jakarta Sans', sans-serif",
+            fontWeight: 700, fontSize: 13, border: 'none', borderRadius: 8, cursor: 'pointer',
+            transition: 'background .2s', boxShadow: '0 2px 8px rgba(13,31,60,.15)',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = C.navy2)}
+          onMouseLeave={e => (e.currentTarget.style.background = C.navy)}
+        >
+          Ver encaje completo
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </button>
       </div>
     </div>
   );
 }
 
-function EmptyBox({ icon, text }: { icon: string; text: string; }) {
-  return (
-    <div style={{ textAlign: 'center', padding: '48px 24px', color: '#94a3b8' }}>
-      <div style={{ fontSize: 40, marginBottom: 12 }}>{icon}</div>
-      <div style={{ fontSize: 14 }}>{text}</div>
-    </div>
-  );
-}
-
-/* ─────────────── MODAL ENCAJE ─────────────── */
+/* ─── COMPONENTE: MODAL ENCAJE ───────────────────────────────────────────────── */
 const PREGUNTAS = [
   '¿Tu empresa lleva más de 1 año operativa?',
   '¿Tienes menos de 250 empleados?',
@@ -127,82 +289,183 @@ const PREGUNTAS = [
   '¿Estás al corriente con Hacienda y Seguridad Social?',
 ];
 
-function ModalEncaje({ match, answers, onChange, onClose, onConfirm }: {
-  match: Match; answers: Record<number, boolean | null>; onChange: (i: number, v: boolean) => void;
-  onClose: () => void; onConfirm: () => void;
+function ModalEncaje({ match, onClose, onTramitar }: {
+  match: Match;
+  onClose: () => void;
+  onTramitar: () => void;
 }) {
+  const [answers, setAnswers] = useState<Record<number, boolean | null>>({});
   const respondidas = Object.values(answers).filter(v => v !== null).length;
   const positivas = Object.values(answers).filter(v => v === true).length;
   const pct = respondidas > 0 ? Math.round((positivas / PREGUNTAS.length) * 100) : null;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(13,31,60,.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 40px rgba(13,31,60,.25)' }}>
-        <div style={{ padding: '24px 28px 0' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Análisis de encaje</div>
-              <div style={{ fontWeight: 700, fontSize: 17, color: '#0d1f3c', lineHeight: 1.3 }}>{match.subvencion.titulo}</div>
-            </div>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#94a3b8', lineHeight: 1, paddingLeft: 8 }}>×</button>
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(13,31,60,.5)', backdropFilter: 'blur(8px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18,
+          padding: '28px 32px', maxWidth: 500, width: '100%',
+          maxHeight: '90vh', overflowY: 'auto',
+          boxShadow: '0 16px 48px rgba(13,31,60,.2)',
+          animation: 'modalIn .28s cubic-bezier(.4,0,.2,1)',
+        }}
+      >
+        <style>{`@keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}`}</style>
+
+        {/* Cabecera */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 20 }}>
+          <div style={{ width: 44, height: 44, background: C.blueBg, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>🎯</div>
+          <div style={{ flex: 1 }}>
+            <h2 style={{ fontSize: 17, fontWeight: 800, color: C.ink, letterSpacing: '-0.02em', lineHeight: 1.2, marginBottom: 2 }}>Análisis de encaje</h2>
+            <p style={{ fontSize: 12, color: C.muted, lineHeight: 1.4 }}>{match.subvencion.titulo}</p>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.muted, fontSize: 22, lineHeight: 1, padding: 0, flexShrink: 0 }}>×</button>
+        </div>
+
+        {/* Preguntas */}
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.muted, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 18, height: 18, background: C.navy, borderRadius: '50%', color: '#fff', fontSize: 9, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, flexShrink: 0 }}>1</span>
+            Verificación rápida
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {PREGUNTAS.map((q, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 13px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 9 }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: C.ink2 }}>{q}</span>
+                <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
+                  {([true, false] as const).map(val => (
+                    <button
+                      key={String(val)}
+                      onClick={() => setAnswers(a => ({ ...a, [i]: val }))}
+                      style={{
+                        padding: '4px 13px', fontSize: 12, fontWeight: 600, borderRadius: 6, cursor: 'pointer',
+                        fontFamily: "'Plus Jakarta Sans', sans-serif", transition: 'all .15s',
+                        border: `1px solid ${answers[i] === val ? (val ? C.greenBorder : '#fecaca') : C.border}`,
+                        background: answers[i] === val ? (val ? C.greenBg : C.redBg) : C.surface,
+                        color: answers[i] === val ? (val ? C.green : C.red) : C.ink2,
+                      }}
+                    >
+                      {val ? 'Sí' : 'No'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div style={{ padding: '20px 28px' }}>
-          {PREGUNTAS.map((q, i) => (
-            <div key={i} style={{ marginBottom: 16, padding: '14px 16px', background: '#f8fafc', borderRadius: 10, border: '1.5px solid', borderColor: answers[i] === true ? '#22c55e' : answers[i] === false ? '#f87171' : '#e2e8f0' }}>
-              <div style={{ fontSize: 14, color: '#1e293b', marginBottom: 10, fontWeight: 500 }}>{q}</div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {[true, false].map(val => (
-                  <button key={String(val)} className="p-qa-btn" onClick={() => onChange(i, val)} style={{
-                    flex: 1, padding: '6px 0', borderRadius: 7, border: '1.5px solid',
-                    borderColor: answers[i] === val ? (val ? '#22c55e' : '#f87171') : '#e2e8f0',
-                    background: answers[i] === val ? (val ? '#f0fdf4' : '#fef2f2') : '#fff',
-                    color: answers[i] === val ? (val ? '#16a34a' : '#dc2626') : '#64748b',
-                    fontWeight: answers[i] === val ? 700 : 400, fontSize: 13, cursor: 'pointer',
-                  }}>
-                    {val ? '✅ Sí' : '❌ No'}
-                  </button>
-                ))}
+        {/* Resultado */}
+        {pct !== null && (
+          <div style={{
+            background: pct >= 60 ? C.greenBg : C.amberBg,
+            border: `1px solid ${pct >= 60 ? C.greenBorder : C.amberBorder}`,
+            borderRadius: 11, padding: '14px 16px',
+            display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16,
+          }}>
+            <span style={{ fontSize: 28, flexShrink: 0 }}>{pct >= 60 ? '✅' : '⚠️'}</span>
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: pct >= 60 ? C.green : C.amber, letterSpacing: '-0.03em', lineHeight: 1 }}>{pct}%</div>
+              <div style={{ fontSize: 12, color: C.ink2, fontWeight: 500, marginTop: 2 }}>
+                {pct >= 60 ? 'Buen nivel de encaje — recomendamos tramitarla' : 'Encaje parcial — revisa los requisitos antes de tramitar'}
               </div>
             </div>
-          ))}
-
-          {pct !== null && (
-            <div style={{ background: pct >= 60 ? '#f0fdf4' : '#fffbeb', border: `1.5px solid ${pct >= 60 ? '#86efac' : '#fcd34d'}`, borderRadius: 10, padding: '14px 16px', marginBottom: 16, textAlign: 'center' }}>
-              <div style={{ fontSize: 28, fontWeight: 800, color: pct >= 60 ? '#16a34a' : '#d97706' }}>{pct}%</div>
-              <div style={{ fontSize: 13, color: '#374151', marginTop: 2 }}>
-                {pct >= 60 ? '✅ Buen nivel de encaje — recomendamos tramitarla' : '⚠️ Encaje parcial — revisa los requisitos antes de tramitar'}
-              </div>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={onClose} style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: 14, cursor: 'pointer', fontWeight: 500 }}>
-              Cancelar
-            </button>
-            <button onClick={onConfirm} style={{ flex: 2, padding: '10px 0', borderRadius: 8, border: 'none', background: '#0d1f3c', color: '#fff', fontSize: 14, cursor: 'pointer', fontWeight: 700 }}>
-              ✅ Quiero que lo tramitéis
-            </button>
           </div>
+        )}
+
+        <div style={{ height: 1, background: C.border, margin: '16px 0' }} />
+
+        {/* Acciones */}
+        <div style={{ display: 'flex', gap: 9 }}>
+          <button
+            onClick={onTramitar}
+            style={{
+              flex: 1, padding: 12, background: C.navy, color: '#fff',
+              fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: 14,
+              border: 'none', borderRadius: 9, cursor: 'pointer', transition: 'background .2s',
+              boxShadow: '0 2px 10px rgba(13,31,60,.2)',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = C.navy2)}
+            onMouseLeave={e => (e.currentTarget.style.background = C.navy)}
+          >
+            ✅ Quiero tramitarla
+          </button>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '12px 20px', background: 'transparent', color: C.muted,
+              fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, fontWeight: 500,
+              border: `1px solid ${C.border}`, borderRadius: 9, cursor: 'pointer', transition: 'all .2s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = C.ink2; e.currentTarget.style.color = C.ink; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.muted; }}
+          >
+            Cerrar
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-/* ─────────────── PÁGINA PRINCIPAL ─────────────── */
+/* ─── COMPONENTE: SIDEBAR ITEM ───────────────────────────────────────────────── */
+function SidebarItem({ icon, label, active, badge, onClick }: {
+  icon: string; label: string; active?: boolean; badge?: number; onClick: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px',
+        borderRadius: 8, fontSize: 13, fontWeight: active ? 600 : 500,
+        color: active ? C.blue : C.ink2,
+        background: active ? C.blueBg : hovered ? C.bg : 'transparent',
+        cursor: 'pointer', marginBottom: 2, transition: 'all .15s', userSelect: 'none',
+      }}
+    >
+      <span style={{ fontSize: 15, width: 20, textAlign: 'center', flexShrink: 0 }}>{icon}</span>
+      <span style={{ flex: 1 }}>{label}</span>
+      {badge ? (
+        <span style={{ background: C.red, color: '#fff', borderRadius: 99, fontSize: 10, padding: '1px 6px', fontWeight: 700 }}>
+          {badge}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/* ─── COMPONENTE: SUMMARY CARD ───────────────────────────────────────────────── */
+function SummaryCard({ label, value, sub, color }: { label: string; value: string | number; sub: string; color: string }) {
+  return (
+    <div style={{
+      background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12,
+      padding: '16px 18px', boxShadow: '0 1px 3px rgba(13,31,60,.06)', flex: 1, minWidth: 160,
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em', color: C.muted, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, color }}>{value}</div>
+      <div style={{ fontSize: 11, color: C.muted, marginTop: 4, fontWeight: 400 }}>{sub}</div>
+    </div>
+  );
+}
+
+/* ─── PÁGINA PRINCIPAL ───────────────────────────────────────────────────────── */
 export default function PortalPage() {
   const router = useRouter();
   const supabase = createClient();
 
   const [loading, setLoading] = useState(true);
-  const [cliente, setCliente] = useState<Cliente | null>(null);
+  const [cliente, setCliente] = useState<ClienteData | null>(null);
+  const [userName, setUserName] = useState('Cliente');
   const [expedientes, setExpedientes] = useState<Expediente[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
-  const [tab, setTab] = useState<'dashboard' | 'expedientes' | 'ayudas'>('dashboard');
+  const [tab, setTab] = useState<'dashboard' | 'ayudas' | 'expedientes'>('dashboard');
   const [modalMatch, setModalMatch] = useState<Match | null>(null);
-  const [qaAnswers, setQaAnswers] = useState<Record<number, boolean | null>>({});
   const [toast, setToast] = useState('');
 
   useEffect(() => {
@@ -210,26 +473,43 @@ export default function PortalPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/'); return; }
 
-      // Datos del cliente
-      const { data: perfil } = await supabase.from('clientes').select('*').eq('user_id', user.id).single();
-      if (perfil) setCliente(perfil);
+      const meta = user.user_metadata;
+      setUserName(meta?.nombre_completo ?? meta?.full_name ?? user.email?.split('@')[0] ?? 'Cliente');
 
-      // Expedientes
-      if (perfil) {
-        const { data: exps } = await supabase.from('expedientes').select('*').eq('cliente_id', perfil.id).order('fecha_solicitud', { ascending: false });
-        setExpedientes(exps || []);
+      // Datos del cliente vinculado a este usuario
+      const { data: clienteData } = await supabase
+        .from('clientes')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (clienteData) {
+        setCliente(clienteData);
+
+        // Expedientes
+        const { data: exps } = await supabase
+          .from('expedientes')
+          .select('id, titulo, estado, created_at, numero_bdns')
+          .eq('cliente_id', clienteData.id)
+          .order('created_at', { ascending: false });
+        setExpedientes(exps ?? []);
 
         // Matches
         const { data: mts } = await supabase
           .from('cliente_subvencion_match')
-          .select('id, score, subvencion:subvenciones(id,titulo,organismo,importe_max,fecha_fin,descripcion)')
-          .eq('cliente_id', perfil.id)
-          .order('score', { ascending: false });
-        setMatches((mts || []) as unknown as Match[]);
+          .select(`
+            id, score, razon_encaje, requisitos_ok, requisitos_riesgo,
+            subvencion:subvenciones(id, titulo, organismo, importe_max, fecha_fin, objeto, bdns_id)
+          `)
+          .eq('cliente_id', clienteData.id)
+          .order('score', { ascending: false })
+          .limit(30);
+        setMatches((mts ?? []) as unknown as Match[]);
       }
 
       setLoading(false);
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleLogout = async () => {
@@ -237,165 +517,315 @@ export default function PortalPage() {
     router.push('/');
   };
 
-  const openEncaje = (m: Match) => {
-    setModalMatch(m);
-    setQaAnswers({});
-  };
-
   const confirmTramitar = () => {
     setModalMatch(null);
-    setToast('✅ Solicitud enviada — nos pondremos en contacto contigo pronto.');
+    setToast('Solicitud enviada — nos pondremos en contacto contigo pronto.');
     setTimeout(() => setToast(''), 4000);
   };
 
-  const matchesAltos = matches.filter(m => m.score >= 0.7);
+  const matchesAltos  = matches.filter(m => m.score >= 0.7);
   const matchesMedios = matches.filter(m => m.score >= 0.4 && m.score < 0.7);
+  const importePotencial = matches.reduce((s, m) => s + (m.subvencion.importe_max ?? 0), 0);
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#f0f4fa' }}>
-        <div style={{ width: 40, height: 40, border: '4px solid #e2e8f0', borderTopColor: '#1a3561', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-        <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
-      </div>
-    );
-  }
+  const proximoCierre = matches
+    .filter(m => m.subvencion.fecha_fin && new Date(m.subvencion.fecha_fin) > new Date())
+    .sort((a, b) => new Date(a.subvencion.fecha_fin!).getTime() - new Date(b.subvencion.fecha_fin!).getTime())[0];
+  const diasProximo = proximoCierre ? getDias(proximoCierre.subvencion.fecha_fin) : null;
 
-  const nombre = cliente?.nombre || 'Cliente';
+  const nombre = cliente?.nombre || userName;
   const hora = new Date().getHours();
   const saludo = hora < 13 ? 'Buenos días' : hora < 20 ? 'Buenas tardes' : 'Buenas noches';
 
+  /* ── Spinner de carga ── */
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: C.bg }}>
+      <div style={{ width: 40, height: 40, border: `4px solid ${C.border}`, borderTopColor: C.navy, borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+
+  /* ── Render principal ── */
   return (
-    <>
+    <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", background: C.bg, minHeight: '100vh' }}>
       <style>{`
-        @keyframes portalUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-        .p-card-anim{animation:portalUp .4s ease both;}
-        .p-sb-item:hover:not(.p-sb-active){background:#1e3d6e!important;}
-        .p-subv-card{transition:box-shadow .25s,transform .25s;}
-        .p-subv-card:hover{box-shadow:0 4px 16px rgba(13,31,60,.13)!important;transform:translateY(-2px);}
-        .p-btn-enc:hover{background:#162d52!important;}
-        .p-qa-btn{transition:all .15s;}
+        @keyframes up { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:translateY(0) } }
+        @keyframes spin { from { transform:rotate(0deg) } to { transform:rotate(360deg) } }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+        .p-anim { animation: up .4s ease both; }
       `}</style>
 
-      <div style={{ display: 'flex', minHeight: '100vh', fontFamily: "'Plus Jakarta Sans', sans-serif", background: '#f0f4fa' }}>
+      {/* ══ TOP NAV ══ */}
+      <nav style={{
+        background: C.surface, borderBottom: `1px solid ${C.border}`,
+        height: 60, display: 'flex', alignItems: 'center', padding: '0 40px',
+        justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50,
+        boxShadow: '0 1px 3px rgba(13,31,60,.06)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <div style={{ width: 32, height: 32, background: C.navy, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 12 }}>AP</div>
+          <span style={{ fontWeight: 700, fontSize: 14, color: C.navy }}>AyudaPyme</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 34, height: 34, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 15, position: 'relative' }}>
+            🔔
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8 }}>
+            <div style={{ width: 26, height: 26, background: C.navy, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 11 }}>
+              {initials(nombre)}
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 600, color: C.ink2 }}>{nombre}</span>
+          </div>
+        </div>
+      </nav>
+
+      {/* ══ LAYOUT ══ */}
+      <div style={{ display: 'flex', minHeight: 'calc(100vh - 60px)' }}>
 
         {/* ── SIDEBAR ── */}
-        <aside style={{ width: 240, background: '#0d1f3c', display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 100 }}>
-          <div style={{ padding: '24px 20px 12px' }}>
-            <img src="/logo-light.png" alt="AyudaPyme" style={{ height: 32, marginBottom: 24 }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#4a6fa5', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 8, paddingLeft: 4 }}>Portal</div>
-            <SidebarItem icon="🏠" label="Dashboard" active={tab === 'dashboard'} onClick={() => setTab('dashboard')} />
-            <SidebarItem icon="📁" label="Mis expedientes" active={tab === 'expedientes'} badge={expedientes.filter(e => e.estado === 'pendiente').length || undefined} onClick={() => setTab('expedientes')} />
-            <SidebarItem icon="🎯" label="Ayudas disponibles" active={tab === 'ayudas'} badge={matchesAltos.length || undefined} onClick={() => setTab('ayudas')} />
+        <aside style={{
+          width: 220, flexShrink: 0, background: C.surface,
+          borderRight: `1px solid ${C.border}`, padding: '24px 0',
+          position: 'sticky', top: 60, height: 'calc(100vh - 60px)', overflowY: 'auto',
+        }}>
+          {/* Sección principal */}
+          <div style={{ padding: '0 16px', marginBottom: 6 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.muted, padding: '0 8px', marginBottom: 6 }}>Principal</div>
+            <SidebarItem icon="🏠" label="Dashboard"        active={tab === 'dashboard'}    onClick={() => setTab('dashboard')} />
+            <SidebarItem icon="📋" label="Mis expedientes"  active={tab === 'expedientes'}  badge={expedientes.filter(e => e.estado === 'pendiente').length || undefined} onClick={() => setTab('expedientes')} />
+            <SidebarItem icon="🔍" label="Todas las ayudas" active={tab === 'ayudas'}       onClick={() => setTab('ayudas')} />
           </div>
-          <div style={{ flex: 1 }} />
-          <div style={{ padding: '16px 20px', borderTop: '1px solid #1a3561' }}>
-            <button onClick={handleLogout} style={{ width: '100%', background: 'transparent', border: '1px solid #1a3561', color: '#94a3b8', borderRadius: 8, padding: '8px 0', fontSize: 13, cursor: 'pointer', transition: 'all .15s' }}>
-              🚪 Cerrar sesión
-            </button>
+
+          <div style={{ height: 1, background: C.border, margin: '12px 16px' }} />
+
+          {/* Sección cuenta */}
+          <div style={{ padding: '0 16px', marginBottom: 6 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.muted, padding: '0 8px', marginBottom: 6 }}>Cuenta</div>
+            <SidebarItem icon="⚙️" label="Perfil empresa"  onClick={() => {}} />
+            <SidebarItem icon="💳" label="Facturación"     onClick={() => {}} />
           </div>
+
+          <div style={{ height: 1, background: C.border, margin: '12px 16px' }} />
+
+          <div style={{ padding: '0 16px' }}>
+            <SidebarItem icon="🚪" label="Cerrar sesión" onClick={handleLogout} />
+          </div>
+
+          {/* Bloque perfil incompleto */}
+          {!cliente?.cnae && (
+            <div style={{ margin: '16px', padding: '14px', background: C.amberBg, border: `1px solid ${C.amberBorder}`, borderRadius: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: C.amber, marginBottom: 8 }}>
+                ⏳ Perfil incompleto
+              </div>
+              <div style={{ height: 5, background: '#fde68a', borderRadius: 100, overflow: 'hidden', marginBottom: 6 }}>
+                <div style={{ height: '100%', background: C.amber, borderRadius: 100, width: '60%' }} />
+              </div>
+              <div style={{ fontSize: 11, color: '#92400e', fontWeight: 500, lineHeight: 1.5 }}>
+                60% completado — añade tu CNAE para mejorar el encaje con las subvenciones
+              </div>
+            </div>
+          )}
         </aside>
 
-        {/* ── MAIN ── */}
-        <main style={{ marginLeft: 240, flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        {/* ── CONTENIDO PRINCIPAL ── */}
+        <main style={{ flex: 1, padding: '32px 36px 60px', overflowY: 'auto', maxWidth: 960 }}>
 
-          {/* Topbar */}
-          <header style={{ background: '#fff', borderBottom: '1px solid #e8edf5', padding: '0 32px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50 }}>
-            <div style={{ fontSize: 14, color: '#6b7a99' }}>
-              {tab === 'dashboard' && '🏠 Dashboard'}
-              {tab === 'expedientes' && '📁 Mis expedientes'}
-              {tab === 'ayudas' && '🎯 Ayudas disponibles'}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>{nombre}</span>
-              <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#1a3561', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 14 }}>
-                {nombre[0]?.toUpperCase()}
-              </div>
-            </div>
-          </header>
-
-          {/* Contenido */}
-          <div style={{ padding: '32px', flex: 1 }}>
-
-            {/* ── DASHBOARD ── */}
-            {tab === 'dashboard' && (
-              <div className="p-card-anim">
-                <h1 style={{ fontSize: 24, fontWeight: 700, color: '#0d1f3c', marginBottom: 4 }}>{saludo}, {nombre} 👋</h1>
-                <p style={{ color: '#6b7a99', fontSize: 14, marginBottom: 28 }}>Aquí tienes un resumen de tu actividad y las mejores oportunidades de financiación.</p>
-
-                {/* Summary cards */}
-                <div style={{ display: 'flex', gap: 16, marginBottom: 32, flexWrap: 'wrap' }}>
-                  <SummaryCard label="Expedientes activos" value={expedientes.length} color="#3b82f6" icon="📁" />
-                  <SummaryCard label="Ayudas recomendadas" value={matchesAltos.length} color="#f97316" icon="🔥" />
-                  <SummaryCard label="Posibles ayudas" value={matchesMedios.length} color="#22c55e" icon="✅" />
+          {/* ═══ VISTA: DASHBOARD ═══ */}
+          {tab === 'dashboard' && (
+            <div className="p-anim">
+              {/* Saludo */}
+              <div style={{ marginBottom: 28 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.muted, marginBottom: 6 }}>
+                  Dashboard personalizado
                 </div>
-
-                {/* Muy recomendables */}
-                {matchesAltos.length > 0 && (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                      <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0d1f3c', margin: 0 }}>🔥 Muy recomendables</h2>
-                      <span style={{ background: '#fff3e0', color: '#f97316', borderRadius: 99, fontSize: 12, padding: '2px 10px', fontWeight: 700 }}>{matchesAltos.length}</span>
-                    </div>
-                    {matchesAltos.slice(0, 3).map(m => <SubvCard key={m.id} match={m} onEncaje={openEncaje} />)}
-                  </>
-                )}
-
-                {/* Posibles */}
-                {matchesMedios.length > 0 && (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, marginTop: matchesAltos.length > 0 ? 24 : 0 }}>
-                      <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0d1f3c', margin: 0 }}>👍 Posibles ayudas</h2>
-                      <span style={{ background: '#f0fdf4', color: '#22c55e', borderRadius: 99, fontSize: 12, padding: '2px 10px', fontWeight: 700 }}>{matchesMedios.length}</span>
-                    </div>
-                    {matchesMedios.slice(0, 3).map(m => <SubvCard key={m.id} match={m} onEncaje={openEncaje} />)}
-                  </>
-                )}
-
-                {matches.length === 0 && <EmptyBox icon="🔍" text="Aún no hemos encontrado subvenciones para tu perfil. Pronto tendrás resultados." />}
-              </div>
-            )}
-
-            {/* ── EXPEDIENTES ── */}
-            {tab === 'expedientes' && (
-              <div className="p-card-anim">
-                <h1 style={{ fontSize: 22, fontWeight: 700, color: '#0d1f3c', marginBottom: 24 }}>📁 Mis expedientes</h1>
-                {expedientes.length === 0 ? (
-                  <EmptyBox icon="📂" text="Todavía no tienes expedientes abiertos." />
+                <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.15, color: C.ink, marginBottom: 8 }}>
+                  {saludo}, <span style={{ color: C.teal }}>{nombre.split(' ')[0]}</span> 👋
+                </h1>
+                {matches.length > 0 ? (
+                  <p style={{ fontSize: 14, color: C.ink2 }}>
+                    Hemos analizado tu perfil y encontrado{' '}
+                    <strong style={{ color: C.ink }}>{matches.length} subvenciones que encajan contigo</strong>
+                    {importePotencial > 0 && (
+                      <> — importe potencial estimado:{' '}
+                        <strong style={{ color: C.teal }}>~{fmtImporte(importePotencial)}</strong>
+                      </>
+                    )}
+                  </p>
                 ) : (
-                  <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 6px rgba(13,31,60,.07)', overflow: 'hidden' }}>
-                    {expedientes.map((exp, i) => {
-                      const estadoColor: Record<string, string> = { activo: '#22c55e', pendiente: '#f97316', cerrado: '#94a3b8', denegado: '#ef4444' };
-                      const color = estadoColor[exp.estado] || '#94a3b8';
-                      return (
-                        <div key={exp.id} style={{ padding: '16px 20px', borderBottom: i < expedientes.length - 1 ? '1px solid #f1f5f9' : 'none', display: 'flex', alignItems: 'center', gap: 16 }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 600, fontSize: 14, color: '#0d1f3c' }}>{exp.titulo}</div>
-                            {exp.fecha_solicitud && <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>Solicitado: {new Date(exp.fecha_solicitud).toLocaleDateString('es-ES')}</div>}
-                          </div>
-                          {exp.importe && <div style={{ fontSize: 14, fontWeight: 700, color: '#1a3561' }}>{exp.importe.toLocaleString('es-ES')}€</div>}
-                          <span style={{ background: `${color}18`, color, borderRadius: 99, fontSize: 12, padding: '3px 12px', fontWeight: 700, textTransform: 'capitalize' }}>{exp.estado}</span>
-                        </div>
-                      );
-                    })}
+                  <p style={{ fontSize: 14, color: C.ink2 }}>
+                    Estamos analizando las subvenciones disponibles para tu perfil de empresa.
+                  </p>
+                )}
+              </div>
+
+              {/* Summary cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 28 }}>
+                <SummaryCard
+                  label="Subvenciones recomendadas"
+                  value={matches.length || '—'}
+                  sub="Analizadas para tu perfil"
+                  color={C.navy}
+                />
+                <SummaryCard
+                  label="Importe potencial"
+                  value={importePotencial > 0 ? `~${fmtImporte(importePotencial)}` : '—'}
+                  sub="Estimación con tu perfil actual"
+                  color={C.green}
+                />
+                <SummaryCard
+                  label="Próximo cierre"
+                  value={diasProximo !== null ? `${diasProximo}d` : '—'}
+                  sub={proximoCierre?.subvencion.organismo?.slice(0, 28) ?? 'Sin plazos próximos'}
+                  color={C.amber}
+                />
+              </div>
+
+              {/* Banner acción recomendada */}
+              {!cliente?.cnae && (
+                <div style={{
+                  background: `linear-gradient(135deg,${C.navy},#0d4a6e)`,
+                  borderRadius: 14, padding: '20px 24px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  gap: 16, marginBottom: 32, boxShadow: '0 4px 16px rgba(13,31,60,.15)', flexWrap: 'wrap',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <span style={{ fontSize: 26, flexShrink: 0 }}>⚡</span>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em', marginBottom: 2 }}>
+                        Acción recomendada: completa tu perfil ahora
+                      </div>
+                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,.6)' }}>
+                        Añade tu CNAE y facturación aproximada para mejorar el encaje con más convocatorias
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
-            )}
+                  <button style={{
+                    padding: '9px 20px', background: '#fff', color: C.navy,
+                    fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: 13,
+                    border: 'none', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                  }}>
+                    Completar perfil →
+                  </button>
+                </div>
+              )}
 
-            {/* ── AYUDAS ── */}
-            {tab === 'ayudas' && (
-              <div className="p-card-anim">
-                <h1 style={{ fontSize: 22, fontWeight: 700, color: '#0d1f3c', marginBottom: 24 }}>🎯 Todas las ayudas disponibles</h1>
-                {matches.length === 0 ? (
-                  <EmptyBox icon="🔍" text="No hay ayudas disponibles por ahora. Vuelve pronto." />
-                ) : (
-                  matches.map(m => <SubvCard key={m.id} match={m} onEncaje={openEncaje} />)
-                )}
-              </div>
-            )}
+              {/* Subvenciones muy recomendables */}
+              {matchesAltos.length > 0 && (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                    <h2 style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em', color: C.ink }}>
+                      🔥 Muy recomendables para ti
+                    </h2>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 100, background: '#fff7ed', color: C.fire, border: '1px solid #fed7aa' }}>
+                      Alta probabilidad
+                    </span>
+                  </div>
+                  {matchesAltos.slice(0, 3).map(m => (
+                    <MatchCard key={m.id} match={m} onEncaje={setModalMatch} />
+                  ))}
+                </>
+              )}
 
-          </div>
+              {/* Subvenciones posibles */}
+              {matchesMedios.length > 0 && (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, marginTop: matchesAltos.length > 0 ? 12 : 0 }}>
+                    <h2 style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em', color: C.ink }}>
+                      👍 Posibles para tu perfil
+                    </h2>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 100, background: C.blueBg, color: C.blue, border: `1px solid ${C.blueBorder}` }}>
+                      Encaje parcial
+                    </span>
+                  </div>
+                  {matchesMedios.slice(0, 2).map(m => (
+                    <MatchCard key={m.id} match={m} onEncaje={setModalMatch} />
+                  ))}
+                </>
+              )}
+
+              {/* Estado vacío */}
+              {matches.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '64px 24px' }}>
+                  <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
+                  <div style={{ fontSize: 17, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Analizando subvenciones para tu perfil</div>
+                  <div style={{ fontSize: 14, color: C.muted, maxWidth: 380, margin: '0 auto', lineHeight: 1.6 }}>
+                    En cuanto completemos el análisis de tu empresa, encontrarás aquí las mejores oportunidades de financiación.
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ═══ VISTA: TODAS LAS AYUDAS ═══ */}
+          {tab === 'ayudas' && (
+            <div className="p-anim">
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.muted, marginBottom: 6 }}>Todas las ayudas</div>
+                <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: C.ink }}>
+                  {matches.length > 0 ? `${matches.length} subvenciones analizadas para tu empresa` : 'Subvenciones disponibles'}
+                </h1>
+              </div>
+
+              {matches.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '64px 24px' }}>
+                  <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
+                  <div style={{ fontSize: 14, color: C.muted }}>No hay subvenciones analizadas todavía.</div>
+                </div>
+              ) : (
+                matches.map(m => <MatchCard key={m.id} match={m} onEncaje={setModalMatch} />)
+              )}
+            </div>
+          )}
+
+          {/* ═══ VISTA: EXPEDIENTES ═══ */}
+          {tab === 'expedientes' && (
+            <div className="p-anim">
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.muted, marginBottom: 6 }}>Gestión</div>
+                <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: C.ink }}>Mis expedientes</h1>
+              </div>
+
+              {expedientes.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '64px 24px' }}>
+                  <div style={{ fontSize: 48, marginBottom: 16 }}>📁</div>
+                  <div style={{ fontSize: 17, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Sin expedientes activos</div>
+                  <div style={{ fontSize: 14, color: C.muted, maxWidth: 340, margin: '0 auto', lineHeight: 1.6 }}>
+                    Cuando empecemos a tramitar una subvención para ti, el estado aparecerá aquí.
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {expedientes.map(exp => {
+                    const estadoMap: Record<string, { bg: string; color: string }> = {
+                      pendiente:   { bg: C.amberBg, color: C.amber },
+                      en_proceso:  { bg: C.blueBg,  color: C.blue  },
+                      presentado:  { bg: C.blueBg,  color: C.blue  },
+                      resuelto:    { bg: C.greenBg, color: C.green },
+                      descartado:  { bg: '#f1f5f9', color: C.muted },
+                    };
+                    const est = estadoMap[exp.estado] ?? { bg: '#f1f5f9', color: C.muted };
+
+                    return (
+                      <div key={exp.id} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '16px 20px', boxShadow: '0 1px 3px rgba(13,31,60,.06)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: 14, color: C.ink, marginBottom: 4 }}>
+                              {exp.titulo ?? `Expediente #${exp.id.slice(0, 8)}`}
+                            </div>
+                            <div style={{ fontSize: 12, color: C.muted }}>
+                              {new Date(exp.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}
+                            </div>
+                          </div>
+                          <span style={{ fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 100, background: est.bg, color: est.color, whiteSpace: 'nowrap' }}>
+                            {exp.estado.replace(/_/g, ' ')}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </main>
       </div>
 
@@ -403,24 +833,25 @@ export default function PortalPage() {
       {modalMatch && (
         <ModalEncaje
           match={modalMatch}
-          answers={qaAnswers}
-          onChange={(i, v) => setQaAnswers(prev => ({ ...prev, [i]: v }))}
           onClose={() => setModalMatch(null)}
-          onConfirm={confirmTramitar}
+          onTramitar={confirmTramitar}
         />
       )}
 
       {/* ── TOAST ── */}
       {toast && (
         <div style={{
-          position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)',
-          background: '#0d1f3c', color: '#fff', borderRadius: 10, padding: '12px 24px',
-          fontSize: 14, fontWeight: 500, boxShadow: '0 4px 20px rgba(13,31,60,.3)', zIndex: 2000,
-          animation: 'portalUp .3s ease both',
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          background: C.navy, color: '#fff', fontFamily: "'Plus Jakarta Sans', sans-serif",
+          fontWeight: 600, padding: '11px 22px', borderRadius: 100, fontSize: 13,
+          zIndex: 300, display: 'flex', alignItems: 'center', gap: 10,
+          boxShadow: '0 8px 28px rgba(13,31,60,.25)', whiteSpace: 'nowrap',
+          animation: 'up .35s ease',
         }}>
+          <span style={{ width: 18, height: 18, background: C.green, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800 }}>✓</span>
           {toast}
         </div>
       )}
-    </>
+    </div>
   );
 }
