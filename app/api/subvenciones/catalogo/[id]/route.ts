@@ -1,7 +1,8 @@
 /**
  * GET /api/subvenciones/catalogo/[id]
  *
- * Detalle de una subvención normalizada con todas sus tablas auxiliares.
+ * Detalle completo de una subvención: datos normalizados + documentos + grounding
+ * + eventos + estado calculado + conflictos + tablas auxiliares.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -28,25 +29,72 @@ export async function GET(
       return NextResponse.json({ error: 'Subvención no encontrada' }, { status: 404 });
     }
 
-    // Tablas auxiliares en paralelo
-    const [requisitos, gastos, documentacion, sectores, tiposEmpresa, actualizaciones] =
-      await Promise.all([
-        supabase.from('subvencion_requisitos').select('*').eq('subvencion_id', id).order('orden'),
-        supabase.from('subvencion_gastos').select('*').eq('subvencion_id', id).order('orden'),
-        supabase.from('subvencion_documentacion').select('*').eq('subvencion_id', id).order('orden'),
-        supabase.from('subvencion_sectores').select('*').eq('subvencion_id', id),
-        supabase.from('subvencion_tipos_empresa').select('*').eq('subvencion_id', id),
-        supabase.from('subvencion_actualizaciones').select('*').eq('subvencion_id', id).order('detectada_at', { ascending: false }).limit(10),
-      ]);
+    // Todas las tablas auxiliares en paralelo (v1 + v2)
+    const [
+      requisitos,
+      gastos,
+      documentacion,
+      sectores,
+      tiposEmpresa,
+      actualizaciones,
+      documentos,
+      camposExtraidos,
+      eventos,
+      estadoCalculado,
+      conflictos,
+      jobsPendientes,
+    ] = await Promise.all([
+      // v1
+      supabase.from('subvencion_requisitos').select('*').eq('subvencion_id', id).order('orden'),
+      supabase.from('subvencion_gastos').select('*').eq('subvencion_id', id).order('orden'),
+      supabase.from('subvencion_documentacion').select('*').eq('subvencion_id', id).order('orden'),
+      supabase.from('subvencion_sectores').select('*').eq('subvencion_id', id),
+      supabase.from('subvencion_tipos_empresa').select('*').eq('subvencion_id', id),
+      supabase.from('subvencion_actualizaciones')
+        .select('*').eq('subvencion_id', id)
+        .order('detectada_at', { ascending: false }).limit(20),
+      // v2
+      supabase.from('subvencion_documentos')
+        .select('id,tipo_documento,titulo,url_origen,storage_path,estado,num_paginas,tamanio_bytes,es_principal,fecha_documento,orden,descargado_at,procesado_at,error_msg')
+        .eq('subvencion_id', id)
+        .order('orden'),
+      supabase.from('subvencion_campos_extraidos')
+        .select('*')
+        .eq('subvencion_id', id)
+        .is('supersedido_por', null)  // solo la versión más reciente de cada campo
+        .order('nombre_campo'),
+      supabase.from('subvencion_eventos')
+        .select('*').eq('subvencion_id', id)
+        .order('fecha_evento', { ascending: true }),
+      supabase.from('subvencion_estado_calculado')
+        .select('*').eq('subvencion_id', id).maybeSingle(),
+      supabase.from('subvencion_conflictos')
+        .select('*').eq('subvencion_id', id)
+        .order('created_at', { ascending: false }),
+      supabase.from('subvencion_reanalisis_jobs')
+        .select('id,tipo_job,estado,motivo,created_at,iniciado_at')
+        .eq('subvencion_id', id)
+        .in('estado', ['pendiente', 'procesando'])
+        .order('created_at', { ascending: false })
+        .limit(3),
+    ]);
 
     return NextResponse.json({
       ...subv,
-      requisitos: requisitos.data ?? [],
-      gastos: gastos.data ?? [],
-      documentacion: documentacion.data ?? [],
-      sectores: sectores.data ?? [],
-      tipos_empresa: tiposEmpresa.data ?? [],
+      // v1
+      requisitos_list: requisitos.data ?? [],
+      gastos_list: gastos.data ?? [],
+      documentacion_list: documentacion.data ?? [],
+      sectores_list: sectores.data ?? [],
+      tipos_empresa_list: tiposEmpresa.data ?? [],
       actualizaciones: actualizaciones.data ?? [],
+      // v2
+      documentos: documentos.data ?? [],
+      campos_extraidos: camposExtraidos.data ?? [],
+      eventos: eventos.data ?? [],
+      estado_calculado: estadoCalculado.data ?? null,
+      conflictos: conflictos.data ?? [],
+      jobs_pendientes: jobsPendientes.data ?? [],
     });
 
   } catch (err) {

@@ -15,7 +15,7 @@
 
 import { createProvider } from '@/lib/ai/providers/factory';
 import type { CompletionOptions } from '@/lib/ai/providers/base';
-import type { IaExtraccionResult } from '@/lib/types/subvenciones-pipeline';
+import type { IaExtraccionResult, IaExtraccionConGrounding } from '@/lib/types/subvenciones-pipeline';
 
 // ─── Configuración ────────────────────────────────────────────────────────────
 
@@ -195,6 +195,184 @@ export async function extraerConIa(
     resultado,
     modelo,
     tokensUsados: response.tokensUsed,
+  };
+}
+
+// ─── Prompt con grounding ─────────────────────────────────────────────────────
+
+const SYSTEM_PROMPT_GROUNDING = `Eres un extractor de datos especializado en convocatorias de subvenciones españolas.
+Tu tarea: analizar el texto y extraer datos estructurados CON TRAZABILIDAD.
+Para cada campo debes indicar:
+  · "valor": el dato extraído (null si no aparece)
+  · "fragmento": cita textual EXACTA del documento (máx 200 caracteres) de donde sacaste el dato
+  · "pagina": número de página estimado (1-based), o null si no es identificable
+  · "confidence": 0.0-1.0 (0 = inventado/dudoso, 1 = cita directa)
+
+REGLAS:
+1. Nunca inventes. Si no está en el texto, "valor": null, "fragmento": null, "confidence": 0.
+2. Las fechas en formato YYYY-MM-DD.
+3. Importes como número sin formato (ej: 50000).
+4. El resumen_ia máximo 3 frases, claro y útil para un gestor.
+5. fragmento debe ser copia literal del texto, no parafraseo.`;
+
+const USER_PROMPT_GROUNDING = (titulo: string, organismo: string, texto: string): string => `
+Analiza esta convocatoria y extrae datos con trazabilidad.
+
+TÍTULO: ${titulo}
+ORGANISMO: ${organismo}
+
+TEXTO:
+${texto}
+
+Devuelve ÚNICAMENTE un JSON válido (sin texto antes ni después):
+
+{
+  "objeto": { "valor": "string|null", "fragmento": "cita literal|null", "pagina": number|null, "confidence": 0.0 },
+  "beneficiarios": { "valor": ["string"]|null, "fragmento": "cita|null", "pagina": number|null, "confidence": 0.0 },
+  "importe_maximo": { "valor": number|null, "fragmento": "cita|null", "pagina": number|null, "confidence": 0.0 },
+  "importe_minimo": { "valor": number|null, "fragmento": "cita|null", "pagina": number|null, "confidence": 0.0 },
+  "porcentaje_financiacion": { "valor": number|null, "fragmento": "cita|null", "pagina": number|null, "confidence": 0.0 },
+  "presupuesto_total": { "valor": number|null, "fragmento": "cita|null", "pagina": number|null, "confidence": 0.0 },
+  "plazo_inicio": { "valor": "YYYY-MM-DD|null", "fragmento": "cita|null", "pagina": number|null, "confidence": 0.0 },
+  "plazo_fin": { "valor": "YYYY-MM-DD|null", "fragmento": "cita|null", "pagina": number|null, "confidence": 0.0 },
+  "plazo_presentacion_texto": { "valor": "string|null", "fragmento": "cita|null", "pagina": number|null, "confidence": 0.0 },
+  "ambito_geografico": { "valor": "nacional|autonomico|local|null", "fragmento": "cita|null", "pagina": number|null, "confidence": 0.0 },
+  "comunidad_autonoma": { "valor": "string|null", "fragmento": "cita|null", "pagina": number|null, "confidence": 0.0 },
+  "provincia": { "valor": "string|null", "fragmento": "cita|null", "pagina": number|null, "confidence": 0.0 },
+  "estado_convocatoria": { "valor": "abierta|cerrada|proxima|suspendida|resuelta|null", "fragmento": "cita|null", "pagina": number|null, "confidence": 0.0 },
+  "resumen_ia": { "valor": "string (3 frases máx)|null", "fragmento": null, "pagina": null, "confidence": 0.0 },
+  "puntos_clave": { "valor": ["bullet accionable"]|null, "fragmento": null, "pagina": null, "confidence": 0.0 },
+  "para_quien": { "valor": "1 frase|null", "fragmento": "cita|null", "pagina": number|null, "confidence": 0.0 },
+  "requisitos": { "valor": [{"tipo":"juridico|economico|sector|otro","descripcion":"string","obligatorio":true}]|null, "fragmento": "cita|null", "pagina": number|null, "confidence": 0.0 },
+  "gastos_subvencionables": { "valor": [{"categoria":"string","descripcion":"string","porcentaje_max":number|null}]|null, "fragmento": "cita|null", "pagina": number|null, "confidence": 0.0 },
+  "documentacion_exigida": { "valor": [{"nombre":"string","descripcion":"string|null","obligatorio":true}]|null, "fragmento": "cita|null", "pagina": number|null, "confidence": 0.0 },
+  "sectores": { "valor": [{"cnae_codigo":"string|null","nombre_sector":"string","excluido":false}]|null, "fragmento": "cita|null", "pagina": number|null, "confidence": 0.0 },
+  "tipos_empresa": { "valor": [{"tipo":"pyme|micropyme|grande|autonomo|startup|otro","descripcion":"string|null","excluido":false}]|null, "fragmento": "cita|null", "pagina": number|null, "confidence": 0.0 },
+  "observaciones": { "valor": "string|null", "fragmento": null, "pagina": null, "confidence": 0.0 },
+  "confidence_score": 0.0
+}`;
+
+function parsearResultadoGrounding(raw: string, modelo: string, tokensUsados: number): IaExtraccionConGrounding {
+  const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const candidate = (fenceMatch ? fenceMatch[1] : raw).trim();
+  const jsonMatch = candidate.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('No se encontró JSON con grounding en la respuesta de IA');
+
+  const p = JSON.parse(jsonMatch[0]);
+
+  function campo<T>(key: string, fallback: T) {
+    const f = p[key];
+    if (!f || typeof f !== 'object') return { valor: fallback, fragmento_texto: undefined, pagina_estimada: undefined, confidence: 0 };
+    return {
+      valor: f.valor ?? fallback,
+      fragmento_texto: typeof f.fragmento === 'string' ? f.fragmento : undefined,
+      pagina_estimada: typeof f.pagina === 'number' ? f.pagina : undefined,
+      confidence: typeof f.confidence === 'number' ? Math.max(0, Math.min(1, f.confidence)) : 0,
+    };
+  }
+
+  return {
+    objeto: campo('objeto', null),
+    beneficiarios: campo('beneficiarios', null),
+    importe_maximo: campo('importe_maximo', null),
+    importe_minimo: campo('importe_minimo', null),
+    porcentaje_financiacion: campo('porcentaje_financiacion', null),
+    presupuesto_total: campo('presupuesto_total', null),
+    plazo_inicio: campo('plazo_inicio', null),
+    plazo_fin: campo('plazo_fin', null),
+    plazo_presentacion_texto: campo('plazo_presentacion_texto', null),
+    ambito_geografico: campo('ambito_geografico', null),
+    comunidad_autonoma: campo('comunidad_autonoma', null),
+    provincia: campo('provincia', null),
+    estado_convocatoria: campo('estado_convocatoria', null),
+    resumen_ia: campo('resumen_ia', null),
+    puntos_clave: campo('puntos_clave', null),
+    para_quien: campo('para_quien', null),
+    requisitos: campo('requisitos', null),
+    gastos_subvencionables: campo('gastos_subvencionables', null),
+    documentacion_exigida: campo('documentacion_exigida', null),
+    sectores: campo('sectores', null),
+    tipos_empresa: campo('tipos_empresa', null),
+    observaciones: campo('observaciones', null),
+    confidence_score: typeof p.confidence_score === 'number' ? Math.max(0, Math.min(1, p.confidence_score)) : 0.5,
+    modelo,
+    tokens_usados: tokensUsados,
+  };
+}
+
+/**
+ * Versión con grounding: extrae datos con trazabilidad por campo.
+ * Devuelve IaExtraccionConGrounding donde cada campo tiene fragmento + página + confidence.
+ */
+export async function extraerConIaConGrounding(
+  texto: string,
+  meta: { titulo: string; organismo?: string },
+  config: ExtractorConfig
+): Promise<IaExtraccionConGrounding> {
+  const textoTruncado = texto.length > MAX_TEXTO_LLM
+    ? texto.slice(0, MAX_TEXTO_LLM) + '\n\n[TEXTO TRUNCADO...]'
+    : texto;
+
+  const provider = createProvider({
+    provider: config.provider as Parameters<typeof createProvider>[0]['provider'],
+    apiKey: config.apiKey,
+    baseUrl: config.baseUrl,
+    organization: config.organization,
+    enabled: true,
+  });
+
+  const modelo = config.model ?? MODELOS_DEFAULT[config.provider] ?? 'gpt-4o-mini';
+
+  const options: CompletionOptions = {
+    model: modelo,
+    temperature: 0.1,
+    maxTokens: 4000,
+    systemPrompt: SYSTEM_PROMPT_GROUNDING,
+  };
+
+  const userPrompt = USER_PROMPT_GROUNDING(
+    meta.titulo,
+    meta.organismo ?? 'No especificado',
+    textoTruncado
+  );
+
+  const response = await provider.complete(
+    [{ role: 'user', content: userPrompt }],
+    options
+  );
+
+  return parsearResultadoGrounding(response.content, modelo, response.tokensUsed);
+}
+
+/**
+ * Convierte IaExtraccionConGrounding al formato IaExtraccionResult clásico
+ * (para mantener compatibilidad con el normalizador existente).
+ */
+export function groundingToLegacy(g: IaExtraccionConGrounding): IaExtraccionResult {
+  return {
+    objeto: g.objeto.valor as string | null,
+    beneficiarios: g.beneficiarios.valor as string[] | null,
+    requisitos: g.requisitos.valor as IaExtraccionResult['requisitos'],
+    gastos_subvencionables: g.gastos_subvencionables.valor as IaExtraccionResult['gastos_subvencionables'],
+    documentacion_exigida: g.documentacion_exigida.valor as IaExtraccionResult['documentacion_exigida'],
+    importe_maximo: g.importe_maximo.valor as number | null,
+    importe_minimo: g.importe_minimo.valor as number | null,
+    porcentaje_financiacion: g.porcentaje_financiacion.valor as number | null,
+    presupuesto_total: g.presupuesto_total.valor as number | null,
+    plazo_inicio: g.plazo_inicio.valor as string | null,
+    plazo_fin: g.plazo_fin.valor as string | null,
+    plazo_presentacion_texto: g.plazo_presentacion_texto.valor as string | null,
+    ambito_geografico: g.ambito_geografico.valor as IaExtraccionResult['ambito_geografico'],
+    comunidad_autonoma: g.comunidad_autonoma.valor as string | null,
+    provincia: g.provincia.valor as string | null,
+    sectores: g.sectores.valor as IaExtraccionResult['sectores'],
+    tipos_empresa: g.tipos_empresa.valor as IaExtraccionResult['tipos_empresa'],
+    estado_convocatoria: g.estado_convocatoria.valor as IaExtraccionResult['estado_convocatoria'],
+    resumen_ia: g.resumen_ia.valor as string | null,
+    puntos_clave: g.puntos_clave.valor as string[] | null,
+    para_quien: g.para_quien.valor as string | null,
+    observaciones: g.observaciones.valor as string | null,
+    confidence_score: g.confidence_score,
   };
 }
 

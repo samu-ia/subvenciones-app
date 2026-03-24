@@ -3,13 +3,16 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Database, RefreshCw, Play, CheckCircle2, Clock, AlertCircle,
-  ExternalLink, ChevronLeft, ChevronRight, Search, Loader2,
-  Settings, X, Brain, Zap, Download, FileText, Save, Info,
+  ExternalLink, Search, Loader2, Settings, Brain, FileText,
+  ChevronRight, AlertTriangle, Shield, BarChart3, X, RotateCcw,
+  Info, Zap, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import AIConfigPanel from "@/components/workspace/ai/AIConfigPanel";
 
-interface Subvencion {
+// ─── Tipos ────────────────────────────────────────────────────────────────────
+
+interface SubvencionItem {
   id: string;
   bdns_id: string;
   titulo: string;
@@ -20,11 +23,52 @@ interface Subvencion {
   fecha_publicacion?: string;
   plazo_fin?: string;
   importe_maximo?: number;
-  porcentaje_financiacion?: number;
+  updated_at: string;
+}
+
+interface SubvencionDetalle extends SubvencionItem {
+  objeto?: string;
   resumen_ia?: string;
   para_quien?: string;
   url_oficial?: string;
-  updated_at: string;
+  plazo_inicio?: string;
+  ambito_geografico?: string;
+  comunidad_autonoma?: string;
+  porcentaje_financiacion?: number;
+  presupuesto_total?: number;
+  pipeline_error?: string;
+  ia_modelo?: string;
+  // v1
+  requisitos_list?: Array<{ id: string; descripcion: string; obligatorio: boolean; tipo?: string }>;
+  gastos_list?: Array<{ id: string; descripcion: string; porcentaje_max?: number; categoria?: string }>;
+  sectores_list?: Array<{ id: string; nombre_sector: string; cnae_codigo?: string; excluido: boolean }>;
+  tipos_empresa_list?: Array<{ id: string; tipo: string; excluido: boolean }>;
+  // v2
+  documentos?: Array<{
+    id: string; tipo_documento: string; titulo?: string; url_origen: string;
+    estado: string; num_paginas?: number; tamanio_bytes?: number;
+    es_principal: boolean; descargado_at?: string; error_msg?: string;
+  }>;
+  campos_extraidos?: Array<{
+    id: string; nombre_campo: string; valor_texto?: string; valor_json?: unknown;
+    fragmento_texto?: string; pagina_estimada?: number; metodo: string;
+    modelo_ia?: string; confidence?: number; revisado: boolean;
+  }>;
+  eventos?: Array<{
+    id: string; tipo_evento: string; fecha_evento?: string; titulo?: string;
+    descripcion?: string; fuente: string; fragmento_texto?: string; confidence?: number;
+  }>;
+  estado_calculado?: {
+    estado: string; razon?: string; dias_para_cierre?: number;
+    urgente: boolean; calculado_at: string;
+  } | null;
+  conflictos?: Array<{
+    id: string; tipo_conflicto: string; campo_afectado?: string;
+    valor_a?: string; fuente_a?: string; valor_b?: string; fuente_b?: string;
+    descripcion?: string; severidad: string; resuelto: boolean;
+  }>;
+  jobs_pendientes?: Array<{ id: string; tipo_job: string; estado: string }>;
+  actualizaciones?: Array<{ id: string; tipo_cambio: string; detectada_at: string; resumen_cambio?: string }>;
 }
 
 interface IngestaLog {
@@ -38,109 +82,726 @@ interface IngestaLog {
   duracion_ms?: number;
 }
 
-interface PipelineConfig {
-  limite_diario: number;
-  dias_atras: number;
-  descargar_pdfs: boolean;
-  extraer_texto: boolean;
-  analizar_con_ia: boolean;
-  max_paginas_pdf: number;
-  modelo_ia: string;
+// ─── Helpers visuales ────────────────────────────────────────────────────────
+
+const ESTADOS: Record<string, { label: string; bg: string; color: string; dot?: string }> = {
+  abierta:     { label: "Abierta",    bg: "#dcfce7", color: "#16a34a", dot: "#22c55e" },
+  cerrada:     { label: "Cerrada",    bg: "#f1f5f9", color: "#64748b" },
+  proxima:     { label: "Próxima",    bg: "#fef9c3", color: "#92400e", dot: "#f59e0b" },
+  suspendida:  { label: "Suspendida", bg: "#fee2e2", color: "#dc2626" },
+  resuelta:    { label: "Resuelta",   bg: "#f3e8ff", color: "#7c3aed" },
+  desconocido: { label: "?",          bg: "#f1f5f9", color: "#94a3b8" },
+};
+
+const PIPELINE: Record<string, { label: string; color: string }> = {
+  normalizado:    { label: "Completo",       color: "#22c55e" },
+  ia_procesado:   { label: "IA procesado",   color: "#3b82f6" },
+  texto_extraido: { label: "Texto extraído", color: "#8b5cf6" },
+  pdf_descargado: { label: "PDF ok",         color: "#f59e0b" },
+  raw:            { label: "Raw",            color: "#94a3b8" },
+  error:          { label: "Error",          color: "#ef4444" },
+};
+
+const TIPO_EVENTO: Record<string, string> = {
+  publicacion: "Publicación",
+  apertura_plazo: "Apertura plazo",
+  cierre_plazo: "Cierre plazo",
+  correccion: "Corrección",
+  ampliacion_plazo: "Ampliación plazo",
+  suspension: "Suspensión",
+  resolucion: "Resolución",
+  pago: "Pago",
+  otro: "Otro",
+};
+
+const TIPO_DOC: Record<string, { label: string; color: string }> = {
+  extracto: { label: "Extracto", color: "#3b82f6" },
+  convocatoria: { label: "Convocatoria", color: "#8b5cf6" },
+  bases_reguladoras: { label: "Bases", color: "#f59e0b" },
+  correccion: { label: "Corrección", color: "#ef4444" },
+  ampliacion: { label: "Ampliación", color: "#22c55e" },
+  resolucion: { label: "Resolución", color: "#6366f1" },
+  otro: { label: "Otro", color: "#94a3b8" },
+};
+
+function fmt(s?: string) {
+  if (!s) return "—";
+  return new Date(s).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "2-digit" });
 }
-
-const CONFIG_DEFAULT: PipelineConfig = {
-  limite_diario: 30,
-  dias_atras: 1,
-  descargar_pdfs: true,
-  extraer_texto: true,
-  analizar_con_ia: true,
-  max_paginas_pdf: 50,
-  modelo_ia: "",
-};
-
-const STORAGE_KEY = "subvenciones_pipeline_config";
-
-const ESTADOS_CONV: Record<string, { label: string; color: string }> = {
-  abierta:     { label: "Abierta",    color: "#22c55e" },
-  cerrada:     { label: "Cerrada",    color: "#94a3b8" },
-  proxima:     { label: "Próxima",    color: "#f59e0b" },
-  suspendida:  { label: "Suspendida", color: "#ef4444" },
-  resuelta:    { label: "Resuelta",   color: "#8b5cf6" },
-  desconocido: { label: "?",          color: "#94a3b8" },
-};
-
-const PIPELINE_ESTADOS: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  normalizado:    { label: "✓ Completo",     color: "#22c55e", icon: <CheckCircle2 size={12} /> },
-  ia_procesado:   { label: "IA procesado",   color: "#3b82f6", icon: <CheckCircle2 size={12} /> },
-  texto_extraido: { label: "Texto extraído", color: "#8b5cf6", icon: <Clock size={12} /> },
-  pdf_descargado: { label: "PDF ok",         color: "#f59e0b", icon: <Clock size={12} /> },
-  raw:            { label: "Raw BDNS",       color: "#94a3b8", icon: <Clock size={12} /> },
-  error:          { label: "Error",          color: "#ef4444", icon: <AlertCircle size={12} /> },
-};
-
-function formatEuros(n?: number) {
+function fmtEuros(n?: number) {
   if (!n) return "—";
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M €`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K €`;
   return `${n} €`;
 }
-function formatDate(s?: string) {
-  if (!s) return "—";
-  return new Date(s).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "2-digit" });
-}
-function formatDuracion(ms?: number) {
+function fmtMs(ms?: number) {
   if (!ms) return "";
   if (ms < 60000) return `${(ms / 1000).toFixed(0)}s`;
   return `${(ms / 60000).toFixed(1)}min`;
 }
-function loadConfig(): PipelineConfig {
-  if (typeof window === "undefined") return CONFIG_DEFAULT;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? { ...CONFIG_DEFAULT, ...JSON.parse(raw) } : CONFIG_DEFAULT;
-  } catch { return CONFIG_DEFAULT; }
+
+// ─── Badges ───────────────────────────────────────────────────────────────────
+
+function EstadoBadge({ estado }: { estado: string }) {
+  const e = ESTADOS[estado] ?? ESTADOS.desconocido;
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 5,
+      background: e.bg, color: e.color,
+      borderRadius: 20, padding: "2px 9px",
+      fontSize: "0.72rem", fontWeight: 700,
+    }}>
+      {e.dot && (
+        <span style={{ width: 6, height: 6, borderRadius: "50%", background: e.dot, display: "inline-block" }} />
+      )}
+      {e.label}
+    </span>
+  );
 }
 
+function PipelineBadge({ estado }: { estado: string }) {
+  const p = PIPELINE[estado] ?? { label: estado, color: "#94a3b8" };
+  return (
+    <span style={{
+      display: "inline-block",
+      background: p.color + "22", color: p.color,
+      borderRadius: 6, padding: "1px 7px",
+      fontSize: "0.68rem", fontWeight: 700,
+    }}>
+      {p.label}
+    </span>
+  );
+}
+
+function ConfidenceBadge({ v }: { v?: number }) {
+  if (v === undefined || v === null) return <span style={{ color: "#94a3b8", fontSize: "0.7rem" }}>—</span>;
+  const pct = Math.round(v * 100);
+  const color = pct >= 75 ? "#22c55e" : pct >= 45 ? "#f59e0b" : "#ef4444";
+  return (
+    <span style={{ fontSize: "0.7rem", fontWeight: 700, color }}>{pct}%</span>
+  );
+}
+
+// ─── Componente ficha detalle ─────────────────────────────────────────────────
+
+type FichaTab = "ficha" | "docs" | "trazabilidad" | "timeline" | "conflictos";
+
+function FichaPanel({
+  sub,
+  onClose,
+  onReprocesar,
+  reprocesando,
+}: {
+  sub: SubvencionDetalle;
+  onClose: () => void;
+  onReprocesar: (id: string, tipo: string) => void;
+  reprocesando: boolean;
+}) {
+  const [tab, setTab] = useState<FichaTab>("ficha");
+  const [expandedCampo, setExpandedCampo] = useState<string | null>(null);
+  const [showReprocMenu, setShowReprocMenu] = useState(false);
+
+  const ec = sub.estado_calculado;
+  const tieneConflictos = (sub.conflictos?.filter(c => !c.resuelto) ?? []).length;
+  const tieneJobs = (sub.jobs_pendientes ?? []).length > 0;
+
+  const tabs: Array<{ key: FichaTab; label: string; badge?: number }> = [
+    { key: "ficha", label: "Ficha" },
+    { key: "docs", label: "Docs", badge: sub.documentos?.length },
+    { key: "trazabilidad", label: "Trazabilidad", badge: sub.campos_extraidos?.length },
+    { key: "timeline", label: "Timeline", badge: sub.eventos?.length },
+    { key: "conflictos", label: "Conflictos", badge: tieneConflictos || undefined },
+  ];
+
+  return (
+    <div style={{
+      display: "flex", flexDirection: "column", height: "100%",
+      background: "#fff",
+    }}>
+      {/* Header */}
+      <div style={{ padding: "20px 24px 0", borderBottom: "1px solid #f1f5f9" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontFamily: "monospace" }}>
+                BDNS #{sub.bdns_id}
+              </span>
+              <EstadoBadge estado={ec?.estado ?? sub.estado_convocatoria} />
+              <PipelineBadge estado={sub.pipeline_estado} />
+              {ec?.urgente && (
+                <span style={{
+                  background: "#fef2f2", color: "#dc2626", fontSize: "0.68rem",
+                  fontWeight: 800, padding: "1px 7px", borderRadius: 6,
+                }}>
+                  URGENTE
+                </span>
+              )}
+            </div>
+            <h2 style={{ fontSize: "0.95rem", fontWeight: 700, color: "#0f172a", lineHeight: 1.4, margin: 0 }}>
+              {sub.titulo}
+            </h2>
+            {sub.organismo && (
+              <p style={{ fontSize: "0.78rem", color: "#64748b", marginTop: 4 }}>{sub.organismo}</p>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+            {/* Reprocesar */}
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={() => setShowReprocMenu(!showReprocMenu)}
+                disabled={reprocesando || tieneJobs}
+                style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  background: reprocesando || tieneJobs ? "#f1f5f9" : "#1a3561",
+                  color: reprocesando || tieneJobs ? "#94a3b8" : "#fff",
+                  border: "none", borderRadius: 8,
+                  padding: "7px 12px", fontSize: "0.78rem", fontWeight: 600,
+                  cursor: reprocesando || tieneJobs ? "not-allowed" : "pointer",
+                }}
+              >
+                {reprocesando ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <RotateCcw size={13} />}
+                {tieneJobs ? "En cola…" : "Reprocesar"}
+                <ChevronDown size={12} />
+              </button>
+              {showReprocMenu && !tieneJobs && (
+                <div style={{
+                  position: "absolute", top: "100%", right: 0, zIndex: 100,
+                  background: "#fff", border: "1px solid #e2e8f0",
+                  borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+                  minWidth: 200, marginTop: 4, overflow: "hidden",
+                }}>
+                  {[
+                    { key: "reanalisis_completo", label: "Análisis completo" },
+                    { key: "solo_ia", label: "Solo IA" },
+                    { key: "solo_estado", label: "Solo estado" },
+                    { key: "solo_documentos", label: "Solo documentos" },
+                  ].map(opt => (
+                    <button
+                      key={opt.key}
+                      onClick={() => { onReprocesar(sub.id, opt.key); setShowReprocMenu(false); }}
+                      style={{
+                        display: "block", width: "100%", textAlign: "left",
+                        padding: "10px 14px", background: "none", border: "none",
+                        fontSize: "0.82rem", color: "#334155", cursor: "pointer",
+                        borderBottom: "1px solid #f1f5f9",
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
+                      onMouseLeave={e => (e.currentTarget.style.background = "none")}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {sub.url_oficial && (
+              <a
+                href={sub.url_oficial}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  background: "#f1f5f9", color: "#64748b",
+                  border: "none", borderRadius: 8,
+                  padding: "7px 12px", fontSize: "0.78rem", fontWeight: 600,
+                  textDecoration: "none",
+                }}
+              >
+                <ExternalLink size={12} />
+                Oficial
+              </a>
+            )}
+            <button
+              onClick={onClose}
+              style={{
+                background: "#f1f5f9", border: "none", borderRadius: 8,
+                width: 32, height: 32, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "#64748b",
+              }}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+
+        {/* Estado calculado razon */}
+        {ec?.razon && (
+          <div style={{
+            background: ec.urgente ? "#fef2f2" : "#f0fdf4",
+            border: `1px solid ${ec.urgente ? "#fecaca" : "#bbf7d0"}`,
+            borderRadius: 8, padding: "7px 12px",
+            fontSize: "0.76rem", color: ec.urgente ? "#991b1b" : "#166534",
+            marginBottom: 12, display: "flex", alignItems: "center", gap: 6,
+          }}>
+            <Info size={12} />
+            {ec.razon}
+            {ec.dias_para_cierre !== undefined && ec.dias_para_cierre >= 0 && (
+              <strong style={{ marginLeft: 4 }}>({ec.dias_para_cierre} días)</strong>
+            )}
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: 0, marginBottom: -1 }}>
+          {tabs.map(t => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              style={{
+                background: "none", border: "none", cursor: "pointer",
+                padding: "8px 14px", fontSize: "0.8rem",
+                color: tab === t.key ? "#1a3561" : "#94a3b8",
+                fontWeight: tab === t.key ? 700 : 500,
+                borderBottom: tab === t.key ? "2px solid #1a3561" : "2px solid transparent",
+                display: "flex", alignItems: "center", gap: 5,
+                transition: "all 0.15s",
+              }}
+            >
+              {t.label}
+              {t.badge ? (
+                <span style={{
+                  background: t.key === "conflictos" ? "#fef2f2" : "#f1f5f9",
+                  color: t.key === "conflictos" ? "#dc2626" : "#64748b",
+                  borderRadius: 10, padding: "0 6px",
+                  fontSize: "0.65rem", fontWeight: 700,
+                }}>
+                  {t.badge}
+                </span>
+              ) : null}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab content */}
+      <div style={{ flex: 1, overflow: "auto", padding: "20px 24px" }}>
+
+        {/* ── FICHA ── */}
+        {tab === "ficha" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Métricas rápidas */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+              {[
+                { label: "Importe máx.", value: fmtEuros(sub.importe_maximo) },
+                { label: "Cofinanciación", value: sub.porcentaje_financiacion ? `${sub.porcentaje_financiacion}%` : "—" },
+                { label: "Cierre", value: fmt(sub.plazo_fin) },
+                { label: "Apertura", value: fmt(sub.plazo_inicio) },
+                { label: "Publicación", value: fmt(sub.fecha_publicacion) },
+                { label: "Confianza IA", value: sub.ia_confidence ? `${Math.round(sub.ia_confidence * 100)}%` : "—" },
+              ].map(m => (
+                <div key={m.label} style={{ background: "#f8fafc", borderRadius: 10, padding: "12px 14px" }}>
+                  <div style={{ fontSize: "0.68rem", color: "#94a3b8", fontWeight: 600, marginBottom: 2 }}>{m.label}</div>
+                  <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "#0f172a" }}>{m.value}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Resumen IA */}
+            {sub.resumen_ia && (
+              <Section label="Resumen IA" icon={<Brain size={14} />}>
+                <p style={{ fontSize: "0.82rem", color: "#334155", lineHeight: 1.65, margin: 0 }}>{sub.resumen_ia}</p>
+              </Section>
+            )}
+
+            {/* Objeto */}
+            {sub.objeto && (
+              <Section label="Objeto">
+                <p style={{ fontSize: "0.82rem", color: "#334155", lineHeight: 1.65, margin: 0 }}>{sub.objeto}</p>
+              </Section>
+            )}
+
+            {/* Para quién */}
+            {sub.para_quien && (
+              <Section label="Beneficiarios">
+                <p style={{ fontSize: "0.82rem", color: "#334155", lineHeight: 1.65, margin: 0 }}>{sub.para_quien}</p>
+              </Section>
+            )}
+
+            {/* Requisitos */}
+            {(sub.requisitos_list ?? []).length > 0 && (
+              <Section label="Requisitos">
+                <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4 }}>
+                  {sub.requisitos_list!.map(r => (
+                    <li key={r.id} style={{ fontSize: "0.8rem", color: "#334155" }}>
+                      {r.descripcion}
+                      {!r.obligatorio && <span style={{ color: "#94a3b8", marginLeft: 6 }}>(opcional)</span>}
+                    </li>
+                  ))}
+                </ul>
+              </Section>
+            )}
+
+            {/* Sectores + tipos empresa */}
+            {(sub.sectores_list ?? []).length > 0 && (
+              <Section label="Sectores">
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {sub.sectores_list!.map(s => (
+                    <span key={s.id} style={{
+                      background: s.excluido ? "#fee2e2" : "#e0f2fe",
+                      color: s.excluido ? "#dc2626" : "#0369a1",
+                      borderRadius: 6, padding: "2px 8px", fontSize: "0.75rem",
+                    }}>
+                      {s.excluido ? "✗ " : ""}{s.nombre_sector}{s.cnae_codigo ? ` (${s.cnae_codigo})` : ""}
+                    </span>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {/* Pipeline info */}
+            {sub.pipeline_error && (
+              <div style={{
+                background: "#fef2f2", border: "1px solid #fecaca",
+                borderRadius: 10, padding: "12px 14px",
+              }}>
+                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#dc2626", marginBottom: 4 }}>
+                  Error de pipeline
+                </div>
+                <p style={{ fontSize: "0.78rem", color: "#991b1b", margin: 0, fontFamily: "monospace" }}>
+                  {sub.pipeline_error}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── DOCS ── */}
+        {tab === "docs" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {(sub.documentos ?? []).length === 0 ? (
+              <Empty label="Sin documentos registrados" />
+            ) : (
+              sub.documentos!.map(doc => {
+                const td = TIPO_DOC[doc.tipo_documento] ?? { label: doc.tipo_documento, color: "#94a3b8" };
+                return (
+                  <div key={doc.id} style={{
+                    border: "1px solid #e2e8f0", borderRadius: 10,
+                    padding: "14px 16px",
+                    borderLeft: `3px solid ${td.color}`,
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <span style={{
+                        background: td.color + "20", color: td.color,
+                        borderRadius: 6, padding: "1px 8px", fontSize: "0.68rem", fontWeight: 700,
+                      }}>
+                        {td.label}
+                      </span>
+                      {doc.es_principal && (
+                        <span style={{ fontSize: "0.68rem", color: "#f59e0b", fontWeight: 700 }}>PRINCIPAL</span>
+                      )}
+                      <span style={{
+                        marginLeft: "auto", fontSize: "0.7rem",
+                        color: doc.estado === "texto_extraido" ? "#22c55e" :
+                               doc.estado === "error" || doc.estado === "no_disponible" ? "#ef4444" : "#f59e0b",
+                        fontWeight: 700,
+                      }}>
+                        {doc.estado}
+                      </span>
+                    </div>
+                    {doc.titulo && (
+                      <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#334155" }}>{doc.titulo}</div>
+                    )}
+                    <div style={{ display: "flex", gap: 12, marginTop: 6 }}>
+                      {doc.num_paginas && (
+                        <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>{doc.num_paginas} páginas</span>
+                      )}
+                      {doc.tamanio_bytes && (
+                        <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
+                          {(doc.tamanio_bytes / 1024).toFixed(0)} KB
+                        </span>
+                      )}
+                      {doc.descargado_at && (
+                        <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
+                          {fmt(doc.descargado_at)}
+                        </span>
+                      )}
+                    </div>
+                    {doc.error_msg && (
+                      <div style={{ fontSize: "0.72rem", color: "#dc2626", marginTop: 4 }}>{doc.error_msg}</div>
+                    )}
+                    <a
+                      href={doc.url_origen}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: "0.72rem", color: "#3b82f6", display: "inline-flex", alignItems: "center", gap: 4, marginTop: 6 }}
+                    >
+                      <ExternalLink size={10} />
+                      {doc.url_origen.length > 60 ? doc.url_origen.slice(0, 60) + "…" : doc.url_origen}
+                    </a>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {/* ── TRAZABILIDAD ── */}
+        {tab === "trazabilidad" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {(sub.campos_extraidos ?? []).length === 0 ? (
+              <Empty label="Sin campos extraídos con grounding. Reprocesa con IA para generar trazabilidad." />
+            ) : (
+              sub.campos_extraidos!.map(campo => {
+                const expanded = expandedCampo === campo.id;
+                return (
+                  <div key={campo.id} style={{ border: "1px solid #e2e8f0", borderRadius: 8 }}>
+                    <button
+                      onClick={() => setExpandedCampo(expanded ? null : campo.id)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 8,
+                        width: "100%", padding: "10px 14px",
+                        background: "none", border: "none", cursor: "pointer",
+                        textAlign: "left",
+                      }}
+                    >
+                      <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#64748b", minWidth: 160 }}>
+                        {campo.nombre_campo}
+                      </span>
+                      <span style={{
+                        flex: 1, fontSize: "0.8rem", color: "#0f172a",
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      }}>
+                        {campo.valor_texto ?? JSON.stringify(campo.valor_json)?.slice(0, 80) ?? "—"}
+                      </span>
+                      <ConfidenceBadge v={campo.confidence} />
+                      <span style={{
+                        fontSize: "0.65rem", color: "#94a3b8",
+                        background: "#f1f5f9", borderRadius: 4, padding: "1px 6px",
+                      }}>
+                        {campo.metodo}
+                      </span>
+                      {expanded ? <ChevronUp size={13} color="#94a3b8" /> : <ChevronDown size={13} color="#94a3b8" />}
+                    </button>
+                    {expanded && (
+                      <div style={{ padding: "0 14px 12px", borderTop: "1px solid #f1f5f9" }}>
+                        {campo.fragmento_texto && (
+                          <blockquote style={{
+                            margin: "10px 0 0",
+                            borderLeft: "3px solid #3b82f6",
+                            paddingLeft: 12,
+                            fontSize: "0.78rem", color: "#334155",
+                            fontStyle: "italic", lineHeight: 1.55,
+                          }}>
+                            "{campo.fragmento_texto}"
+                            {campo.pagina_estimada && (
+                              <span style={{ color: "#94a3b8", fontStyle: "normal", marginLeft: 8, fontSize: "0.72rem" }}>
+                                (p. {campo.pagina_estimada})
+                              </span>
+                            )}
+                          </blockquote>
+                        )}
+                        {campo.modelo_ia && (
+                          <div style={{ fontSize: "0.7rem", color: "#94a3b8", marginTop: 6 }}>
+                            Modelo: {campo.modelo_ia}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {/* ── TIMELINE ── */}
+        {tab === "timeline" && (
+          <div style={{ position: "relative" }}>
+            {(sub.eventos ?? []).length === 0 ? (
+              <Empty label="Sin eventos detectados en documentos." />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                {sub.eventos!.map((ev, i) => (
+                  <div key={ev.id} style={{ display: "flex", gap: 12 }}>
+                    {/* Line */}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 24 }}>
+                      <div style={{
+                        width: 10, height: 10, borderRadius: "50%",
+                        background: "#1a3561", border: "2px solid #e2e8f0",
+                        flexShrink: 0, marginTop: 4,
+                      }} />
+                      {i < sub.eventos!.length - 1 && (
+                        <div style={{ width: 1, background: "#e2e8f0", flex: 1, minHeight: 20 }} />
+                      )}
+                    </div>
+                    <div style={{ flex: 1, paddingBottom: 16 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#0f172a" }}>
+                          {TIPO_EVENTO[ev.tipo_evento] ?? ev.tipo_evento}
+                        </span>
+                        {ev.fecha_evento && (
+                          <span style={{ fontSize: "0.72rem", color: "#64748b" }}>{fmt(ev.fecha_evento)}</span>
+                        )}
+                        <span style={{
+                          fontSize: "0.65rem", color: "#94a3b8",
+                          background: "#f1f5f9", borderRadius: 4, padding: "1px 5px",
+                        }}>
+                          {ev.fuente}
+                        </span>
+                        {ev.confidence !== undefined && <ConfidenceBadge v={ev.confidence} />}
+                      </div>
+                      {ev.descripcion && (
+                        <p style={{ fontSize: "0.78rem", color: "#64748b", margin: "4px 0 0", lineHeight: 1.5 }}>
+                          {ev.descripcion}
+                        </p>
+                      )}
+                      {ev.fragmento_texto && (
+                        <blockquote style={{
+                          margin: "6px 0 0", borderLeft: "2px solid #e2e8f0",
+                          paddingLeft: 10, fontSize: "0.75rem", color: "#64748b",
+                          fontStyle: "italic",
+                        }}>
+                          "{ev.fragmento_texto}"
+                        </blockquote>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── CONFLICTOS ── */}
+        {tab === "conflictos" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {(sub.conflictos ?? []).length === 0 ? (
+              <div style={{
+                textAlign: "center", padding: "40px 20px",
+                color: "#22c55e", display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+              }}>
+                <Shield size={32} />
+                <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>Sin conflictos detectados</div>
+              </div>
+            ) : (
+              sub.conflictos!.map(c => (
+                <div key={c.id} style={{
+                  border: `1px solid ${c.severidad === "alta" ? "#fecaca" : c.severidad === "media" ? "#fde68a" : "#e2e8f0"}`,
+                  background: c.resuelto ? "#f0fdf4" : "#fff",
+                  borderRadius: 10, padding: "14px 16px",
+                  borderLeft: `3px solid ${c.severidad === "alta" ? "#ef4444" : c.severidad === "media" ? "#f59e0b" : "#94a3b8"}`,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                    <AlertTriangle size={13} color={c.severidad === "alta" ? "#ef4444" : "#f59e0b"} />
+                    <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#0f172a" }}>
+                      {c.campo_afectado ?? c.tipo_conflicto}
+                    </span>
+                    <span style={{
+                      fontSize: "0.65rem", fontWeight: 700,
+                      color: c.severidad === "alta" ? "#dc2626" : c.severidad === "media" ? "#92400e" : "#64748b",
+                      background: c.severidad === "alta" ? "#fee2e2" : c.severidad === "media" ? "#fef3c7" : "#f1f5f9",
+                      borderRadius: 4, padding: "1px 6px",
+                    }}>
+                      {c.severidad}
+                    </span>
+                    {c.resuelto && (
+                      <span style={{ marginLeft: "auto", fontSize: "0.68rem", color: "#22c55e", fontWeight: 700 }}>
+                        ✓ RESUELTO
+                      </span>
+                    )}
+                  </div>
+                  {c.descripcion && (
+                    <p style={{ fontSize: "0.8rem", color: "#334155", margin: "0 0 8px", lineHeight: 1.5 }}>
+                      {c.descripcion}
+                    </p>
+                  )}
+                  {c.valor_a && c.valor_b && (
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <div style={{ flex: 1, background: "#f8fafc", borderRadius: 6, padding: "8px 10px" }}>
+                        <div style={{ fontSize: "0.65rem", color: "#94a3b8", fontWeight: 700, marginBottom: 2 }}>
+                          {c.fuente_a ?? "Fuente A"}
+                        </div>
+                        <div style={{ fontSize: "0.78rem", color: "#0f172a", fontWeight: 600 }}>{c.valor_a}</div>
+                      </div>
+                      <div style={{ flex: 1, background: "#f8fafc", borderRadius: 6, padding: "8px 10px" }}>
+                        <div style={{ fontSize: "0.65rem", color: "#94a3b8", fontWeight: 700, marginBottom: 2 }}>
+                          {c.fuente_b ?? "Fuente B"}
+                        </div>
+                        <div style={{ fontSize: "0.78rem", color: "#0f172a", fontWeight: 600 }}>{c.valor_b}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
+    </div>
+  );
+}
+
+function Section({ label, icon, children }: { label: string; icon?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+        {icon && <span style={{ color: "#94a3b8" }}>{icon}</span>}
+        <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          {label}
+        </span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function Empty({ label }: { label: string }) {
+  return (
+    <div style={{ textAlign: "center", padding: "40px 20px", color: "#94a3b8" }}>
+      <div style={{ fontSize: "0.82rem" }}>{label}</div>
+    </div>
+  );
+}
+
+// ─── Página principal ─────────────────────────────────────────────────────────
+
 export default function SubvencionsBdPage() {
-  const [subvenciones, setSubvenciones] = useState<Subvencion[]>([]);
+  const supabase = createClient();
+
+  // Lista
+  const [items, setItems] = useState<SubvencionItem[]>([]);
   const [total, setTotal] = useState(0);
   const [pagina, setPagina] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [ingestando, setIngestando] = useState(false);
-  const [logs, setLogs] = useState<IngestaLog[]>([]);
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("");
   const [filtroPipeline, setFiltroPipeline] = useState("");
-  const [expandida, setExpandida] = useState<string | null>(null);
-  const [feedbackIngesta, setFeedbackIngesta] = useState<string | null>(null);
 
-  const [panelAbierto, setPanelAbierto] = useState(false);
-  const [tabPanel, setTabPanel] = useState<"pipeline" | "ia">("pipeline");
-  const [config, setConfig] = useState<PipelineConfig>(CONFIG_DEFAULT);
-  const [configGuardada, setConfigGuardada] = useState(false);
+  // Detalle
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detalle, setDetalle] = useState<SubvencionDetalle | null>(null);
+  const [loadingDetalle, setLoadingDetalle] = useState(false);
+  const [reprocesando, setReprocesando] = useState(false);
+
+  // Ingesta
+  const [ingestando, setIngestando] = useState(false);
+  const [feedbackIngesta, setFeedbackIngesta] = useState<string | null>(null);
+  const [logs, setLogs] = useState<IngestaLog[]>([]);
+
+  // Config
+  const [panelIA, setPanelIA] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [proveedorActivo, setProveedorActivo] = useState<string | null>(null);
 
-  const tamanio = 20;
+  const tamanio = 25;
 
   useEffect(() => {
-    setConfig(loadConfig());
-    const sb = createClient();
-    sb.auth.getUser().then(async ({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
       setUserId(user.id);
-      const { data } = await sb
-        .from("ia_providers")
-        .select("provider")
-        .eq("enabled", true)
-        .not("api_key", "is", null)
-        .limit(1)
-        .maybeSingle();
+      const { data } = await supabase.from("ia_providers")
+        .select("provider").eq("enabled", true).not("api_key", "is", null).limit(1).maybeSingle();
       setProveedorActivo(data?.provider ?? null);
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const cargarSubvenciones = useCallback(async () => {
+  const cargarLista = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -151,460 +812,355 @@ export default function SubvencionsBdPage() {
       });
       const res = await fetch(`/api/subvenciones/catalogo?${params}`);
       const data = await res.json();
-      setSubvenciones(data.data ?? []);
+      setItems(data.data ?? []);
       setTotal(data.total ?? 0);
     } finally { setLoading(false); }
   }, [pagina, busqueda, filtroEstado, filtroPipeline]);
 
+  useEffect(() => { cargarLista(); }, [cargarLista]);
+
   const cargarLogs = useCallback(async () => {
-    const res = await fetch("/api/subvenciones/ingesta-log");
+    const res = await fetch("/api/subvenciones/ingesta-log?limit=5");
     const data = await res.json();
-    setLogs(data.data ?? []);
+    setLogs(data.logs ?? []);
   }, []);
 
-  useEffect(() => { cargarSubvenciones(); }, [cargarSubvenciones]);
   useEffect(() => { cargarLogs(); }, [cargarLogs]);
 
-  const lanzarIngesta = async () => {
-    if (ingestando) return;
-    setIngestando(true);
-    setFeedbackIngesta("Consultando BDNS...");
+  async function cargarDetalle(id: string) {
+    setSelectedId(id);
+    setLoadingDetalle(true);
+    setDetalle(null);
     try {
-      const cfg = loadConfig();
-      const body: Record<string, unknown> = {
-        limite: cfg.limite_diario,
-        soloNuevas: true,
-        descargarPdfs: cfg.descargar_pdfs,
-        extraerTexto: cfg.extraer_texto,
-        analizarConIa: cfg.analizar_con_ia,
-      };
-      const diasAtras = cfg.dias_atras;
-      if (diasAtras > 0) {
-        const hoy = new Date();
-        const desde = new Date(hoy);
-        desde.setDate(desde.getDate() - diasAtras);
-        body.fechaHasta = hoy.toISOString().split("T")[0];
-        body.fechaDesde = desde.toISOString().split("T")[0];
-      }
-      setFeedbackIngesta(`Procesando convocatorias (máx. ${cfg.limite_diario})…`);
-      const res = await fetch("/api/subvenciones/ingest", {
+      const res = await fetch(`/api/subvenciones/catalogo/${id}`);
+      const data = await res.json();
+      setDetalle(data);
+    } finally { setLoadingDetalle(false); }
+  }
+
+  async function handleReprocesar(id: string, tipoJob: string) {
+    setReprocesando(true);
+    try {
+      const res = await fetch(`/api/subvenciones/catalogo/${id}/reprocesar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ tipo_job: tipoJob, motivo: "Solicitud manual desde panel admin" }),
       });
       const data = await res.json();
       if (data.ok) {
-        const r = data.resultado;
-        setFeedbackIngesta(
-          `✅ ${r?.nuevas ?? 0} nuevas · ${r?.actualizadas ?? 0} actualizadas · ${r?.errores ?? 0} errores` +
-          (r?.duracion_ms ? ` · ${formatDuracion(r.duracion_ms)}` : "")
-        );
-        await cargarSubvenciones();
+        setFeedbackIngesta(`Job "${tipoJob}" creado. ID: ${data.job_id?.slice(0, 8)}…`);
+        setTimeout(() => cargarDetalle(id), 1500);
+      } else {
+        setFeedbackIngesta(data.message ?? data.error ?? "Error al crear job");
+      }
+    } finally { setReprocesando(false); }
+  }
+
+  async function lanzarIngesta() {
+    setIngestando(true);
+    setFeedbackIngesta(null);
+    try {
+      const res = await fetch("/api/subvenciones/ingest", { method: "POST" });
+      const data = await res.json();
+      if (data.ok) {
+        setFeedbackIngesta(`✓ ${data.mensaje}`);
+        await cargarLista();
         await cargarLogs();
       } else {
-        setFeedbackIngesta(`❌ ${data.error}`);
+        setFeedbackIngesta(`Error: ${data.error ?? "desconocido"}`);
       }
-    } catch {
-      setFeedbackIngesta("❌ Error de red");
-    } finally {
-      setIngestando(false);
-      setTimeout(() => setFeedbackIngesta(null), 10000);
-    }
-  };
+    } finally { setIngestando(false); }
+  }
 
-  const guardarConfig = () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-    setConfigGuardada(true);
-    setTimeout(() => setConfigGuardada(false), 2000);
-  };
-
-  const updateConfig = (f: Partial<PipelineConfig>) => setConfig(c => ({ ...c, ...f }));
   const totalPaginas = Math.ceil(total / tamanio);
 
   return (
-    <div style={{ display: "flex", height: "100%", minHeight: "calc(100vh - 60px)" }}>
-
-      {/* ── Contenido principal ── */}
-      <div style={{ flex: 1, padding: "28px 32px", overflow: "auto", minWidth: 0 }}>
-
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Database size={22} color="var(--blue)" />
-            <div>
-              <h1 style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--ink)", margin: 0 }}>
-                Catálogo BDNS
-              </h1>
-              <p style={{ fontSize: "0.78rem", color: "var(--muted)", margin: "2px 0 0" }}>
-                {total.toLocaleString()} subvenciones · PDFs como fuente de verdad
-                {proveedorActivo && <span style={{ marginLeft: 8, color: "#22c55e" }}>· IA: {proveedorActivo}</span>}
-              </p>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={cargarSubvenciones} disabled={loading} style={btnSec}>
-              <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Actualizar
-            </button>
-            <button
-              onClick={() => { setPanelAbierto(p => !p); setTabPanel("pipeline"); }}
-              style={{ ...btnSec, background: panelAbierto ? "var(--blue-bg)" : "var(--surface)", color: panelAbierto ? "var(--blue)" : "var(--ink2)", borderColor: panelAbierto ? "var(--blue)" : "var(--border)" }}
-            >
-              <Settings size={14} /> Ajustes
-            </button>
-            <button onClick={lanzarIngesta} disabled={ingestando} style={{
-              display: "flex", alignItems: "center", gap: 6, padding: "7px 16px", borderRadius: 8,
-              border: "none", background: ingestando ? "var(--blue-bg)" : "var(--blue)",
-              color: ingestando ? "var(--blue)" : "#fff", fontSize: "0.82rem",
-              cursor: ingestando ? "not-allowed" : "pointer", fontWeight: 600, fontFamily: "inherit",
-            }}>
-              {ingestando ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
-              {ingestando ? "Ingestando..." : "Lanzar ingesta"}
-            </button>
-          </div>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "#f8fafc" }}>
+      {/* Top bar */}
+      <div style={{
+        background: "#fff", borderBottom: "1px solid #e2e8f0",
+        padding: "14px 24px", display: "flex", alignItems: "center", gap: 12,
+        flexWrap: "wrap",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Database size={18} color="#1a3561" />
+          <span style={{ fontWeight: 800, fontSize: "1rem", color: "#1a3561" }}>Subvenciones BDNS</span>
+          <span style={{ background: "#f1f5f9", color: "#64748b", borderRadius: 10, padding: "1px 9px", fontSize: "0.75rem", fontWeight: 600 }}>
+            {total.toLocaleString()} registros
+          </span>
         </div>
 
-        {/* Feedback */}
-        {feedbackIngesta && (
-          <div style={{
-            padding: "10px 16px", borderRadius: 8, marginBottom: 14,
-            background: feedbackIngesta.startsWith("✅") ? "#f0fdf4" : feedbackIngesta.startsWith("❌") ? "#fef2f2" : "#eff6ff",
-            border: `1px solid ${feedbackIngesta.startsWith("✅") ? "#bbf7d0" : feedbackIngesta.startsWith("❌") ? "#fecaca" : "#bfdbfe"}`,
-            fontSize: "0.83rem", color: "var(--ink2)", display: "flex", alignItems: "center", gap: 8,
-          }}>
-            {ingestando && <Loader2 size={13} className="animate-spin" />}
-            {feedbackIngesta}
-          </div>
-        )}
-
-        {/* Logs */}
-        {logs.length > 0 && (
-          <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-            {logs.slice(0, 3).map(log => (
-              <div key={log.id} style={{
-                padding: "7px 12px", borderRadius: 8, background: "var(--surface)",
-                border: "1px solid var(--border)", fontSize: "0.77rem", color: "var(--ink2)",
-                display: "flex", gap: 7, alignItems: "center",
-              }}>
-                <span style={{
-                  width: 7, height: 7, borderRadius: "50%", flexShrink: 0,
-                  background: log.estado === "completado" ? "#22c55e" : log.estado === "error" ? "#ef4444" : log.estado === "parcial" ? "#f59e0b" : "#3b82f6",
-                }} />
-                <span style={{ fontWeight: 600 }}>{formatDate(log.fecha_ingesta)}</span>
-                <span>{log.nuevas} nuevas · {log.actualizadas} act. · {log.errores} err.</span>
-                {log.duracion_ms && <span style={{ color: "var(--muted)" }}>{formatDuracion(log.duracion_ms)}</span>}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Filtros */}
-        <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
-          <div style={{ position: "relative", flex: "1 1 240px" }}>
-            <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--muted)" }} />
-            <input
-              placeholder="Buscar por título, organismo..."
-              value={busqueda}
-              onChange={e => { setBusqueda(e.target.value); setPagina(1); }}
-              style={{ ...inputSt, paddingLeft: 32, width: "100%", boxSizing: "border-box" }}
-            />
-          </div>
-          <select value={filtroEstado} onChange={e => { setFiltroEstado(e.target.value); setPagina(1); }} style={selectSt}>
-            <option value="">Todos los estados</option>
-            <option value="abierta">Abierta</option>
-            <option value="proxima">Próxima</option>
-            <option value="cerrada">Cerrada</option>
-            <option value="resuelta">Resuelta</option>
-          </select>
-          <select value={filtroPipeline} onChange={e => { setFiltroPipeline(e.target.value); setPagina(1); }} style={selectSt}>
-            <option value="">Todo el pipeline</option>
-            <option value="normalizado">Normalizado ✓</option>
-            <option value="ia_procesado">IA procesado</option>
-            <option value="pdf_descargado">PDF descargado</option>
-            <option value="raw">Solo raw</option>
-            <option value="error">Con errores</option>
-          </select>
-        </div>
-
-        {/* Lista */}
-        {loading ? (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 60, color: "var(--muted)" }}>
-            <Loader2 size={20} className="animate-spin" style={{ marginRight: 10 }} /> Cargando...
-          </div>
-        ) : subvenciones.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "60px 20px", background: "var(--surface)", borderRadius: 12, border: "1px dashed var(--border)", color: "var(--muted)" }}>
-            <Database size={32} style={{ marginBottom: 12, opacity: 0.4 }} />
-            <p style={{ fontWeight: 600, margin: "0 0 6px" }}>Sin subvenciones</p>
-            <p style={{ fontSize: "0.83rem", margin: 0 }}>
-              {busqueda || filtroEstado ? "Sin resultados para los filtros." : "Pulsa \"Lanzar ingesta\" para traer convocatorias de BDNS."}
-            </p>
-          </div>
+        {/* Proveedor IA */}
+        {proveedorActivo ? (
+          <span style={{ background: "#dcfce7", color: "#166534", borderRadius: 8, padding: "3px 10px", fontSize: "0.72rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 5 }}>
+            <Zap size={11} /> {proveedorActivo}
+          </span>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-            {subvenciones.map(s => {
-              const ec = ESTADOS_CONV[s.estado_convocatoria] ?? ESTADOS_CONV.desconocido;
-              const ep = PIPELINE_ESTADOS[s.pipeline_estado] ?? PIPELINE_ESTADOS.raw;
-              const open = expandida === s.id;
-              return (
-                <div key={s.id} style={{ background: "var(--surface)", borderRadius: 10, border: `1px solid ${open ? "var(--blue)" : "var(--border)"}`, overflow: "hidden" }}>
-                  <div onClick={() => setExpandida(open ? null : s.id)} style={{
-                    padding: "11px 16px", cursor: "pointer",
-                    display: "grid", gridTemplateColumns: "1fr 170px 85px 80px 80px", gap: 12, alignItems: "center",
-                  }}>
-                    <div>
-                      <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--ink)", lineHeight: 1.3, marginBottom: 2 }}>
-                        {s.titulo || `Convocatoria ${s.bdns_id}`}
-                      </div>
-                      <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{s.organismo ?? "—"} · BDNS {s.bdns_id}</div>
+          <span style={{ background: "#fef2f2", color: "#dc2626", borderRadius: 8, padding: "3px 10px", fontSize: "0.72rem", fontWeight: 700 }}>
+            Sin IA
+          </span>
+        )}
+
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          <button
+            onClick={() => { setPanelIA(true); }}
+            style={{ display: "flex", alignItems: "center", gap: 5, background: "#f1f5f9", border: "none", borderRadius: 8, padding: "7px 12px", fontSize: "0.78rem", fontWeight: 600, cursor: "pointer", color: "#334155" }}
+          >
+            <Brain size={14} /> Config IA
+          </button>
+          <button
+            onClick={cargarLista}
+            style={{ display: "flex", alignItems: "center", gap: 5, background: "#f1f5f9", border: "none", borderRadius: 8, padding: "7px 12px", fontSize: "0.78rem", fontWeight: 600, cursor: "pointer", color: "#334155" }}
+          >
+            <RefreshCw size={14} />
+          </button>
+          <button
+            onClick={lanzarIngesta}
+            disabled={ingestando}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: ingestando ? "#f1f5f9" : "#1a3561",
+              color: ingestando ? "#94a3b8" : "#fff",
+              border: "none", borderRadius: 8,
+              padding: "8px 16px", fontSize: "0.82rem", fontWeight: 700,
+              cursor: ingestando ? "not-allowed" : "pointer",
+            }}
+          >
+            {ingestando ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Play size={14} />}
+            {ingestando ? "Ingestando…" : "Iniciar ingesta"}
+          </button>
+        </div>
+      </div>
+
+      {/* Feedback */}
+      {feedbackIngesta && (
+        <div style={{
+          background: feedbackIngesta.startsWith("Error") ? "#fef2f2" : "#f0fdf4",
+          borderBottom: `1px solid ${feedbackIngesta.startsWith("Error") ? "#fecaca" : "#bbf7d0"}`,
+          padding: "10px 24px", fontSize: "0.8rem",
+          color: feedbackIngesta.startsWith("Error") ? "#dc2626" : "#166534",
+          display: "flex", alignItems: "center", gap: 8,
+        }}>
+          {feedbackIngesta}
+          <button onClick={() => setFeedbackIngesta(null)} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer" }}>
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Content: list + detail */}
+      <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
+
+        {/* LEFT: Lista */}
+        <div style={{
+          width: selectedId ? 380 : "100%",
+          flexShrink: 0,
+          display: "flex", flexDirection: "column",
+          borderRight: selectedId ? "1px solid #e2e8f0" : "none",
+          overflow: "hidden",
+          transition: "width 0.2s",
+        }}>
+          {/* Filtros */}
+          <div style={{ padding: "12px 16px", borderBottom: "1px solid #f1f5f9", background: "#fff", display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <div style={{ position: "relative", flex: 1, minWidth: 140 }}>
+              <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+              <input
+                value={busqueda}
+                onChange={e => { setBusqueda(e.target.value); setPagina(1); }}
+                placeholder="Buscar…"
+                style={{ width: "100%", paddingLeft: 30, paddingRight: 10, paddingTop: 7, paddingBottom: 7, border: "1px solid #e2e8f0", borderRadius: 8, fontSize: "0.8rem", outline: "none", boxSizing: "border-box", color: "#334155" }}
+              />
+            </div>
+            <select
+              value={filtroEstado}
+              onChange={e => { setFiltroEstado(e.target.value); setPagina(1); }}
+              style={{ padding: "7px 10px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: "0.78rem", color: "#334155", outline: "none", background: "#fff" }}
+            >
+              <option value="">Todos los estados</option>
+              {Object.entries(ESTADOS).map(([k, v]) => (
+                <option key={k} value={k}>{v.label}</option>
+              ))}
+            </select>
+            <select
+              value={filtroPipeline}
+              onChange={e => { setFiltroPipeline(e.target.value); setPagina(1); }}
+              style={{ padding: "7px 10px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: "0.78rem", color: "#334155", outline: "none", background: "#fff" }}
+            >
+              <option value="">Pipeline</option>
+              {Object.entries(PIPELINE).map(([k, v]) => (
+                <option key={k} value={k}>{v.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Lista items */}
+          <div style={{ flex: 1, overflow: "auto" }}>
+            {loading ? (
+              <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
+                <Loader2 size={20} style={{ animation: "spin 1s linear infinite", color: "#94a3b8" }} />
+              </div>
+            ) : items.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px 20px", color: "#94a3b8", fontSize: "0.85rem" }}>
+                Sin resultados
+              </div>
+            ) : (
+              items.map(item => {
+                const isSelected = selectedId === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => cargarDetalle(item.id)}
+                    style={{
+                      display: "block", width: "100%", textAlign: "left",
+                      padding: "12px 16px", background: isSelected ? "#f0f6ff" : "#fff",
+                      border: "none", borderBottom: "1px solid #f1f5f9",
+                      cursor: "pointer",
+                      borderLeft: isSelected ? "3px solid #1a3561" : "3px solid transparent",
+                    }}
+                    onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "#f8fafc"; }}
+                    onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = "#fff"; }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                      <EstadoBadge estado={item.estado_convocatoria} />
+                      <PipelineBadge estado={item.pipeline_estado} />
+                      <ChevronRight size={12} color="#94a3b8" style={{ marginLeft: "auto" }} />
                     </div>
-                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                      <span style={{ fontSize: "0.7rem", fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: ec.color + "20", color: ec.color }}>{ec.label}</span>
-                      <span style={{ fontSize: "0.7rem", fontWeight: 500, padding: "2px 8px", borderRadius: 20, background: ep.color + "18", color: ep.color, display: "flex", alignItems: "center", gap: 3 }}>
-                        {ep.icon} {ep.label}
-                      </span>
+                    <div style={{
+                      fontSize: "0.82rem", fontWeight: 600, color: "#0f172a",
+                      lineHeight: 1.35,
+                      display: "-webkit-box", WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical", overflow: "hidden",
+                    }}>
+                      {item.titulo}
                     </div>
-                    <div style={{ textAlign: "right", fontSize: "0.82rem", fontWeight: 600, color: "var(--ink)" }}>
-                      {formatEuros(s.importe_maximo)}
-                      {s.porcentaje_financiacion && <div style={{ fontSize: "0.72rem", fontWeight: 400, color: "var(--muted)" }}>{s.porcentaje_financiacion}%</div>}
-                    </div>
-                    <div style={{ textAlign: "right", fontSize: "0.78rem", color: "var(--muted)" }}>
-                      {s.plazo_fin ? <><div style={{ fontWeight: 600, color: "var(--ink2)" }}>Hasta</div>{formatDate(s.plazo_fin)}</> : "—"}
-                    </div>
-                    <div style={{ textAlign: "right", fontSize: "0.75rem", color: "var(--muted)" }}>
-                      {s.ia_confidence != null ? (
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4 }}>
-                          <div style={{ width: 36, height: 4, borderRadius: 2, background: "var(--border)", overflow: "hidden" }}>
-                            <div style={{ width: `${(s.ia_confidence * 100).toFixed(0)}%`, height: "100%", background: s.ia_confidence > 0.7 ? "#22c55e" : s.ia_confidence > 0.4 ? "#f59e0b" : "#ef4444" }} />
-                          </div>
-                          <span>{(s.ia_confidence * 100).toFixed(0)}%</span>
-                        </div>
-                      ) : "—"}
-                    </div>
-                  </div>
-                  {open && (
-                    <div style={{ borderTop: "1px solid var(--border)", padding: "14px 16px", background: "var(--bg)", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                      {s.resumen_ia && (
-                        <div>
-                          <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", color: "var(--muted)", marginBottom: 6 }}>Resumen (del PDF)</div>
-                          <p style={{ fontSize: "0.83rem", color: "var(--ink2)", margin: 0, lineHeight: 1.5 }}>{s.resumen_ia}</p>
-                        </div>
+                    <div style={{ display: "flex", gap: 10, marginTop: 5 }}>
+                      {item.organismo && (
+                        <span style={{ fontSize: "0.7rem", color: "#64748b" }}>
+                          {item.organismo.length > 35 ? item.organismo.slice(0, 35) + "…" : item.organismo}
+                        </span>
                       )}
-                      {s.para_quien && (
-                        <div>
-                          <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", color: "var(--muted)", marginBottom: 6 }}>Para quién</div>
-                          <p style={{ fontSize: "0.83rem", color: "var(--ink2)", margin: 0, lineHeight: 1.5 }}>{s.para_quien}</p>
-                        </div>
+                      {item.importe_maximo && (
+                        <span style={{ fontSize: "0.7rem", color: "#0369a1", fontWeight: 700, marginLeft: "auto", flexShrink: 0 }}>
+                          {fmtEuros(item.importe_maximo)}
+                        </span>
                       )}
-                      <div style={{ gridColumn: "span 2", display: "flex", gap: 10 }}>
-                        {s.url_oficial && (
-                          <a href={s.url_oficial} target="_blank" rel="noreferrer"
-                            style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", color: "var(--blue)", textDecoration: "none" }}
-                            onClick={e => e.stopPropagation()}>
-                            <ExternalLink size={12} /> Ver convocatoria / PDF
-                          </a>
-                        )}
-                        <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>Actualizado: {formatDate(s.updated_at)}</span>
-                      </div>
                     </div>
-                  )}
+                    {item.plazo_fin && (
+                      <div style={{ fontSize: "0.68rem", color: "#94a3b8", marginTop: 3 }}>
+                        Cierre: {fmt(item.plazo_fin)}
+                      </div>
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          {/* Paginación + logs */}
+          <div style={{ borderTop: "1px solid #e2e8f0", background: "#fff" }}>
+            {/* Paginación */}
+            {totalPaginas > 1 && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 16px", borderBottom: "1px solid #f1f5f9" }}>
+                <button
+                  onClick={() => setPagina(p => Math.max(1, p - 1))}
+                  disabled={pagina === 1}
+                  style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "4px 10px", fontSize: "0.75rem", cursor: pagina === 1 ? "not-allowed" : "pointer", color: "#64748b" }}
+                >
+                  Anterior
+                </button>
+                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                  {pagina} / {totalPaginas}
+                </span>
+                <button
+                  onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))}
+                  disabled={pagina === totalPaginas}
+                  style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "4px 10px", fontSize: "0.75rem", cursor: pagina === totalPaginas ? "not-allowed" : "pointer", color: "#64748b" }}
+                >
+                  Siguiente
+                </button>
+              </div>
+            )}
+
+            {/* Últimas ingestas */}
+            {logs.length > 0 && (
+              <div style={{ padding: "10px 16px" }}>
+                <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#94a3b8", marginBottom: 6 }}>
+                  ÚLTIMAS INGESTAS
                 </div>
-              );
-            })}
+                {logs.slice(0, 3).map(log => (
+                  <div key={log.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                    {log.estado === "completado" ? (
+                      <CheckCircle2 size={11} color="#22c55e" />
+                    ) : log.estado === "error" ? (
+                      <AlertCircle size={11} color="#ef4444" />
+                    ) : (
+                      <Clock size={11} color="#f59e0b" />
+                    )}
+                    <span style={{ fontSize: "0.7rem", color: "#64748b" }}>
+                      {fmt(log.fecha_ingesta)} — {log.nuevas}N {log.actualizadas}A {log.errores > 0 ? `${log.errores}E` : ""}
+                    </span>
+                    <span style={{ fontSize: "0.65rem", color: "#94a3b8", marginLeft: "auto" }}>
+                      {fmtMs(log.duracion_ms)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT: Detalle */}
+        {selectedId && (
+          <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            {loadingDetalle ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flex: 1 }}>
+                <Loader2 size={24} style={{ animation: "spin 1s linear infinite", color: "#94a3b8" }} />
+              </div>
+            ) : detalle ? (
+              <FichaPanel
+                sub={detalle}
+                onClose={() => { setSelectedId(null); setDetalle(null); }}
+                onReprocesar={handleReprocesar}
+                reprocesando={reprocesando}
+              />
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flex: 1, color: "#94a3b8", fontSize: "0.85rem" }}>
+                Error cargando detalle
+              </div>
+            )}
           </div>
         )}
 
-        {/* Paginación */}
-        {totalPaginas > 1 && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginTop: 20 }}>
-            <button onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1} style={btnNav}>
-              <ChevronLeft size={16} />
-            </button>
-            <span style={{ fontSize: "0.83rem", color: "var(--muted)" }}>Pág. {pagina} de {totalPaginas} · {total} resultados</span>
-            <button onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))} disabled={pagina === totalPaginas} style={btnNav}>
-              <ChevronRight size={16} />
-            </button>
-          </div>
+        {/* Empty state when nothing selected */}
+        {!selectedId && !loading && items.length > 0 && (
+          <div style={{ display: "none" }} /> /* lista ocupa full width */
         )}
       </div>
 
-      {/* ── Panel Ajustes (drawer derecho) ── */}
-      {panelAbierto && (
-        <div style={{
-          width: 370, flexShrink: 0, borderLeft: "1px solid var(--border)",
-          background: "var(--surface)", display: "flex", flexDirection: "column",
-          height: "calc(100vh - 60px)", position: "sticky", top: 0, overflow: "hidden",
-        }}>
-          {/* Header del panel */}
-          <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", gap: 2 }}>
-              {(["pipeline", "ia"] as const).map(tab => (
-                <button key={tab} onClick={() => setTabPanel(tab)} style={{
-                  padding: "6px 12px", borderRadius: 7, border: "none",
-                  fontSize: "0.81rem", fontWeight: tabPanel === tab ? 700 : 500,
-                  background: tabPanel === tab ? "var(--blue-bg)" : "transparent",
-                  color: tabPanel === tab ? "var(--blue)" : "var(--muted)",
-                  cursor: "pointer", fontFamily: "inherit",
-                  display: "flex", alignItems: "center", gap: 5,
-                }}>
-                  {tab === "pipeline" ? <Zap size={13} /> : <Brain size={13} />}
-                  {tab === "pipeline" ? "Pipeline" : "Proveedores IA"}
-                </button>
-              ))}
+      {/* Panel configuración IA */}
+      {panelIA && userId && (
+        <div
+          onClick={() => setPanelIA(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(0,0,0,0.3)", display: "flex", alignItems: "flex-end", justifyContent: "flex-end" }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: "#fff", borderRadius: "16px 0 0 0", width: 480, maxHeight: "90vh", overflow: "auto", padding: 24 }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <span style={{ fontWeight: 800, fontSize: "1rem", color: "#1a3561" }}>Configuración IA</span>
+              <button onClick={() => setPanelIA(false)} style={{ background: "none", border: "none", cursor: "pointer" }}>
+                <X size={16} />
+              </button>
             </div>
-            <button onClick={() => setPanelAbierto(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", display: "flex", padding: 4 }}>
-              <X size={16} />
-            </button>
-          </div>
-
-          <div style={{ flex: 1, overflow: "auto" }}>
-
-            {/* Tab Pipeline */}
-            {tabPanel === "pipeline" && (
-              <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 14 }}>
-
-                {/* Banner estado IA */}
-                <div style={{
-                  padding: "9px 11px", borderRadius: 8,
-                  background: proveedorActivo ? "#f0fdf4" : "#fffbeb",
-                  border: `1px solid ${proveedorActivo ? "#bbf7d0" : "#fde68a"}`,
-                  display: "flex", alignItems: "flex-start", gap: 8,
-                }}>
-                  <Info size={13} style={{ marginTop: 1, flexShrink: 0 }} color={proveedorActivo ? "#22c55e" : "#d97706"} />
-                  <div style={{ fontSize: "0.77rem" }}>
-                    {proveedorActivo ? (
-                      <span style={{ color: "#166534" }}>
-                        IA activa: <strong>{proveedorActivo}</strong>. El pipeline leerá los PDFs y extraerá información estructurada de los documentos oficiales.
-                      </span>
-                    ) : (
-                      <span style={{ color: "#92400e" }}>
-                        Sin IA. Los PDFs se descargarán pero no se analizarán. La BD se rellena solo con datos básicos de BDNS.{" "}
-                        <button onClick={() => setTabPanel("ia")} style={{ background: "none", border: "none", color: "#d97706", fontWeight: 700, cursor: "pointer", padding: 0, fontFamily: "inherit", fontSize: "inherit" }}>
-                          Configurar IA →
-                        </button>
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Fases */}
-                <div>
-                  <div style={{ fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", color: "var(--muted)", marginBottom: 7, letterSpacing: "0.06em" }}>
-                    Fases del pipeline
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <PhaseRow icon={<Database size={13} />} num="1" label="Detectar en BDNS" sub="Índice de convocatorias y cambios" checked disabled />
-                    <PhaseRow icon={<Download size={13} />} num="2" label="Descargar PDFs" sub="PDF oficial → Storage"
-                      checked={config.descargar_pdfs} onChange={v => updateConfig({ descargar_pdfs: v })} />
-                    <PhaseRow icon={<FileText size={13} />} num="3" label="Extraer texto del PDF" sub="Fuente de verdad para la IA"
-                      checked={config.extraer_texto} disabled={!config.descargar_pdfs}
-                      onChange={v => updateConfig({ extraer_texto: v })} />
-                    <PhaseRow icon={<Brain size={13} />} num="4" label="Analizar con IA" sub="Extrae datos del documento oficial"
-                      checked={config.analizar_con_ia} disabled={!proveedorActivo}
-                      onChange={v => updateConfig({ analizar_con_ia: v })} />
-                    <PhaseRow icon={<Database size={13} />} num="5" label="Guardar en base de datos" sub="BD siempre refleja los PDFs"
-                      checked disabled />
-                  </div>
-                </div>
-
-                {/* Params */}
-                <div>
-                  <div style={{ fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", color: "var(--muted)", marginBottom: 7, letterSpacing: "0.06em" }}>
-                    Parámetros
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9 }}>
-                    <Param label="Convoc. por ingesta">
-                      <input type="number" min={5} max={200} value={config.limite_diario}
-                        onChange={e => updateConfig({ limite_diario: Number(e.target.value) })} style={inputSm} />
-                    </Param>
-                    <Param label="Días atrás a consultar">
-                      <input type="number" min={1} max={30} value={config.dias_atras}
-                        onChange={e => updateConfig({ dias_atras: Number(e.target.value) })} style={inputSm} />
-                    </Param>
-                    <Param label="Máx. páginas PDF">
-                      <input type="number" min={5} max={200} value={config.max_paginas_pdf}
-                        onChange={e => updateConfig({ max_paginas_pdf: Number(e.target.value) })} style={inputSm} />
-                    </Param>
-                    <Param label="Modelo IA (vacío=auto)">
-                      <input type="text" value={config.modelo_ia} placeholder="auto"
-                        onChange={e => updateConfig({ modelo_ia: e.target.value })} style={inputSm} />
-                    </Param>
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                  <button onClick={guardarConfig} style={{
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-                    padding: "8px 14px", borderRadius: 8, border: "none",
-                    background: "var(--blue)", color: "#fff", fontSize: "0.82rem", fontWeight: 600,
-                    cursor: "pointer", fontFamily: "inherit",
-                  }}>
-                    {configGuardada ? <CheckCircle2 size={14} /> : <Save size={14} />}
-                    {configGuardada ? "Guardado" : "Guardar configuración"}
-                  </button>
-                  <button onClick={() => { guardarConfig(); setPanelAbierto(false); lanzarIngesta(); }} disabled={ingestando} style={{
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-                    padding: "8px 14px", borderRadius: 8, border: "1px solid var(--blue)",
-                    background: "var(--blue-bg)", color: "var(--blue)", fontSize: "0.82rem", fontWeight: 600,
-                    cursor: "pointer", fontFamily: "inherit",
-                  }}>
-                    <Play size={14} /> Guardar y lanzar ingesta
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Tab IA */}
-            {tabPanel === "ia" && (
-              <div>
-                {userId
-                  ? <AIConfigPanel userId={userId} workspaceType="expediente" inline isOpen />
-                  : <div style={{ padding: 24, textAlign: "center", color: "var(--muted)", fontSize: "0.83rem" }}><Loader2 size={18} className="animate-spin" /><div style={{ marginTop: 8 }}>Cargando...</div></div>
-                }
-              </div>
-            )}
+            <AIConfigPanel userId={userId} workspaceType="expediente" />
           </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }
-
-// ─── Subcomponentes ───────────────────────────────────────────────────────────
-
-function PhaseRow({ icon, num, label, sub, checked, disabled, onChange }: {
-  icon: React.ReactNode; num: string; label: string; sub: string;
-  checked: boolean; disabled?: boolean; onChange?: (v: boolean) => void;
-}) {
-  return (
-    <div onClick={() => !disabled && onChange?.(!checked)} style={{
-      display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: 8,
-      background: checked && !disabled ? "var(--blue-bg)" : "var(--bg)",
-      border: `1px solid ${checked && !disabled ? "var(--blue)" : "var(--border)"}`,
-      opacity: disabled ? 0.5 : 1, cursor: disabled ? "default" : "pointer",
-    }}>
-      <span style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--muted)", width: 14, textAlign: "center" }}>{num}</span>
-      <span style={{ color: checked && !disabled ? "var(--blue)" : "var(--muted)", flexShrink: 0 }}>{icon}</span>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--ink)" }}>{label}</div>
-        <div style={{ fontSize: "0.7rem", color: "var(--muted)" }}>{sub}</div>
-      </div>
-      <div style={{ width: 28, height: 15, borderRadius: 8, background: checked && !disabled ? "var(--blue)" : "var(--border)", position: "relative", flexShrink: 0 }}>
-        <div style={{ position: "absolute", top: 1.5, borderRadius: "50%", width: 12, height: 12, background: "#fff", left: checked && !disabled ? 14 : 1.5, transition: "left 0.15s" }} />
-      </div>
-    </div>
-  );
-}
-
-function Param({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label style={{ display: "block", fontSize: "0.7rem", fontWeight: 600, color: "var(--ink2)", marginBottom: 4 }}>{label}</label>
-      {children}
-    </div>
-  );
-}
-
-const inputSt: React.CSSProperties = { padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: "0.83rem", background: "var(--surface)", color: "var(--ink)", fontFamily: "inherit" };
-const inputSm: React.CSSProperties = { width: "100%", padding: "6px 8px", borderRadius: 7, border: "1px solid var(--border)", fontSize: "0.81rem", background: "var(--bg)", color: "var(--ink)", fontFamily: "inherit", boxSizing: "border-box" };
-const selectSt: React.CSSProperties = { padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: "0.83rem", background: "var(--surface)", color: "var(--ink)", fontFamily: "inherit" };
-const btnSec: React.CSSProperties = { display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--ink2)", fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit" };
-const btnNav: React.CSSProperties = { padding: "6px 12px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)", cursor: "pointer", display: "flex", alignItems: "center" };

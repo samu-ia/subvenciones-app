@@ -300,3 +300,208 @@ export interface EtapaPipelineResult {
   error?: string;
   skip?: boolean;    // si se saltó porque ya estaba procesado
 }
+
+// ─── V2: MULTI-DOCUMENTO ──────────────────────────────────────────────────────
+
+export type TipoDocumento =
+  | 'extracto' | 'convocatoria' | 'bases_reguladoras'
+  | 'correccion' | 'ampliacion' | 'resolucion' | 'otro';
+
+export type EstadoDocumento =
+  | 'pendiente' | 'descargado' | 'texto_extraido'
+  | 'ia_procesado' | 'error' | 'no_disponible';
+
+export interface SubvencionDocumento {
+  id: string;
+  subvencion_id: string;
+  bdns_id: string;
+  tipo_documento: TipoDocumento;
+  titulo?: string;
+  url_origen: string;
+  storage_path?: string;
+  hash_pdf?: string;
+  tamanio_bytes?: number;
+  num_paginas?: number;
+  texto_extraido?: string;
+  hash_texto?: string;
+  estado: EstadoDocumento;
+  error_msg?: string;
+  intentos: number;
+  es_principal: boolean;
+  fecha_documento?: string;
+  orden: number;
+  descargado_at?: string;
+  procesado_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// ─── V2: GROUNDING ────────────────────────────────────────────────────────────
+
+export type MetodoExtraccion = 'ia' | 'regex' | 'bdns_raw' | 'manual' | 'calculado';
+
+/** Un campo extraído con trazabilidad completa */
+export interface SubvencionCampoExtraido {
+  id: string;
+  subvencion_id: string;
+  documento_id?: string;
+  bdns_id: string;
+  nombre_campo: string;
+  valor_texto?: string;
+  valor_json?: unknown;
+  fragmento_texto?: string;
+  pagina_estimada?: number;
+  metodo: MetodoExtraccion;
+  modelo_ia?: string;
+  confidence?: number;
+  revisado: boolean;
+  revisado_at?: string;
+  override_manual: boolean;
+  version: number;
+  supersedido_por?: string;
+  created_at: string;
+}
+
+/** Resultado de un campo individual en la extracción con grounding */
+export interface IaFieldResult<T = string | number | null> {
+  valor: T;
+  fragmento_texto?: string;
+  pagina_estimada?: number;
+  confidence: number;
+}
+
+/** Resultado completo de IA con grounding por campo */
+export interface IaExtraccionConGrounding {
+  objeto: IaFieldResult<string | null>;
+  beneficiarios: IaFieldResult<string[] | null>;
+  importe_maximo: IaFieldResult<number | null>;
+  importe_minimo: IaFieldResult<number | null>;
+  porcentaje_financiacion: IaFieldResult<number | null>;
+  presupuesto_total: IaFieldResult<number | null>;
+  plazo_inicio: IaFieldResult<string | null>;
+  plazo_fin: IaFieldResult<string | null>;
+  plazo_presentacion_texto: IaFieldResult<string | null>;
+  ambito_geografico: IaFieldResult<'nacional' | 'autonomico' | 'local' | null>;
+  comunidad_autonoma: IaFieldResult<string | null>;
+  provincia: IaFieldResult<string | null>;
+  estado_convocatoria: IaFieldResult<'abierta' | 'cerrada' | 'proxima' | 'suspendida' | 'resuelta' | null>;
+  resumen_ia: IaFieldResult<string | null>;
+  puntos_clave: IaFieldResult<string[] | null>;
+  para_quien: IaFieldResult<string | null>;
+  // Estos campos se guardan como valor_json
+  requisitos: IaFieldResult<IaExtraccionResult['requisitos']>;
+  gastos_subvencionables: IaFieldResult<IaExtraccionResult['gastos_subvencionables']>;
+  documentacion_exigida: IaFieldResult<IaExtraccionResult['documentacion_exigida']>;
+  sectores: IaFieldResult<IaExtraccionResult['sectores']>;
+  tipos_empresa: IaFieldResult<IaExtraccionResult['tipos_empresa']>;
+  observaciones: IaFieldResult<string | null>;
+  confidence_score: number;          // confianza global del análisis
+  modelo: string;
+  tokens_usados: number;
+}
+
+// ─── V2: EVENTOS ──────────────────────────────────────────────────────────────
+
+export type TipoEvento =
+  | 'publicacion' | 'apertura_plazo' | 'cierre_plazo'
+  | 'correccion' | 'ampliacion_plazo' | 'suspension'
+  | 'resolucion' | 'pago' | 'otro';
+
+export interface SubvencionEvento {
+  id: string;
+  subvencion_id: string;
+  documento_id?: string;
+  bdns_id: string;
+  tipo_evento: TipoEvento;
+  fecha_evento?: string;
+  fecha_evento_fin?: string;
+  titulo?: string;
+  descripcion?: string;
+  fuente: 'ia' | 'bdns' | 'sistema' | 'manual';
+  fragmento_texto?: string;
+  pagina_estimada?: number;
+  confidence?: number;
+  created_at: string;
+}
+
+// ─── V2: ESTADO CALCULADO ────────────────────────────────────────────────────
+
+export interface SubvencionEstadoCalculado {
+  id: string;
+  subvencion_id: string;
+  bdns_id: string;
+  estado: EstadoConvocatoria;
+  razon?: string;
+  dias_para_cierre?: number;
+  urgente: boolean;
+  calculado_at: string;
+  plazo_inicio_usado?: string;
+  plazo_fin_usado?: string;
+  tiene_evento_suspension: boolean;
+  tiene_evento_resolucion: boolean;
+  tiene_evento_ampliacion: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Input para la máquina de estados */
+export interface EstadoCalculatorInput {
+  plazo_inicio?: string | null;
+  plazo_fin?: string | null;
+  fecha_publicacion?: string | null;
+  eventos: Pick<SubvencionEvento, 'tipo_evento' | 'fecha_evento' | 'fecha_evento_fin'>[];
+  ahora?: Date;
+}
+
+/** Output de la máquina de estados */
+export interface EstadoCalculatorOutput {
+  estado: EstadoConvocatoria;
+  razon: string;
+  dias_para_cierre?: number;
+  urgente: boolean;
+  tiene_evento_suspension: boolean;
+  tiene_evento_resolucion: boolean;
+  tiene_evento_ampliacion: boolean;
+}
+
+// ─── V2: CONFLICTOS ───────────────────────────────────────────────────────────
+
+export type TipoConflicto =
+  | 'fecha_inconsistente' | 'importe_inconsistente'
+  | 'estado_inconsistente' | 'documento_contradice_bdns'
+  | 'documento_contradice_documento' | 'dato_dudoso' | 'otro';
+
+export interface SubvencionConflicto {
+  id: string;
+  subvencion_id: string;
+  bdns_id: string;
+  tipo_conflicto: TipoConflicto;
+  campo_afectado?: string;
+  valor_a?: string;
+  fuente_a?: string;
+  valor_b?: string;
+  fuente_b?: string;
+  descripcion?: string;
+  severidad: 'baja' | 'media' | 'alta';
+  resuelto: boolean;
+  resolucion?: string;
+  resuelto_at?: string;
+  created_at: string;
+}
+
+// ─── V2: DETALLE COMPLETO (API response) ─────────────────────────────────────
+
+/** Respuesta completa del endpoint GET /api/subvenciones/[id] */
+export interface SubvencionDetalle extends Subvencion {
+  documentos: SubvencionDocumento[];
+  campos_extraidos: SubvencionCampoExtraido[];
+  eventos: SubvencionEvento[];
+  estado_calculado?: SubvencionEstadoCalculado;
+  conflictos: SubvencionConflicto[];
+  requisitos_list: SubvencionRequisito[];
+  gastos_list: SubvencionGasto[];
+  documentacion_list: SubvencionDocumentacion[];
+  sectores_list: SubvencionSector[];
+  tipos_empresa_list: SubvencionTipoEmpresa[];
+  actualizaciones: SubvencionActualizacion[];
+}
