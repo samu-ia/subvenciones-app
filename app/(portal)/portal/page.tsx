@@ -3,825 +3,980 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import {
+  Bell, LogOut, ChevronRight, ExternalLink, FileText,
+  CheckCircle, AlertTriangle, Clock, Zap, Star,
+  CreditCard, Landmark, ArrowRight, ArrowLeft,
+  Shield, X, Check, Loader2, User,
+} from 'lucide-react';
 
-/* ─── TIPOS ─────────────────────────────────────────────────────────────────── */
+// ─── Tipos ────────────────────────────────────────────────────────────────────
+
 interface ClienteData {
-  id?: string;
-  nombre?: string;
-  nif?: string;
-  sector?: string;
-  tamano_empresa?: string;
+  nif: string;
+  nombre_empresa?: string;
+  nombre_normalizado?: string;
   ciudad?: string;
-  cnae?: string;
+  comunidad_autonoma?: string;
+  cnae_descripcion?: string;
+  tamano_empresa?: string;
+  num_empleados?: number;
+  facturacion_anual?: number;
 }
 
-interface MatchSubvencion {
-  id: string;
-  titulo: string;
-  organismo?: string;
-  importe_max?: number;
-  fecha_fin?: string;
-  objeto?: string;
-  bdns_id?: string;
-}
-
-interface Match {
+interface MatchItem {
   id: string;
   score: number;
-  razon_encaje?: string;
-  requisitos_ok?: string[];
-  requisitos_riesgo?: string[];
-  subvencion: MatchSubvencion;
+  motivos: string[];
+  estado: string;
+  es_hard_exclude: boolean;
+  detalle_scoring?: Record<string, number>;
+  subvencion: {
+    id: string;
+    bdns_id: string;
+    titulo: string;
+    organismo?: string;
+    objeto?: string;
+    resumen_ia?: string;
+    para_quien?: string;
+    importe_maximo?: number;
+    porcentaje_financiacion?: number;
+    plazo_fin?: string;
+    plazo_inicio?: string;
+    estado_convocatoria: string;
+    ambito_geografico?: string;
+    url_oficial?: string;
+  };
+  solicitud?: {
+    id: string;
+    estado: string;
+    contrato_firmado: boolean;
+    metodo_pago_ok: boolean;
+  };
 }
 
 interface Expediente {
   id: string;
-  titulo?: string;
+  numero_bdns?: number;
   estado: string;
   created_at: string;
-  numero_bdns?: number;
+  contrato_firmado: boolean;
 }
 
-/* ─── COLORES ────────────────────────────────────────────────────────────────── */
+// ─── Colores ──────────────────────────────────────────────────────────────────
+
 const C = {
-  navy: '#0d1f3c',
-  navy2: '#162d52',
-  teal: '#0d7377',
-  bg: '#f4f6fb',
-  surface: '#fff',
-  border: '#e8ecf4',
-  ink: '#0d1f3c',
-  ink2: '#4a5568',
-  muted: '#94a3b8',
-  green: '#059669',
-  greenBg: '#ecfdf5',
-  greenBorder: '#a7f3d0',
-  amber: '#d97706',
-  amberBg: '#fffbeb',
-  amberBorder: '#fcd34d',
-  red: '#dc2626',
-  redBg: '#fef2f2',
-  blue: '#1d4ed8',
-  blueBg: '#eff4ff',
-  blueBorder: '#bfdbfe',
+  navy: '#0d1f3c', teal: '#0d9488', bg: '#f4f6fb',
+  surface: '#fff', border: '#e8ecf4', ink: '#0d1f3c',
+  ink2: '#475569', muted: '#94a3b8', green: '#059669',
+  amber: '#d97706', red: '#dc2626', blue: '#1d4ed8',
   fire: '#f97316',
 };
 
-/* ─── UTILIDADES ────────────────────────────────────────────────────────────── */
-function getScoreStyle(score: number) {
-  if (score >= 0.7) return { text: '🔥 Muy recomendable', bg: '#fff7ed', color: C.fire, border: '#fed7aa' };
-  if (score >= 0.4) return { text: '👍 Posible encaje',   bg: C.greenBg, color: C.green, border: C.greenBorder };
-  return                 { text: '⚠️ Encaje bajo',        bg: '#f8fafc',  color: C.muted, border: C.border };
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function fmt(s?: string) {
+  if (!s) return '—';
+  return new Date(s).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+function fmtE(n?: number) {
+  if (!n) return null;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M €`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K €`;
+  return `${n} €`;
+}
+function diasRestantes(s?: string) {
+  if (!s) return null;
+  return Math.ceil((new Date(s).getTime() - Date.now()) / 86_400_000);
+}
+function scoreLabel(score: number) {
+  if (score >= 0.65) return { text: 'Muy recomendable', color: C.fire, bg: '#fff7ed', border: '#fed7aa', icon: '🔥' };
+  if (score >= 0.40) return { text: 'Buen encaje',       color: C.green, bg: '#ecfdf5', border: '#a7f3d0', icon: '✓' };
+  return                 { text: 'Encaje posible',       color: C.muted,  bg: '#f8fafc', border: C.border,   icon: '~' };
 }
 
-function getStrip(score: number) {
-  if (score >= 0.7) return 'linear-gradient(90deg,#f97316,#fbbf24)';
-  if (score >= 0.4) return `linear-gradient(90deg,${C.green},#34d399)`;
-  return 'linear-gradient(90deg,#94a3b8,#cbd5e1)';
-}
+// ─── Modal flujo solicitud ────────────────────────────────────────────────────
 
-function getDias(fechaFin?: string): number | null {
-  if (!fechaFin) return null;
-  return Math.ceil((new Date(fechaFin).getTime() - Date.now()) / 86400000);
-}
-
-function fmtImporte(n?: number): string {
-  if (!n) return '';
-  if (n >= 1000000) return `${(n / 1000000).toFixed(1).replace('.0', '')} M€`;
-  if (n >= 1000) return `${Math.round(n / 1000).toLocaleString('es-ES')}k €`;
-  return `${n.toLocaleString('es-ES')} €`;
-}
-
-function initials(nombre: string): string {
-  return nombre.split(' ').slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase() || 'U';
-}
-
-/* ─── COMPONENTE: MATCH CARD ────────────────────────────────────────────────── */
-function MatchCard({ match, onEncaje }: { match: Match; onEncaje: (m: Match) => void }) {
-  const [expanded, setExpanded] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  const s = match.subvencion;
-  const sl = getScoreStyle(match.score);
-  const dias = getDias(s.fecha_fin);
-  const reqOk = match.requisitos_ok ?? [];
-  const reqRiesgo = match.requisitos_riesgo ?? [];
-
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        background: C.surface, border: `1px solid ${hovered ? '#d0d5e8' : C.border}`,
-        borderRadius: 14, overflow: 'hidden',
-        boxShadow: hovered ? '0 4px 16px rgba(13,31,60,.1)' : '0 1px 3px rgba(13,31,60,.06)',
-        marginBottom: 12, transform: hovered ? 'translateY(-2px)' : 'none',
-        transition: 'all .25s cubic-bezier(.4,0,.2,1)',
-      }}
-    >
-      {/* Strip */}
-      <div style={{ height: 3, background: getStrip(match.score) }} />
-
-      {/* Main */}
-      <div style={{ padding: '16px 20px' }}>
-        {/* Badges row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginBottom: 10 }}>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12,
-            fontWeight: 700, padding: '3px 10px', borderRadius: 100,
-            background: sl.bg, color: sl.color, border: `1px solid ${sl.border}`,
-          }}>
-            {sl.text}
-          </span>
-          {s.fecha_fin && new Date(s.fecha_fin) > new Date() && (
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12,
-              fontWeight: 600, padding: '3px 9px', borderRadius: 100,
-              background: C.greenBg, color: C.green,
-            }}>
-              <span style={{ width: 5, height: 5, borderRadius: '50%', background: C.green, display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
-              Abierta
-            </span>
-          )}
-          {dias !== null && dias >= 0 && dias <= 30 && (
-            <span style={{
-              fontSize: 12, fontWeight: 700, padding: '3px 9px', borderRadius: 100,
-              background: C.redBg, color: C.red,
-            }}>
-              ⏰ {dias} días
-            </span>
-          )}
-        </div>
-
-        {/* Título */}
-        <div style={{ fontWeight: 700, fontSize: 15, color: C.ink, lineHeight: 1.3, marginBottom: 8, letterSpacing: '-0.01em' }}>
-          {s.titulo}
-        </div>
-
-        {/* Why box */}
-        {match.razon_encaje && (
-          <div style={{ background: '#f0f7ff', border: '1px solid #dbeafe', borderRadius: 9, padding: '10px 13px', marginBottom: 10 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#3b82f6', marginBottom: 3 }}>
-              Por qué encaja con tu empresa
-            </div>
-            <div style={{ fontSize: 13, color: C.ink2, lineHeight: 1.55 }}>{match.razon_encaje}</div>
-          </div>
-        )}
-
-        {/* Importe */}
-        {s.importe_max ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-            <span style={{ fontSize: 18, fontWeight: 800, color: C.teal, letterSpacing: '-0.02em' }}>
-              Hasta {fmtImporte(s.importe_max)}
-            </span>
-            <span style={{ fontSize: 12, color: C.muted, fontWeight: 500 }}>importe máximo</span>
-          </div>
-        ) : null}
-      </div>
-
-      {/* Toggle */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 6, width: '100%',
-          padding: '10px 20px', background: 'none', border: 'none',
-          borderTop: `1px solid ${C.border}`, fontFamily: "'Plus Jakarta Sans', sans-serif",
-          fontSize: 12, fontWeight: 600, color: expanded ? C.ink2 : C.muted,
-          cursor: 'pointer', textAlign: 'left', transition: 'color .15s',
-        }}
-      >
-        <span style={{
-          width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
-          background: expanded ? C.navy : C.bg, border: `1px solid ${expanded ? C.navy : C.border}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 10, color: expanded ? '#fff' : C.muted,
-          transform: expanded ? 'rotate(180deg)' : 'none', transition: 'all .25s',
-        }}>↓</span>
-        {expanded ? 'Ocultar detalles' : 'Ver detalles y análisis de riesgos'}
-      </button>
-
-      {/* Detalles expandibles */}
-      {expanded && (
-        <div style={{ borderTop: `1px solid ${C.border}`, padding: '12px 20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {s.objeto && (
-            <div style={{ fontSize: 13, color: C.ink2, lineHeight: 1.65 }}>{s.objeto}</div>
-          )}
-
-          {(reqOk.length > 0 || reqRiesgo.length > 0) && (
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.muted, marginBottom: 6 }}>
-                Checklist de elegibilidad
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                {reqOk.map((r, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: C.ink2 }}>
-                    <span>✅</span> {r}
-                  </div>
-                ))}
-                {reqRiesgo.map((r, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: C.ink2 }}>
-                    <span>⚠️</span> {r}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
-            {s.importe_max && (
-              <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 12px' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.muted, marginBottom: 2 }}>Importe máx.</div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: C.teal }}>{fmtImporte(s.importe_max)}</div>
-              </div>
-            )}
-            {s.fecha_fin && (
-              <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 12px' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.muted, marginBottom: 2 }}>Fin de plazo</div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>
-                  {new Date(s.fecha_fin).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
-                </div>
-              </div>
-            )}
-            {s.organismo && (
-              <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 12px', gridColumn: '1 / -1' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.muted, marginBottom: 2 }}>Organismo</div>
-                <div style={{ fontSize: 12, fontWeight: 500, color: C.ink }}>{s.organismo}</div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Footer */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-        padding: '10px 20px 14px', borderTop: `1px solid ${C.border}`, background: '#fafbfd', flexWrap: 'wrap',
-      }}>
-        <span style={{ fontSize: 11, color: C.muted, fontWeight: 500 }}>
-          {s.bdns_id ? `BDNS #${s.bdns_id}` : ''}
-        </span>
-        <button
-          onClick={() => onEncaje(match)}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5, padding: '8px 18px',
-            background: C.navy, color: '#fff', fontFamily: "'Plus Jakarta Sans', sans-serif",
-            fontWeight: 700, fontSize: 13, border: 'none', borderRadius: 8, cursor: 'pointer',
-            transition: 'background .2s', boxShadow: '0 2px 8px rgba(13,31,60,.15)',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.background = C.navy2)}
-          onMouseLeave={e => (e.currentTarget.style.background = C.navy)}
-        >
-          Ver encaje completo
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M5 12h14M12 5l7 7-7 7" />
-          </svg>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* ─── COMPONENTE: MODAL ENCAJE ───────────────────────────────────────────────── */
-const PREGUNTAS = [
-  '¿Tu empresa lleva más de 1 año operativa?',
-  '¿Tienes menos de 250 empleados?',
-  '¿El proyecto supone innovación o digitalización?',
-  '¿Puedes aportar al menos un 25% de cofinanciación?',
-  '¿Estás al corriente con Hacienda y Seguridad Social?',
+const PREGUNTAS_ENCAJE = [
+  '¿Tu empresa tiene más de 1 año de antigüedad?',
+  '¿Estás al corriente de pago con Hacienda y Seguridad Social?',
+  '¿No tienes ninguna subvención de la misma convocatoria activa actualmente?',
+  '¿Tienes capacidad administrativa para aportar documentación si se requiere?',
+  '¿Autorizas a AyudaPyme a gestionar esta solicitud en tu nombre?',
 ];
 
-function ModalEncaje({ match, onClose, onTramitar }: {
-  match: Match;
+type ModalPaso = 1 | 2 | 3;
+
+function ModalSolicitud({
+  match,
+  cliente,
+  onClose,
+  onCompletado,
+}: {
+  match: MatchItem;
+  cliente: ClienteData;
   onClose: () => void;
-  onTramitar: () => void;
+  onCompletado: () => void;
 }) {
-  const [answers, setAnswers] = useState<Record<number, boolean | null>>({});
-  const respondidas = Object.values(answers).filter(v => v !== null).length;
-  const positivas = Object.values(answers).filter(v => v === true).length;
-  const pct = respondidas > 0 ? Math.round((positivas / PREGUNTAS.length) * 100) : null;
+  const supabase = createClient();
+  const [paso, setPaso] = useState<ModalPaso>(1);
+  const [respuestas, setRespuestas] = useState<boolean[]>(Array(PREGUNTAS_ENCAJE.length).fill(null));
+  const [firmante, setFirmante] = useState(cliente.nombre_empresa ?? '');
+  const [dni, setDni] = useState(cliente.nif ?? '');
+  const [aceptaContrato, setAceptaContrato] = useState(false);
+  const [metodoPago, setMetodoPago] = useState<'tarjeta' | 'transferencia' | null>(null);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState('');
+
+  const subv = match.subvencion;
+  const scoreInfo = scoreLabel(match.score);
+  const encajePositivo = respuestas.filter(r => r === true).length;
+  const todasRespondidas = respuestas.every(r => r !== null);
+  const dias = diasRestantes(subv.plazo_fin);
+
+  async function avanzarPaso1() {
+    if (!todasRespondidas) return;
+    setPaso(2);
+  }
+
+  async function avanzarPaso2() {
+    if (!aceptaContrato || !firmante.trim()) {
+      setError('Debes leer y aceptar el contrato para continuar.');
+      return;
+    }
+    setError('');
+    setPaso(3);
+  }
+
+  async function finalizarSolicitud() {
+    if (!metodoPago) { setError('Selecciona un método de pago.'); return; }
+    setGuardando(true);
+    setError('');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const solicitudData = {
+        nif: cliente.nif,
+        subvencion_id: subv.id,
+        user_id: user?.id,
+        match_id: match.id,
+        estado: 'activo',
+        respuestas_encaje: PREGUNTAS_ENCAJE.map((p, i) => ({ pregunta: p, respuesta: respuestas[i] })),
+        encaje_score: encajePositivo,
+        encaje_confirmado_at: new Date().toISOString(),
+        porcentaje_exito: 15,
+        nombre_firmante: firmante,
+        dni_firmante: dni,
+        contrato_firmado: true,
+        contrato_firmado_at: new Date().toISOString(),
+        metodo_pago: metodoPago,
+        metodo_pago_ok: true,
+        metodo_pago_ok_at: new Date().toISOString(),
+      };
+      const { error: e } = await supabase.from('solicitudes').upsert(solicitudData, { onConflict: 'nif,subvencion_id' });
+      if (e) throw e;
+      // Actualizar match a interesado
+      await supabase.from('cliente_subvencion_match').update({ estado: 'interesado' }).eq('id', match.id);
+      onCompletado();
+    } catch (err) {
+      setError((err as Error).message ?? 'Error al guardar');
+    } finally {
+      setGuardando(false);
+    }
+  }
 
   return (
     <div
       onClick={onClose}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(13,31,60,.5)', backdropFilter: 'blur(8px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'rgba(13,31,60,0.6)', backdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 20,
+      }}
     >
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18,
-          padding: '28px 32px', maxWidth: 500, width: '100%',
-          maxHeight: '90vh', overflowY: 'auto',
-          boxShadow: '0 16px 48px rgba(13,31,60,.2)',
-          animation: 'modalIn .28s cubic-bezier(.4,0,.2,1)',
+          background: '#fff', borderRadius: 20,
+          width: '100%', maxWidth: 540,
+          boxShadow: '0 24px 80px rgba(13,31,60,0.25)',
+          overflow: 'hidden', maxHeight: '90vh', display: 'flex', flexDirection: 'column',
         }}
       >
-        <style>{`@keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}`}</style>
-
-        {/* Cabecera */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 20 }}>
-          <div style={{ width: 44, height: 44, background: C.blueBg, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>🎯</div>
-          <div style={{ flex: 1 }}>
-            <h2 style={{ fontSize: 17, fontWeight: 800, color: C.ink, letterSpacing: '-0.02em', lineHeight: 1.2, marginBottom: 2 }}>Análisis de encaje</h2>
-            <p style={{ fontSize: 12, color: C.muted, lineHeight: 1.4 }}>{match.subvencion.titulo}</p>
+        {/* Header */}
+        <div style={{ padding: '24px 28px 16px', borderBottom: '1px solid #f1f5f9' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ flex: 1, minWidth: 0, paddingRight: 12 }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ background: scoreInfo.bg, color: scoreInfo.color, border: `1px solid ${scoreInfo.border}`, borderRadius: 20, padding: '2px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
+                  {scoreInfo.icon} {scoreInfo.text} · {Math.round(match.score * 100)}%
+                </span>
+              </div>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: C.navy, lineHeight: 1.4, margin: 0 }}>
+                {subv.titulo}
+              </h3>
+              {subv.organismo && (
+                <p style={{ fontSize: '0.76rem', color: C.muted, marginTop: 4 }}>{subv.organismo}</p>
+              )}
+            </div>
+            <button onClick={onClose} style={{ background: '#f1f5f9', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <X size={14} color={C.ink2} />
+            </button>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.muted, fontSize: 22, lineHeight: 1, padding: 0, flexShrink: 0 }}>×</button>
-        </div>
 
-        {/* Preguntas */}
-        <div style={{ marginBottom: 18 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.muted, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 18, height: 18, background: C.navy, borderRadius: '50%', color: '#fff', fontSize: 9, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, flexShrink: 0 }}>1</span>
-            Verificación rápida
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {PREGUNTAS.map((q, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 13px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 9 }}>
-                <span style={{ fontSize: 13, fontWeight: 500, color: C.ink2 }}>{q}</span>
-                <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
-                  {([true, false] as const).map(val => (
-                    <button
-                      key={String(val)}
-                      onClick={() => setAnswers(a => ({ ...a, [i]: val }))}
-                      style={{
-                        padding: '4px 13px', fontSize: 12, fontWeight: 600, borderRadius: 6, cursor: 'pointer',
-                        fontFamily: "'Plus Jakarta Sans', sans-serif", transition: 'all .15s',
-                        border: `1px solid ${answers[i] === val ? (val ? C.greenBorder : '#fecaca') : C.border}`,
-                        background: answers[i] === val ? (val ? C.greenBg : C.redBg) : C.surface,
-                        color: answers[i] === val ? (val ? C.green : C.red) : C.ink2,
-                      }}
-                    >
-                      {val ? 'Sí' : 'No'}
-                    </button>
-                  ))}
+          {/* Pasos */}
+          <div style={{ display: 'flex', gap: 4, marginTop: 16 }}>
+            {[{ n: 1, label: 'Verificar encaje' }, { n: 2, label: 'Contrato' }, { n: 3, label: 'Método de pago' }].map(p => (
+              <div key={p.n} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{
+                  width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                  background: paso === p.n ? C.navy : paso > p.n ? C.teal : '#e2e8f0',
+                  color: paso >= p.n ? '#fff' : C.muted,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '0.7rem', fontWeight: 800,
+                }}>
+                  {paso > p.n ? <Check size={11} /> : p.n}
                 </div>
+                <span style={{ fontSize: '0.72rem', color: paso === p.n ? C.navy : C.muted, fontWeight: paso === p.n ? 700 : 400 }}>
+                  {p.label}
+                </span>
+                {p.n < 3 && <div style={{ flex: 1, height: 1, background: paso > p.n ? C.teal : '#e2e8f0' }} />}
               </div>
             ))}
           </div>
         </div>
 
-        {/* Resultado */}
-        {pct !== null && (
-          <div style={{
-            background: pct >= 60 ? C.greenBg : C.amberBg,
-            border: `1px solid ${pct >= 60 ? C.greenBorder : C.amberBorder}`,
-            borderRadius: 11, padding: '14px 16px',
-            display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16,
-          }}>
-            <span style={{ fontSize: 28, flexShrink: 0 }}>{pct >= 60 ? '✅' : '⚠️'}</span>
+        {/* Contenido */}
+        <div style={{ flex: 1, overflow: 'auto', padding: '24px 28px' }}>
+
+          {/* PASO 1: Verificar encaje */}
+          {paso === 1 && (
             <div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: pct >= 60 ? C.green : C.amber, letterSpacing: '-0.03em', lineHeight: 1 }}>{pct}%</div>
-              <div style={{ fontSize: 12, color: C.ink2, fontWeight: 500, marginTop: 2 }}>
-                {pct >= 60 ? 'Buen nivel de encaje — recomendamos tramitarla' : 'Encaje parcial — revisa los requisitos antes de tramitar'}
+              <p style={{ fontSize: '0.85rem', color: C.ink2, marginBottom: 20, lineHeight: 1.6 }}>
+                Antes de iniciar la gestión, necesitamos verificar que tu empresa cumple los requisitos básicos. Responde estas {PREGUNTAS_ENCAJE.length} preguntas:
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {PREGUNTAS_ENCAJE.map((preg, i) => (
+                  <div key={i} style={{ background: '#f8fafc', borderRadius: 12, padding: '14px 16px' }}>
+                    <p style={{ fontSize: '0.83rem', color: C.ink, fontWeight: 600, marginBottom: 10 }}>{preg}</p>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => { const r = [...respuestas]; r[i] = true; setRespuestas(r); }}
+                        style={{
+                          flex: 1, padding: '8px', borderRadius: 8, fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
+                          background: respuestas[i] === true ? '#dcfce7' : '#fff',
+                          border: `1.5px solid ${respuestas[i] === true ? '#22c55e' : '#e2e8f0'}`,
+                          color: respuestas[i] === true ? '#166534' : C.ink2,
+                        }}
+                      >
+                        ✓ Sí
+                      </button>
+                      <button
+                        onClick={() => { const r = [...respuestas]; r[i] = false; setRespuestas(r); }}
+                        style={{
+                          flex: 1, padding: '8px', borderRadius: 8, fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
+                          background: respuestas[i] === false ? '#fef2f2' : '#fff',
+                          border: `1.5px solid ${respuestas[i] === false ? '#ef4444' : '#e2e8f0'}`,
+                          color: respuestas[i] === false ? '#dc2626' : C.ink2,
+                        }}
+                      >
+                        ✗ No
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
+              {todasRespondidas && (
+                <div style={{
+                  marginTop: 16, background: encajePositivo >= 4 ? '#f0fdf4' : '#fef9c3',
+                  border: `1px solid ${encajePositivo >= 4 ? '#bbf7d0' : '#fde68a'}`,
+                  borderRadius: 10, padding: '12px 16px', fontSize: '0.82rem',
+                  color: encajePositivo >= 4 ? '#166534' : '#92400e',
+                }}>
+                  {encajePositivo >= 4
+                    ? `✓ Perfecto, cumples ${encajePositivo}/5 criterios — buena base para esta solicitud.`
+                    : `⚠ Cumples ${encajePositivo}/5 criterios — puede haber dificultades. Podemos continuar pero revisaremos el expediente.`}
+                </div>
+              )}
             </div>
+          )}
+
+          {/* PASO 2: Contrato */}
+          {paso === 2 && (
+            <div>
+              <div style={{
+                background: '#f8fafc', borderRadius: 12, padding: '16px 18px',
+                border: '1px solid #e2e8f0', marginBottom: 20, maxHeight: 300, overflow: 'auto',
+                fontSize: '0.78rem', color: C.ink2, lineHeight: 1.8,
+              }}>
+                <p style={{ fontWeight: 800, color: C.navy, marginBottom: 10, fontSize: '0.85rem' }}>
+                  CONTRATO DE GESTIÓN DE SUBVENCIONES — MODELO DE ÉXITO
+                </p>
+                <p><strong>PARTES:</strong> AyudaPyme (en adelante, el Gestor) y {cliente.nombre_empresa || 'el Cliente'} con NIF {cliente.nif} (en adelante, el Cliente).</p>
+                <br />
+                <p><strong>OBJETO:</strong> El Gestor se compromete a identificar, preparar y presentar en nombre del Cliente la solicitud de la siguiente subvención: <em>"{subv.titulo}"</em> (BDNS #{subv.bdns_id}), convocada por {subv.organismo ?? 'el organismo convocante'}.</p>
+                <br />
+                <p><strong>HONORARIOS:</strong> Este contrato se rige bajo el modelo de éxito. El Cliente <strong>no abonará cantidad alguna</strong> si no se obtiene la subvención. En caso de concesión, el Cliente pagará al Gestor el <strong>15% del importe concedido</strong> (IVA no incluido), en el plazo de 30 días desde el cobro.</p>
+                <br />
+                <p><strong>OBLIGACIONES DEL CLIENTE:</strong> El Cliente se compromete a (i) aportar la documentación requerida en los plazos indicados, (ii) no contratar a otro gestor para la misma subvención durante la vigencia de este contrato, (iii) informar al Gestor de cualquier cambio relevante en su situación empresarial.</p>
+                <br />
+                <p><strong>DURACIÓN:</strong> El presente contrato estará vigente hasta la resolución definitiva de la convocatoria o hasta su cancelación por mutuo acuerdo.</p>
+                <br />
+                <p><strong>PROTECCIÓN DE DATOS:</strong> Los datos del Cliente serán tratados conforme al RGPD y la LOPDGDD únicamente para la prestación del servicio contratado.</p>
+                <br />
+                <p style={{ color: C.muted, fontSize: '0.72rem' }}>Firmado electrónicamente — IP registrada — Fecha y hora de firma quedan registradas en el sistema.</p>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 700, color: C.ink2, display: 'block', marginBottom: 4 }}>
+                    NOMBRE O RAZÓN SOCIAL DEL FIRMANTE
+                  </label>
+                  <input
+                    value={firmante}
+                    onChange={e => setFirmante(e.target.value)}
+                    placeholder="Nombre completo o razón social"
+                    style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 9, fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', color: C.ink }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 700, color: C.ink2, display: 'block', marginBottom: 4 }}>
+                    NIF / DNI DEL REPRESENTANTE
+                  </label>
+                  <input
+                    value={dni}
+                    onChange={e => setDni(e.target.value)}
+                    placeholder="NIF de empresa o DNI del representante"
+                    style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 9, fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', color: C.ink }}
+                  />
+                </div>
+                <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', padding: '12px 14px', background: aceptaContrato ? '#f0fdf4' : '#f8fafc', borderRadius: 10, border: `1.5px solid ${aceptaContrato ? '#22c55e' : '#e2e8f0'}` }}>
+                  <input type="checkbox" checked={aceptaContrato} onChange={e => setAceptaContrato(e.target.checked)} style={{ width: 16, height: 16, marginTop: 1, accentColor: C.teal, flexShrink: 0 }} />
+                  <span style={{ fontSize: '0.8rem', color: C.ink, lineHeight: 1.5 }}>
+                    He leído y acepto el contrato de gestión anterior. Declaro ser el representante legal autorizado para firmar en nombre de {cliente.nombre_empresa || 'mi empresa'} y asumo el compromiso de pago del 15% del importe subvencionado <strong>únicamente si se consigue la subvención</strong>.
+                  </span>
+                </label>
+              </div>
+              {error && <p style={{ color: C.red, fontSize: '0.78rem', marginTop: 10 }}>{error}</p>}
+            </div>
+          )}
+
+          {/* PASO 3: Método de pago */}
+          {paso === 3 && (
+            <div>
+              <p style={{ fontSize: '0.85rem', color: C.ink2, marginBottom: 8, lineHeight: 1.6 }}>
+                Recuerda: <strong>no cobraremos nada</strong> hasta que consigas la subvención. Necesitamos el método de pago para cuando llegue ese momento.
+              </p>
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Shield size={14} color={C.green} />
+                <span style={{ fontSize: '0.78rem', color: '#166534' }}>
+                  Solo se realizará el cargo cuando la subvención sea <strong>efectivamente concedida y cobrada</strong>.
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {[
+                  {
+                    key: 'tarjeta' as const,
+                    icon: <CreditCard size={20} color={C.navy} />,
+                    titulo: 'Tarjeta de crédito / débito',
+                    desc: 'Visa, Mastercard, American Express — cargo automático al cobrar',
+                  },
+                  {
+                    key: 'transferencia' as const,
+                    icon: <Landmark size={20} color={C.navy} />,
+                    titulo: 'Transferencia bancaria',
+                    desc: 'Te enviaremos la factura cuando corresponda — 30 días para pagar',
+                  },
+                ].map(opt => (
+                  <button
+                    key={opt.key}
+                    onClick={() => setMetodoPago(opt.key)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 14,
+                      padding: '16px 18px', borderRadius: 12, cursor: 'pointer',
+                      background: metodoPago === opt.key ? '#eff6ff' : '#f8fafc',
+                      border: `2px solid ${metodoPago === opt.key ? '#3b82f6' : '#e2e8f0'}`,
+                      textAlign: 'left',
+                    }}
+                  >
+                    <div style={{ width: 44, height: 44, borderRadius: 10, background: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {opt.icon}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.navy }}>{opt.titulo}</div>
+                      <div style={{ fontSize: '0.75rem', color: C.ink2, marginTop: 2 }}>{opt.desc}</div>
+                    </div>
+                    {metodoPago === opt.key && <Check size={18} color="#3b82f6" style={{ flexShrink: 0 }} />}
+                  </button>
+                ))}
+              </div>
+
+              {metodoPago === 'tarjeta' && (
+                <div style={{ marginTop: 14, background: '#eff6ff', borderRadius: 10, padding: '12px 14px', fontSize: '0.78rem', color: '#1e40af' }}>
+                  Guardaremos el método de pago de forma segura. El cargo solo se ejecutará tras la concesión. Recibirás un correo de confirmación.
+                </div>
+              )}
+              {error && <p style={{ color: C.red, fontSize: '0.78rem', marginTop: 10 }}>{error}</p>}
+            </div>
+          )}
+        </div>
+
+        {/* Footer con botones */}
+        <div style={{ padding: '16px 28px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+          {paso > 1 ? (
+            <button
+              onClick={() => { setPaso(paso === 3 ? 2 : 1); setError(''); }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f1f5f9', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', color: C.ink2 }}
+            >
+              <ArrowLeft size={14} /> Atrás
+            </button>
+          ) : <div />}
+
+          {paso === 1 && (
+            <button
+              onClick={avanzarPaso1}
+              disabled={!todasRespondidas}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: todasRespondidas ? C.navy : '#e2e8f0',
+                color: todasRespondidas ? '#fff' : C.muted,
+                border: 'none', borderRadius: 10, padding: '10px 20px',
+                fontSize: '0.88rem', fontWeight: 700, cursor: todasRespondidas ? 'pointer' : 'not-allowed',
+              }}
+            >
+              Continuar <ArrowRight size={14} />
+            </button>
+          )}
+          {paso === 2 && (
+            <button
+              onClick={avanzarPaso2}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: C.navy, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer' }}
+            >
+              Firmar y continuar <ArrowRight size={14} />
+            </button>
+          )}
+          {paso === 3 && (
+            <button
+              onClick={finalizarSolicitud}
+              disabled={guardando || !metodoPago}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: metodoPago ? C.teal : '#e2e8f0',
+                color: metodoPago ? '#fff' : C.muted,
+                border: 'none', borderRadius: 10, padding: '10px 20px',
+                fontSize: '0.88rem', fontWeight: 700,
+                cursor: guardando || !metodoPago ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {guardando ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckCircle size={14} />}
+              {guardando ? 'Guardando…' : 'Confirmar solicitud'}
+            </button>
+          )}
+        </div>
+      </div>
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+}
+
+// ─── Card de match ────────────────────────────────────────────────────────────
+
+function MatchCard({
+  match,
+  cliente,
+  onSolicitar,
+}: {
+  match: MatchItem;
+  cliente: ClienteData;
+  onSolicitar: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const subv = match.subvencion;
+  const info = scoreLabel(match.score);
+  const dias = diasRestantes(subv.plazo_fin);
+  const urgente = dias !== null && dias >= 0 && dias <= 15;
+  const solicitud = match.solicitud;
+  const yaActiva = solicitud && ['activo', 'contrato_firmado', 'pago_pendiente'].includes(solicitud.estado);
+
+  return (
+    <div style={{
+      background: '#fff', borderRadius: 16,
+      border: `1px solid ${yaActiva ? '#bbf7d0' : C.border}`,
+      overflow: 'hidden',
+      boxShadow: urgente ? '0 0 0 2px #fef2f2, 0 4px 16px rgba(239,68,68,0.08)' : '0 2px 8px rgba(13,31,60,0.06)',
+    }}>
+      {/* Strip de color por score */}
+      <div style={{ height: 4, background: info.color === C.fire ? 'linear-gradient(90deg,#f97316,#fbbf24)' : info.color === C.green ? 'linear-gradient(90deg,#059669,#34d399)' : 'linear-gradient(90deg,#94a3b8,#cbd5e1)' }} />
+
+      <div style={{ padding: '18px 20px' }}>
+        {/* Header card */}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
+              <span style={{ background: info.bg, color: info.color, border: `1px solid ${info.border}`, borderRadius: 20, padding: '2px 10px', fontSize: '0.7rem', fontWeight: 800 }}>
+                {info.icon} {info.text}
+              </span>
+              {urgente && (
+                <span style={{ background: '#fef2f2', color: C.red, borderRadius: 20, padding: '2px 10px', fontSize: '0.7rem', fontWeight: 800 }}>
+                  ⚡ {dias}d restantes
+                </span>
+              )}
+              {subv.estado_convocatoria === 'abierta' && !urgente && (
+                <span style={{ background: '#f0fdf4', color: C.green, borderRadius: 20, padding: '2px 10px', fontSize: '0.7rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: C.green, display: 'inline-block' }} />
+                  Abierta
+                </span>
+              )}
+              {yaActiva && (
+                <span style={{ background: '#dcfce7', color: '#166534', borderRadius: 20, padding: '2px 10px', fontSize: '0.7rem', fontWeight: 800 }}>
+                  ✓ Solicitud activa
+                </span>
+              )}
+            </div>
+            <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: C.navy, lineHeight: 1.4, margin: 0 }}>
+              {subv.titulo}
+            </h3>
+            {subv.organismo && <p style={{ fontSize: '0.75rem', color: C.muted, marginTop: 3 }}>{subv.organismo}</p>}
+          </div>
+          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+            <div style={{ fontSize: '1.5rem', fontWeight: 900, color: info.color, lineHeight: 1 }}>
+              {Math.round(match.score * 100)}%
+            </div>
+            <div style={{ fontSize: '0.62rem', color: C.muted, fontWeight: 600 }}>encaje</div>
+          </div>
+        </div>
+
+        {/* Por qué encaja */}
+        {match.motivos.length > 0 && (
+          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
+            <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#1e40af', marginBottom: 5 }}>POR QUÉ ENCAJA</p>
+            <ul style={{ margin: 0, paddingLeft: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {match.motivos.map((m, i) => (
+                <li key={i} style={{ fontSize: '0.78rem', color: '#1e3a8a', display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                  <Check size={11} color="#3b82f6" style={{ marginTop: 2, flexShrink: 0 }} />
+                  {m}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
-        <div style={{ height: 1, background: C.border, margin: '16px 0' }} />
+        {/* Importe */}
+        {subv.importe_maximo && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: '0.72rem', color: C.muted }}>Importe máximo:</span>
+            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: C.teal }}>{fmtE(subv.importe_maximo)}</span>
+            {subv.porcentaje_financiacion && (
+              <span style={{ fontSize: '0.72rem', color: C.muted }}>({subv.porcentaje_financiacion}% cofinanciación)</span>
+            )}
+          </div>
+        )}
 
-        {/* Acciones */}
-        <div style={{ display: 'flex', gap: 9 }}>
+        {/* Resumen expandible */}
+        {expanded && (
+          <div style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {subv.resumen_ia && (
+              <div style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 14px' }}>
+                <p style={{ fontSize: '0.72rem', fontWeight: 700, color: C.muted, marginBottom: 4 }}>RESUMEN</p>
+                <p style={{ fontSize: '0.8rem', color: C.ink2, lineHeight: 1.6, margin: 0 }}>{subv.resumen_ia}</p>
+              </div>
+            )}
+            {subv.plazo_fin && (
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <Clock size={12} color={C.muted} />
+                <span style={{ fontSize: '0.78rem', color: C.ink2 }}>Cierre: <strong>{fmt(subv.plazo_fin)}</strong></span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Footer card */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', paddingTop: 4 }}>
           <button
-            onClick={onTramitar}
-            style={{
-              flex: 1, padding: 12, background: C.navy, color: '#fff',
-              fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: 14,
-              border: 'none', borderRadius: 9, cursor: 'pointer', transition: 'background .2s',
-              boxShadow: '0 2px 10px rgba(13,31,60,.2)',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.background = C.navy2)}
-            onMouseLeave={e => (e.currentTarget.style.background = C.navy)}
+            onClick={() => setExpanded(!expanded)}
+            style={{ background: '#f1f5f9', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: '0.76rem', fontWeight: 600, cursor: 'pointer', color: C.ink2 }}
           >
-            ✅ Quiero tramitarla
+            {expanded ? 'Ver menos' : 'Ver más'}
           </button>
-          <button
-            onClick={onClose}
-            style={{
-              padding: '12px 20px', background: 'transparent', color: C.muted,
-              fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, fontWeight: 500,
-              border: `1px solid ${C.border}`, borderRadius: 9, cursor: 'pointer', transition: 'all .2s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = C.ink2; e.currentTarget.style.color = C.ink; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.muted; }}
-          >
-            Cerrar
-          </button>
+          {subv.url_oficial && (
+            <a href={subv.url_oficial} target="_blank" rel="noopener noreferrer"
+              style={{ background: '#f1f5f9', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: '0.76rem', fontWeight: 600, cursor: 'pointer', color: C.ink2, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <ExternalLink size={11} /> Oficial
+            </a>
+          )}
+          {!yaActiva ? (
+            <button
+              onClick={onSolicitar}
+              style={{
+                marginLeft: 'auto',
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: info.color === C.fire ? 'linear-gradient(90deg,#f97316,#ea580c)' :
+                             info.color === C.green ? 'linear-gradient(90deg,#059669,#047857)' :
+                             'linear-gradient(90deg,#1a3561,#1e40af)',
+                color: '#fff', border: 'none', borderRadius: 10,
+                padding: '9px 18px', fontSize: '0.85rem', fontWeight: 800,
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              }}
+            >
+              <Star size={13} />
+              Quiero esta
+            </button>
+          ) : (
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, color: C.green, fontSize: '0.8rem', fontWeight: 700 }}>
+              <CheckCircle size={14} />
+              Solicitud enviada
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-/* ─── COMPONENTE: SIDEBAR ITEM ───────────────────────────────────────────────── */
-function SidebarItem({ icon, label, active, badge, onClick }: {
-  icon: string; label: string; active?: boolean; badge?: number; onClick: () => void;
-}) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <div
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px',
-        borderRadius: 8, fontSize: 13, fontWeight: active ? 600 : 500,
-        color: active ? C.blue : C.ink2,
-        background: active ? C.blueBg : hovered ? C.bg : 'transparent',
-        cursor: 'pointer', marginBottom: 2, transition: 'all .15s', userSelect: 'none',
-      }}
-    >
-      <span style={{ fontSize: 15, width: 20, textAlign: 'center', flexShrink: 0 }}>{icon}</span>
-      <span style={{ flex: 1 }}>{label}</span>
-      {badge ? (
-        <span style={{ background: C.red, color: '#fff', borderRadius: 99, fontSize: 10, padding: '1px 6px', fontWeight: 700 }}>
-          {badge}
-        </span>
-      ) : null}
-    </div>
-  );
-}
+// ─── Página principal ─────────────────────────────────────────────────────────
 
-/* ─── COMPONENTE: SUMMARY CARD ───────────────────────────────────────────────── */
-function SummaryCard({ label, value, sub, color }: { label: string; value: string | number; sub: string; color: string }) {
-  return (
-    <div style={{
-      background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12,
-      padding: '16px 18px', boxShadow: '0 1px 3px rgba(13,31,60,.06)', flex: 1, minWidth: 160,
-    }}>
-      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em', color: C.muted, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, color }}>{value}</div>
-      <div style={{ fontSize: 11, color: C.muted, marginTop: 4, fontWeight: 400 }}>{sub}</div>
-    </div>
-  );
-}
+type Vista = 'dashboard' | 'ayudas' | 'expedientes';
 
-/* ─── PÁGINA PRINCIPAL ───────────────────────────────────────────────────────── */
 export default function PortalPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [loading, setLoading] = useState(true);
+  const [checking, setChecking] = useState(true);
   const [cliente, setCliente] = useState<ClienteData | null>(null);
-  const [userName, setUserName] = useState('Cliente');
+  const [matches, setMatches] = useState<MatchItem[]>([]);
   const [expedientes, setExpedientes] = useState<Expediente[]>([]);
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [tab, setTab] = useState<'dashboard' | 'ayudas' | 'expedientes'>('dashboard');
-  const [modalMatch, setModalMatch] = useState<Match | null>(null);
+  const [vista, setVista] = useState<Vista>('dashboard');
+  const [matchSolicitando, setMatchSolicitando] = useState<MatchItem | null>(null);
   const [toast, setToast] = useState('');
 
+  // Auth check
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/'); return; }
+      if (!user) { router.replace('/'); return; }
 
-      const meta = user.user_metadata;
-      setUserName(meta?.nombre_completo ?? meta?.full_name ?? user.email?.split('@')[0] ?? 'Cliente');
+      const { data: perfil } = await supabase
+        .from('perfiles').select('rol, nif').eq('id', user.id).maybeSingle();
 
-      // Datos del cliente vinculado a este usuario
-      const { data: clienteData } = await supabase
-        .from('clientes')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      if (perfil?.rol === 'admin') { router.replace('/clientes'); return; }
 
-      if (clienteData) {
-        setCliente(clienteData);
+      if (perfil?.nif) {
+        // Cargar datos del cliente
+        const { data: cli } = await supabase.from('cliente')
+          .select('nif,nombre_empresa,nombre_normalizado,ciudad,comunidad_autonoma,cnae_descripcion,tamano_empresa,num_empleados,facturacion_anual')
+          .eq('nif', perfil.nif).maybeSingle();
+        setCliente(cli);
 
-        // Expedientes
-        const { data: exps } = await supabase
-          .from('expedientes')
-          .select('id, titulo, estado, created_at, numero_bdns')
-          .eq('cliente_id', clienteData.id)
-          .order('created_at', { ascending: false });
-        setExpedientes(exps ?? []);
-
-        // Matches
-        const { data: mts } = await supabase
+        // Cargar matches con subvenciones
+        const { data: matchData } = await supabase
           .from('cliente_subvencion_match')
           .select(`
-            id, score, razon_encaje, requisitos_ok, requisitos_riesgo,
-            subvencion:subvenciones(id, titulo, organismo, importe_max, fecha_fin, objeto, bdns_id)
+            id, score, motivos, estado, es_hard_exclude, detalle_scoring,
+            subvenciones!inner(
+              id, bdns_id, titulo, organismo, objeto, resumen_ia, para_quien,
+              importe_maximo, porcentaje_financiacion, plazo_fin, plazo_inicio,
+              estado_convocatoria, ambito_geografico, url_oficial
+            )
           `)
-          .eq('cliente_id', clienteData.id)
+          .eq('nif', perfil.nif)
+          .eq('es_hard_exclude', false)
+          .gte('score', 0.1)
           .order('score', { ascending: false })
           .limit(30);
-        setMatches((mts ?? []) as unknown as Match[]);
+
+        // Cargar solicitudes existentes
+        const { data: solis } = await supabase
+          .from('solicitudes')
+          .select('id, estado, contrato_firmado, metodo_pago_ok, subvencion_id')
+          .eq('nif', perfil.nif);
+
+        const soliMap = Object.fromEntries((solis ?? []).map(s => [s.subvencion_id, s]));
+
+        const matchItems: MatchItem[] = (matchData ?? []).map((m: Record<string, unknown>) => {
+          const subv = (m.subvenciones as Record<string, unknown>);
+          return {
+            id: m.id as string,
+            score: m.score as number,
+            motivos: (m.motivos as string[]) ?? [],
+            estado: m.estado as string,
+            es_hard_exclude: m.es_hard_exclude as boolean,
+            detalle_scoring: m.detalle_scoring as Record<string, number>,
+            subvencion: {
+              id: subv.id as string,
+              bdns_id: subv.bdns_id as string,
+              titulo: subv.titulo as string,
+              organismo: subv.organismo as string,
+              objeto: subv.objeto as string,
+              resumen_ia: subv.resumen_ia as string,
+              para_quien: subv.para_quien as string,
+              importe_maximo: subv.importe_maximo as number,
+              porcentaje_financiacion: subv.porcentaje_financiacion as number,
+              plazo_fin: subv.plazo_fin as string,
+              plazo_inicio: subv.plazo_inicio as string,
+              estado_convocatoria: subv.estado_convocatoria as string,
+              ambito_geografico: subv.ambito_geografico as string,
+              url_oficial: subv.url_oficial as string,
+            },
+            solicitud: soliMap[subv.id as string],
+          };
+        });
+        setMatches(matchItems);
+
+        // Cargar expedientes
+        const { data: expData } = await supabase
+          .from('expediente')
+          .select('id, numero_bdns, estado, created_at, contrato_firmado')
+          .eq('nif', perfil.nif)
+          .order('created_at', { ascending: false });
+        setExpedientes(expData ?? []);
+      } else {
+        setCliente({ nif: '', nombre_empresa: user.email ?? 'Mi empresa' });
       }
 
-      setLoading(false);
+      setChecking(false);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
-  };
+  function onSolicitudCompletada() {
+    setMatchSolicitando(null);
+    setToast('✓ Solicitud registrada. Nuestro equipo se pondrá en contacto pronto.');
+    setTimeout(() => setToast(''), 5000);
+    // Refrescar matches para mostrar "solicitud activa"
+    setMatches(prev => prev.map(m =>
+      m.id === matchSolicitando?.id
+        ? { ...m, solicitud: { id: 'new', estado: 'activo', contrato_firmado: true, metodo_pago_ok: true } }
+        : m
+    ));
+  }
 
-  const confirmTramitar = () => {
-    setModalMatch(null);
-    setToast('Solicitud enviada — nos pondremos en contacto contigo pronto.');
-    setTimeout(() => setToast(''), 4000);
-  };
+  if (checking) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#f4f6fb' }}>
+        <Loader2 size={28} style={{ animation: 'spin 1s linear infinite', color: '#1a3561' }} />
+        <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+      </div>
+    );
+  }
 
-  const matchesAltos  = matches.filter(m => m.score >= 0.7);
-  const matchesMedios = matches.filter(m => m.score >= 0.4 && m.score < 0.7);
-  const importePotencial = matches.reduce((s, m) => s + (m.subvencion.importe_max ?? 0), 0);
+  const nombre = cliente?.nombre_empresa ?? cliente?.nombre_normalizado ?? 'tu empresa';
+  const matchesActivos = matches.filter(m => m.subvencion.estado_convocatoria === 'abierta');
+  const matchesFuego = matches.filter(m => m.score >= 0.65);
+  const totalPotencial = matches.reduce((s, m) => s + (m.subvencion.importe_maximo ?? 0), 0);
 
-  const proximoCierre = matches
-    .filter(m => m.subvencion.fecha_fin && new Date(m.subvencion.fecha_fin) > new Date())
-    .sort((a, b) => new Date(a.subvencion.fecha_fin!).getTime() - new Date(b.subvencion.fecha_fin!).getTime())[0];
-  const diasProximo = proximoCierre ? getDias(proximoCierre.subvencion.fecha_fin) : null;
-
-  const nombre = cliente?.nombre || userName;
-  const hora = new Date().getHours();
-  const saludo = hora < 13 ? 'Buenos días' : hora < 20 ? 'Buenas tardes' : 'Buenas noches';
-
-  /* ── Spinner de carga ── */
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: C.bg }}>
-      <div style={{ width: 40, height: 40, border: `4px solid ${C.border}`, borderTopColor: C.navy, borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
-    </div>
-  );
-
-  /* ── Render principal ── */
   return (
-    <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", background: C.bg, minHeight: '100vh' }}>
-      <style>{`
-        @keyframes up { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:translateY(0) } }
-        @keyframes spin { from { transform:rotate(0deg) } to { transform:rotate(360deg) } }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-        .p-anim { animation: up .4s ease both; }
-      `}</style>
+    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column' }}>
 
-      {/* ══ TOP NAV ══ */}
-      <nav style={{
-        background: C.surface, borderBottom: `1px solid ${C.border}`,
-        height: 60, display: 'flex', alignItems: 'center', padding: '0 40px',
-        justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50,
-        boxShadow: '0 1px 3px rgba(13,31,60,.06)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <div style={{ width: 32, height: 32, background: C.navy, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 12 }}>AP</div>
-          <span style={{ fontWeight: 700, fontSize: 14, color: C.navy }}>AyudaPyme</span>
+      {/* NAV */}
+      <nav style={{ background: C.navy, padding: '0 24px', display: 'flex', alignItems: 'center', height: 56, gap: 16, position: 'sticky', top: 0, zIndex: 100 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ width: 32, height: 32, background: '#fff', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.75rem', color: C.navy }}>AP</div>
+          <span style={{ color: '#fff', fontWeight: 800, fontSize: '0.95rem' }}>AyudaPyme</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 34, height: 34, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 15, position: 'relative' }}>
-            🔔
+        <div style={{ flex: 1 }} />
+        {matchesFuego.length > 0 && (
+          <div style={{ background: '#f97316', borderRadius: 20, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Zap size={11} /> {matchesFuego.length} muy recomendable{matchesFuego.length > 1 ? 's' : ''}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8 }}>
-            <div style={{ width: 26, height: 26, background: C.navy, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 11 }}>
-              {initials(nombre)}
-            </div>
-            <span style={{ fontSize: 13, fontWeight: 600, color: C.ink2 }}>{nombre}</span>
-          </div>
+        )}
+        <button onClick={() => {}} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+          <Bell size={16} color="#fff" />
+        </button>
+        <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <User size={16} color="#fff" />
         </div>
+        <button onClick={async () => { await supabase.auth.signOut(); router.push('/'); }}
+          style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <LogOut size={13} /> Salir
+        </button>
       </nav>
 
-      {/* ══ LAYOUT ══ */}
-      <div style={{ display: 'flex', minHeight: 'calc(100vh - 60px)' }}>
+      <div style={{ display: 'flex', flex: 1 }}>
 
-        {/* ── SIDEBAR ── */}
-        <aside style={{
-          width: 220, flexShrink: 0, background: C.surface,
-          borderRight: `1px solid ${C.border}`, padding: '24px 0',
-          position: 'sticky', top: 60, height: 'calc(100vh - 60px)', overflowY: 'auto',
-        }}>
-          {/* Sección principal */}
-          <div style={{ padding: '0 16px', marginBottom: 6 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.muted, padding: '0 8px', marginBottom: 6 }}>Principal</div>
-            <SidebarItem icon="🏠" label="Dashboard"        active={tab === 'dashboard'}    onClick={() => setTab('dashboard')} />
-            <SidebarItem icon="📋" label="Mis expedientes"  active={tab === 'expedientes'}  badge={expedientes.filter(e => e.estado === 'pendiente').length || undefined} onClick={() => setTab('expedientes')} />
-            <SidebarItem icon="🔍" label="Todas las ayudas" active={tab === 'ayudas'}       onClick={() => setTab('ayudas')} />
-          </div>
+        {/* SIDEBAR */}
+        <aside style={{ width: 220, background: '#fff', borderRight: `1px solid ${C.border}`, padding: '20px 0', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+          {[
+            { key: 'dashboard', label: 'Inicio', icon: <Star size={15} /> },
+            { key: 'ayudas', label: 'Mis subvenciones', icon: <FileText size={15} />, badge: matchesActivos.length || undefined },
+            { key: 'expedientes', label: 'Expedientes', icon: <CheckCircle size={15} />, badge: expedientes.length || undefined },
+          ].map(item => (
+            <button key={item.key} onClick={() => setVista(item.key as Vista)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 20px', background: vista === item.key ? '#eff6ff' : 'none',
+                border: 'none', borderLeft: `3px solid ${vista === item.key ? '#3b82f6' : 'transparent'}`,
+                cursor: 'pointer', color: vista === item.key ? '#1e40af' : C.ink2,
+                fontWeight: vista === item.key ? 700 : 500, fontSize: '0.85rem',
+                textAlign: 'left', width: '100%',
+              }}>
+              {item.icon}
+              <span style={{ flex: 1 }}>{item.label}</span>
+              {item.badge && (
+                <span style={{ background: vista === item.key ? '#3b82f6' : '#f1f5f9', color: vista === item.key ? '#fff' : C.ink2, borderRadius: 10, padding: '1px 7px', fontSize: '0.65rem', fontWeight: 800 }}>
+                  {item.badge}
+                </span>
+              )}
+            </button>
+          ))}
 
-          <div style={{ height: 1, background: C.border, margin: '12px 16px' }} />
+          <div style={{ flex: 1 }} />
 
-          {/* Sección cuenta */}
-          <div style={{ padding: '0 16px', marginBottom: 6 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.muted, padding: '0 8px', marginBottom: 6 }}>Cuenta</div>
-            <SidebarItem icon="⚙️" label="Perfil empresa"  onClick={() => {}} />
-            <SidebarItem icon="💳" label="Facturación"     onClick={() => {}} />
-          </div>
-
-          <div style={{ height: 1, background: C.border, margin: '12px 16px' }} />
-
-          <div style={{ padding: '0 16px' }}>
-            <SidebarItem icon="🚪" label="Cerrar sesión" onClick={handleLogout} />
-          </div>
-
-          {/* Bloque perfil incompleto */}
-          {!cliente?.cnae && (
-            <div style={{ margin: '16px', padding: '14px', background: C.amberBg, border: `1px solid ${C.amberBorder}`, borderRadius: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: C.amber, marginBottom: 8 }}>
-                ⏳ Perfil incompleto
-              </div>
-              <div style={{ height: 5, background: '#fde68a', borderRadius: 100, overflow: 'hidden', marginBottom: 6 }}>
-                <div style={{ height: '100%', background: C.amber, borderRadius: 100, width: '60%' }} />
-              </div>
-              <div style={{ fontSize: 11, color: '#92400e', fontWeight: 500, lineHeight: 1.5 }}>
-                60% completado — añade tu CNAE para mejorar el encaje con las subvenciones
-              </div>
+          {/* Perfil incompleto */}
+          {!cliente?.cnae_descripcion && (
+            <div style={{ margin: 12, background: '#fffbeb', borderRadius: 12, padding: '12px 14px', border: '1px solid #fde68a' }}>
+              <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#92400e', marginBottom: 4 }}>Completa tu perfil</p>
+              <p style={{ fontSize: '0.7rem', color: '#92400e', margin: 0, lineHeight: 1.5 }}>
+                Añade tu CNAE y comunidad autónoma para obtener matches más precisos.
+              </p>
             </div>
           )}
+
+          <div style={{ padding: '12px 20px', borderTop: `1px solid ${C.border}` }}>
+            <p style={{ fontSize: '0.72rem', fontWeight: 700, color: C.muted, marginBottom: 2 }}>
+              {nombre.length > 22 ? nombre.slice(0, 22) + '…' : nombre}
+            </p>
+            {cliente?.ciudad && <p style={{ fontSize: '0.68rem', color: C.muted }}>{cliente.ciudad}</p>}
+          </div>
         </aside>
 
-        {/* ── CONTENIDO PRINCIPAL ── */}
-        <main style={{ flex: 1, padding: '32px 36px 60px', overflowY: 'auto', maxWidth: 960 }}>
+        {/* MAIN */}
+        <main style={{ flex: 1, padding: '28px 32px', overflow: 'auto', minWidth: 0 }}>
 
-          {/* ═══ VISTA: DASHBOARD ═══ */}
-          {tab === 'dashboard' && (
-            <div className="p-anim">
-              {/* Saludo */}
-              <div style={{ marginBottom: 28 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.muted, marginBottom: 6 }}>
-                  Dashboard personalizado
-                </div>
-                <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.15, color: C.ink, marginBottom: 8 }}>
-                  {saludo}, <span style={{ color: C.teal }}>{nombre.split(' ')[0]}</span> 👋
-                </h1>
-                {matches.length > 0 ? (
-                  <p style={{ fontSize: 14, color: C.ink2 }}>
-                    Hemos analizado tu perfil y encontrado{' '}
-                    <strong style={{ color: C.ink }}>{matches.length} subvenciones que encajan contigo</strong>
-                    {importePotencial > 0 && (
-                      <> — importe potencial estimado:{' '}
-                        <strong style={{ color: C.teal }}>~{fmtImporte(importePotencial)}</strong>
-                      </>
-                    )}
-                  </p>
-                ) : (
-                  <p style={{ fontSize: 14, color: C.ink2 }}>
-                    Estamos analizando las subvenciones disponibles para tu perfil de empresa.
-                  </p>
-                )}
-              </div>
+          {/* ── DASHBOARD ── */}
+          {vista === 'dashboard' && (
+            <div style={{ maxWidth: 820, margin: '0 auto' }}>
+              <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: C.navy, marginBottom: 4 }}>
+                Hola, {nombre.split(' ')[0]} 👋
+              </h1>
+              <p style={{ color: C.ink2, marginBottom: 24, fontSize: '0.9rem' }}>
+                Hemos encontrado <strong>{matches.length} subvenciones</strong> que podrían encajar con tu empresa.
+              </p>
 
               {/* Summary cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 28 }}>
-                <SummaryCard
-                  label="Subvenciones recomendadas"
-                  value={matches.length || '—'}
-                  sub="Analizadas para tu perfil"
-                  color={C.navy}
-                />
-                <SummaryCard
-                  label="Importe potencial"
-                  value={importePotencial > 0 ? `~${fmtImporte(importePotencial)}` : '—'}
-                  sub="Estimación con tu perfil actual"
-                  color={C.green}
-                />
-                <SummaryCard
-                  label="Próximo cierre"
-                  value={diasProximo !== null ? `${diasProximo}d` : '—'}
-                  sub={proximoCierre?.subvencion.organismo?.slice(0, 28) ?? 'Sin plazos próximos'}
-                  color={C.amber}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 28 }}>
+                {[
+                  { label: 'Subvenciones abiertas', value: String(matchesActivos.length), sub: 'En plazo ahora mismo', color: C.green, bg: '#f0fdf4' },
+                  { label: 'Muy recomendables', value: String(matchesFuego.length), sub: 'Encaje alto con tu empresa', color: C.fire, bg: '#fff7ed' },
+                  { label: 'Importe potencial', value: totalPotencial > 0 ? fmtE(totalPotencial) ?? '—' : '—', sub: 'Suma de importes máximos', color: C.teal, bg: '#f0fdfa' },
+                ].map(card => (
+                  <div key={card.label} style={{ background: card.bg, borderRadius: 14, padding: '16px 18px', border: `1px solid ${card.bg}` }}>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 900, color: card.color }}>{card.value}</div>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 700, color: C.navy, marginTop: 2 }}>{card.label}</div>
+                    <div style={{ fontSize: '0.7rem', color: C.muted }}>{card.sub}</div>
+                  </div>
+                ))}
               </div>
 
-              {/* Banner acción recomendada */}
-              {!cliente?.cnae && (
+              {/* Banner si hay matches urgentes */}
+              {matchesFuego.length > 0 && (
                 <div style={{
-                  background: `linear-gradient(135deg,${C.navy},#0d4a6e)`,
-                  borderRadius: 14, padding: '20px 24px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  gap: 16, marginBottom: 32, boxShadow: '0 4px 16px rgba(13,31,60,.15)', flexWrap: 'wrap',
+                  background: 'linear-gradient(135deg,#0d1f3c,#1a3561)',
+                  borderRadius: 16, padding: '20px 24px', marginBottom: 24,
+                  display: 'flex', alignItems: 'center', gap: 16,
+                  color: '#fff',
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <span style={{ fontSize: 26, flexShrink: 0 }}>⚡</span>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em', marginBottom: 2 }}>
-                        Acción recomendada: completa tu perfil ahora
-                      </div>
-                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,.6)' }}>
-                        Añade tu CNAE y facturación aproximada para mejorar el encaje con más convocatorias
-                      </div>
-                    </div>
+                  <div style={{ width: 44, height: 44, background: 'rgba(255,255,255,0.15)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Zap size={22} color="#fbbf24" />
                   </div>
-                  <button style={{
-                    padding: '9px 20px', background: '#fff', color: C.navy,
-                    fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: 13,
-                    border: 'none', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
-                  }}>
-                    Completar perfil →
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontWeight: 800, fontSize: '0.95rem', margin: 0 }}>
+                      {matchesFuego.length} subvención{matchesFuego.length > 1 ? 'es' : ''} con muy alto encaje
+                    </p>
+                    <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', margin: '3px 0 0' }}>
+                      Estas son las más relevantes para tu empresa. Actúa antes de que cierren los plazos.
+                    </p>
+                  </div>
+                  <button onClick={() => setVista('ayudas')}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', flexShrink: 0 }}>
+                    Ver todas <ChevronRight size={14} />
                   </button>
                 </div>
               )}
 
-              {/* Subvenciones muy recomendables */}
-              {matchesAltos.length > 0 && (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                    <h2 style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em', color: C.ink }}>
-                      🔥 Muy recomendables para ti
-                    </h2>
-                    <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 100, background: '#fff7ed', color: C.fire, border: '1px solid #fed7aa' }}>
-                      Alta probabilidad
-                    </span>
-                  </div>
-                  {matchesAltos.slice(0, 3).map(m => (
-                    <MatchCard key={m.id} match={m} onEncaje={setModalMatch} />
-                  ))}
-                </>
-              )}
-
-              {/* Subvenciones posibles */}
-              {matchesMedios.length > 0 && (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, marginTop: matchesAltos.length > 0 ? 12 : 0 }}>
-                    <h2 style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em', color: C.ink }}>
-                      👍 Posibles para tu perfil
-                    </h2>
-                    <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 100, background: C.blueBg, color: C.blue, border: `1px solid ${C.blueBorder}` }}>
-                      Encaje parcial
-                    </span>
-                  </div>
-                  {matchesMedios.slice(0, 2).map(m => (
-                    <MatchCard key={m.id} match={m} onEncaje={setModalMatch} />
-                  ))}
-                </>
-              )}
-
-              {/* Estado vacío */}
-              {matches.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '64px 24px' }}>
-                  <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
-                  <div style={{ fontSize: 17, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Analizando subvenciones para tu perfil</div>
-                  <div style={{ fontSize: 14, color: C.muted, maxWidth: 380, margin: '0 auto', lineHeight: 1.6 }}>
-                    En cuanto completemos el análisis de tu empresa, encontrarás aquí las mejores oportunidades de financiación.
-                  </div>
-                </div>
-              )}
+              {/* Top 3 matches */}
+              <h2 style={{ fontSize: '1rem', fontWeight: 800, color: C.navy, marginBottom: 14 }}>
+                Top subvenciones para ti
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {matches.slice(0, 3).map(m => (
+                  <MatchCard key={m.id} match={m} cliente={cliente!} onSolicitar={() => setMatchSolicitando(m)} />
+                ))}
+                {matches.length > 3 && (
+                  <button onClick={() => setVista('ayudas')}
+                    style={{ background: '#f1f5f9', border: 'none', borderRadius: 12, padding: '14px', cursor: 'pointer', color: C.ink2, fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    Ver las {matches.length - 3} subvenciones restantes <ChevronRight size={14} />
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
-          {/* ═══ VISTA: TODAS LAS AYUDAS ═══ */}
-          {tab === 'ayudas' && (
-            <div className="p-anim">
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.muted, marginBottom: 6 }}>Todas las ayudas</div>
-                <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: C.ink }}>
-                  {matches.length > 0 ? `${matches.length} subvenciones analizadas para tu empresa` : 'Subvenciones disponibles'}
-                </h1>
+          {/* ── AYUDAS ── */}
+          {vista === 'ayudas' && (
+            <div style={{ maxWidth: 820, margin: '0 auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+                <h1 style={{ fontSize: '1.3rem', fontWeight: 800, color: C.navy, margin: 0 }}>Mis subvenciones</h1>
+                <span style={{ background: '#f1f5f9', color: C.muted, borderRadius: 20, padding: '2px 10px', fontSize: '0.75rem', fontWeight: 700 }}>
+                  {matches.length} encontradas
+                </span>
               </div>
-
-              {matches.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '64px 24px' }}>
-                  <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
-                  <div style={{ fontSize: 14, color: C.muted }}>No hay subvenciones analizadas todavía.</div>
-                </div>
-              ) : (
-                matches.map(m => <MatchCard key={m.id} match={m} onEncaje={setModalMatch} />)
-              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {matches.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '60px 20px', color: C.muted }}>
+                    <FileText size={40} style={{ marginBottom: 12, opacity: 0.5 }} />
+                    <p style={{ fontSize: '0.9rem' }}>No hay subvenciones en este momento. Vuelve pronto.</p>
+                  </div>
+                ) : (
+                  matches.map(m => (
+                    <MatchCard key={m.id} match={m} cliente={cliente!} onSolicitar={() => setMatchSolicitando(m)} />
+                  ))
+                )}
+              </div>
             </div>
           )}
 
-          {/* ═══ VISTA: EXPEDIENTES ═══ */}
-          {tab === 'expedientes' && (
-            <div className="p-anim">
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.muted, marginBottom: 6 }}>Gestión</div>
-                <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: C.ink }}>Mis expedientes</h1>
-              </div>
-
+          {/* ── EXPEDIENTES ── */}
+          {vista === 'expedientes' && (
+            <div style={{ maxWidth: 700, margin: '0 auto' }}>
+              <h1 style={{ fontSize: '1.3rem', fontWeight: 800, color: C.navy, marginBottom: 20 }}>Mis expedientes</h1>
               {expedientes.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '64px 24px' }}>
-                  <div style={{ fontSize: 48, marginBottom: 16 }}>📁</div>
-                  <div style={{ fontSize: 17, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Sin expedientes activos</div>
-                  <div style={{ fontSize: 14, color: C.muted, maxWidth: 340, margin: '0 auto', lineHeight: 1.6 }}>
-                    Cuando empecemos a tramitar una subvención para ti, el estado aparecerá aquí.
-                  </div>
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: C.muted }}>
+                  <CheckCircle size={40} style={{ marginBottom: 12, opacity: 0.4 }} />
+                  <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>Aún no tienes expedientes activos</p>
+                  <p style={{ fontSize: '0.82rem', marginTop: 6 }}>Cuando solicites una subvención y la aprobemos, aparecerá aquí.</p>
+                  <button onClick={() => setVista('ayudas')}
+                    style={{ marginTop: 16, background: C.navy, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    Ver subvenciones disponibles <ArrowRight size={14} />
+                  </button>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {expedientes.map(exp => {
-                    const estadoMap: Record<string, { bg: string; color: string }> = {
-                      pendiente:   { bg: C.amberBg, color: C.amber },
-                      en_proceso:  { bg: C.blueBg,  color: C.blue  },
-                      presentado:  { bg: C.blueBg,  color: C.blue  },
-                      resuelto:    { bg: C.greenBg, color: C.green },
-                      descartado:  { bg: '#f1f5f9', color: C.muted },
-                    };
-                    const est = estadoMap[exp.estado] ?? { bg: '#f1f5f9', color: C.muted };
-
-                    return (
-                      <div key={exp.id} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '16px 20px', boxShadow: '0 1px 3px rgba(13,31,60,.06)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                          <div>
-                            <div style={{ fontWeight: 700, fontSize: 14, color: C.ink, marginBottom: 4 }}>
-                              {exp.titulo ?? `Expediente #${exp.id.slice(0, 8)}`}
-                            </div>
-                            <div style={{ fontSize: 12, color: C.muted }}>
-                              {new Date(exp.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}
-                            </div>
-                          </div>
-                          <span style={{ fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 100, background: est.bg, color: est.color, whiteSpace: 'nowrap' }}>
-                            {exp.estado.replace(/_/g, ' ')}
-                          </span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {expedientes.map(exp => (
+                    <div key={exp.id} style={{ background: '#fff', borderRadius: 14, border: `1px solid ${C.border}`, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: exp.contrato_firmado ? '#dcfce7' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <FileText size={18} color={exp.contrato_firmado ? C.green : C.muted} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.navy }}>
+                          {exp.numero_bdns ? `Subvención BDNS #${exp.numero_bdns}` : 'Expediente en gestión'}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: C.muted, marginTop: 2 }}>
+                          Abierto el {fmt(exp.created_at)}
                         </div>
                       </div>
-                    );
-                  })}
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{
+                          background: exp.estado === 'en_tramite' ? '#eff6ff' : exp.estado === 'aprobado' ? '#dcfce7' : '#f1f5f9',
+                          color: exp.estado === 'en_tramite' ? C.blue : exp.estado === 'aprobado' ? C.green : C.muted,
+                          borderRadius: 20, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700,
+                        }}>
+                          {exp.estado}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -829,29 +984,35 @@ export default function PortalPage() {
         </main>
       </div>
 
-      {/* ── MODAL ── */}
-      {modalMatch && (
-        <ModalEncaje
-          match={modalMatch}
-          onClose={() => setModalMatch(null)}
-          onTramitar={confirmTramitar}
-        />
-      )}
-
-      {/* ── TOAST ── */}
+      {/* Toast */}
       {toast && (
         <div style={{
-          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
-          background: C.navy, color: '#fff', fontFamily: "'Plus Jakarta Sans', sans-serif",
-          fontWeight: 600, padding: '11px 22px', borderRadius: 100, fontSize: 13,
-          zIndex: 300, display: 'flex', alignItems: 'center', gap: 10,
-          boxShadow: '0 8px 28px rgba(13,31,60,.25)', whiteSpace: 'nowrap',
-          animation: 'up .35s ease',
+          position: 'fixed', bottom: 24, right: 24, zIndex: 2000,
+          background: '#0f172a', color: '#fff', borderRadius: 12,
+          padding: '14px 20px', fontSize: '0.85rem', fontWeight: 600,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+          display: 'flex', alignItems: 'center', gap: 8,
+          animation: 'slideUp 0.3s ease',
         }}>
-          <span style={{ width: 18, height: 18, background: C.green, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800 }}>✓</span>
+          <CheckCircle size={16} color="#4ade80" />
           {toast}
         </div>
       )}
+
+      {/* Modal solicitud */}
+      {matchSolicitando && cliente && (
+        <ModalSolicitud
+          match={matchSolicitando}
+          cliente={cliente}
+          onClose={() => setMatchSolicitando(null)}
+          onCompletado={onSolicitudCompletada}
+        />
+      )}
+
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
     </div>
   );
 }
