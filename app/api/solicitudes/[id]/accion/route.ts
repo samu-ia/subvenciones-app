@@ -91,6 +91,13 @@ export async function POST(
       })
       .eq('id', solicitudId);
 
+    // Disparar setup automático en background (checklist IA + proveedores + memoria)
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? `https://${request.headers.get('host')}`;
+    fetch(`${baseUrl}/api/expedientes/${exp.id}/setup`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.INGEST_SECRET ?? ''}` },
+    }).catch(() => {/* best effort */});
+
     return NextResponse.json({ ok: true, expediente_id: exp.id });
   }
 

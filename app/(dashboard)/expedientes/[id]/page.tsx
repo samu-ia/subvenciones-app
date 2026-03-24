@@ -4,12 +4,188 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
-import { ArrowLeft, Briefcase, User } from 'lucide-react';
+import { ArrowLeft, Briefcase, User, Bot, CheckSquare, Store, Check, Square, ExternalLink, Mail, RefreshCw } from 'lucide-react';
 import WorkspaceLayout from '@/components/workspace/WorkspaceLayout';
 import NotebookLeftPanel from '@/components/workspace/docs/NotebookLeftPanel';
 import RichTextEditor from '@/components/workspace/editor/RichTextEditor';
 import AIPanelV2 from '@/components/workspace/ai/AIPanelV2';
 import type { ContextMode } from '@/components/workspace/ai/ContextToggle';
+
+// ─── Tipos extra ──────────────────────────────────────────────────────────────
+
+interface ChecklistItem {
+  id: string; nombre: string; descripcion?: string;
+  tipo: string; categoria?: string; obligatorio: boolean;
+  completado: boolean; generado_ia: boolean; orden: number;
+}
+interface ProveedorAsignado {
+  id: string; relevancia_score: number;
+  motivo_match?: string; propuesta_texto?: string; estado: string;
+  proveedor: { nombre: string; categoria: string; descripcion?: string; servicios?: string[]; web?: string; contacto_email?: string; contacto_nombre?: string; precio_referencia?: string };
+}
+
+// ─── Panel checklist ──────────────────────────────────────────────────────────
+
+function PanelChecklist({ expedienteId }: { expedienteId: string }) {
+  const [items, setItems] = useState<ChecklistItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.from('checklist_items').select('*').eq('expediente_id', expedienteId).order('orden')
+      .then(({ data }) => { setItems(data ?? []); setLoading(false); });
+  }, [expedienteId]);
+
+  async function toggle(item: ChecklistItem) {
+    const supabase = createClient();
+    await supabase.from('checklist_items').update({ completado: !item.completado }).eq('id', item.id);
+    setItems(prev => prev.map(i => i.id === item.id ? { ...i, completado: !i.completado } : i));
+  }
+
+  const completados = items.filter(i => i.completado).length;
+  const categorias = [...new Set(items.map(i => i.categoria).filter(Boolean))];
+
+  if (loading) return <div style={{ padding: 20, color: '#94a3b8', fontSize: '0.83rem' }}>Cargando checklist...</div>;
+  if (items.length === 0) return (
+    <div style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>
+      <CheckSquare size={32} style={{ marginBottom: 8, opacity: 0.4 }} />
+      <p style={{ fontSize: '0.82rem' }}>Sin checklist. Se genera automáticamente al activar el expediente.</p>
+    </div>
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      {/* Progress */}
+      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: '#475569', marginBottom: 6 }}>
+          <span>Documentación requerida</span>
+          <span style={{ color: completados === items.length ? '#059669' : '#475569' }}>{completados}/{items.length}</span>
+        </div>
+        <div style={{ background: '#f1f5f9', borderRadius: 4, height: 6, overflow: 'hidden' }}>
+          <div style={{ height: '100%', borderRadius: 4, width: `${(completados / items.length) * 100}%`, background: completados === items.length ? '#059669' : '#3b82f6', transition: 'width 0.3s' }} />
+        </div>
+      </div>
+      {/* Items by category */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 12px' }}>
+        {(categorias.length > 0 ? categorias : [undefined]).map(cat => {
+          const catItems = cat ? items.filter(i => i.categoria === cat) : items.filter(i => !i.categoria);
+          if (catItems.length === 0) return null;
+          return (
+            <div key={cat ?? 'sin-cat'} style={{ marginBottom: 12 }}>
+              {cat && <div style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94a3b8', marginBottom: 4, paddingLeft: 2 }}>{cat}</div>}
+              {catItems.map(item => (
+                <div
+                  key={item.id}
+                  onClick={() => toggle(item)}
+                  style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '7px 8px', borderRadius: 8, cursor: 'pointer', marginBottom: 2, background: item.completado ? '#f0fdf4' : 'transparent', transition: 'background 0.12s' }}
+                >
+                  <span style={{ color: item.completado ? '#059669' : '#cbd5e1', marginTop: 1, flexShrink: 0 }}>
+                    {item.completado ? <Check size={14} /> : <Square size={14} />}
+                  </span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: item.obligatorio ? 600 : 500, color: item.completado ? '#6b7280' : '#0d1f3c', textDecoration: item.completado ? 'line-through' : 'none' }}>
+                      {item.nombre}
+                      {item.obligatorio && !item.completado && <span style={{ color: '#dc2626', marginLeft: 3 }}>*</span>}
+                    </div>
+                    {item.descripcion && !item.completado && (
+                      <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: 1 }}>{item.descripcion}</div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Panel proveedores ────────────────────────────────────────────────────────
+
+function PanelProveedores({ expedienteId }: { expedienteId: string }) {
+  const [provs, setProvs] = useState<ProveedorAsignado[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.from('expediente_proveedores')
+      .select('id, relevancia_score, motivo_match, propuesta_texto, estado, proveedor:proveedores(nombre,categoria,descripcion,servicios,web,contacto_email,contacto_nombre,precio_referencia)')
+      .eq('expediente_id', expedienteId)
+      .order('relevancia_score', { ascending: false })
+      .then(({ data }) => {
+        setProvs((data ?? []).map((d: any) => ({ ...d, proveedor: Array.isArray(d.proveedor) ? d.proveedor[0] : d.proveedor })));
+        setLoading(false);
+      });
+  }, [expedienteId]);
+
+  async function cambiarEstado(id: string, estado: string) {
+    const supabase = createClient();
+    await supabase.from('expediente_proveedores').update({ estado }).eq('id', id);
+    setProvs(prev => prev.map(p => p.id === id ? { ...p, estado } : p));
+  }
+
+  if (loading) return <div style={{ padding: 20, color: '#94a3b8', fontSize: '0.83rem' }}>Cargando proveedores...</div>;
+  if (provs.length === 0) return (
+    <div style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>
+      <Store size={32} style={{ marginBottom: 8, opacity: 0.4 }} />
+      <p style={{ fontSize: '0.82rem' }}>Sin proveedores asignados. Se generan al activar el expediente.</p>
+    </div>
+  );
+
+  const ESTADO_COLORS: Record<string, string> = { sugerido: '#3b82f6', contactado: '#d97706', aceptado: '#059669', descartado: '#94a3b8' };
+
+  return (
+    <div style={{ overflowY: 'auto', padding: '12px 12px 20px' }}>
+      <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginBottom: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        Proveedores sugeridos por IA
+      </div>
+      {provs.map(p => (
+        <div key={p.id} style={{ background: '#fff', border: '1px solid #e8ecf4', borderRadius: 10, padding: '12px 14px', marginBottom: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0d1f3c' }}>{p.proveedor?.nombre}</div>
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: ESTADO_COLORS[p.estado] ?? '#94a3b8', background: (ESTADO_COLORS[p.estado] ?? '#94a3b8') + '20', padding: '2px 7px', borderRadius: 10 }}>
+              {p.estado}
+            </span>
+          </div>
+          {p.motivo_match && (
+            <div style={{ fontSize: '0.73rem', color: '#475569', marginBottom: 6, fontStyle: 'italic' }}>
+              {p.motivo_match}
+            </div>
+          )}
+          {p.propuesta_texto && (
+            <div style={{ fontSize: '0.73rem', color: '#334155', background: '#f8fafc', borderRadius: 6, padding: '6px 8px', marginBottom: 8, lineHeight: 1.5 }}>
+              {p.propuesta_texto}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+            {p.proveedor?.contacto_email && (
+              <a href={`mailto:${p.proveedor.contacto_email}`} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.68rem', color: '#3b82f6', textDecoration: 'none', background: '#eff6ff', padding: '3px 7px', borderRadius: 6 }}>
+                <Mail size={10} /> Contactar
+              </a>
+            )}
+            {p.proveedor?.web && (
+              <a href={p.proveedor.web} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.68rem', color: '#475569', textDecoration: 'none', background: '#f8fafc', padding: '3px 7px', borderRadius: 6 }}>
+                <ExternalLink size={10} /> Web
+              </a>
+            )}
+            <select
+              value={p.estado}
+              onChange={e => cambiarEstado(p.id, e.target.value)}
+              onClick={e => e.stopPropagation()}
+              style={{ marginLeft: 'auto', fontSize: '0.65rem', padding: '2px 6px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', fontFamily: 'inherit', cursor: 'pointer' }}
+            >
+              <option value="sugerido">Sugerido</option>
+              <option value="contactado">Contactado</option>
+              <option value="aceptado">Aceptado</option>
+              <option value="descartado">Descartado</option>
+            </select>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 interface Expediente {
   id: string;
@@ -46,6 +222,8 @@ export default function ExpedienteWorkspacePage() {
   const [archivos, setArchivos] = useState<Array<{ id: string; nombre: string; mime_type?: string | null; tamano_bytes?: number; storage_path?: string }>>([]);
   const [contextSelections, setContextSelections] = useState<Record<string, ContextMode>>({});
   const [archivoSignedUrl, setArchivoSignedUrl] = useState<string | null>(null);
+  const [panelTab, setPanelTab] = useState<'ia' | 'checklist' | 'proveedores'>('ia');
+  const [setupLoading, setSetupLoading] = useState(false);
 
   const selectedDoc = documentos.find(d => d.id === selectedDocId);
 
@@ -501,22 +679,56 @@ export default function ExpedienteWorkspacePage() {
         })()
       }
       aiPanel={
-        userId ? (
-          <AIPanelV2
-            userId={userId}
-            contextoId={expedienteId}
-            contextoTipo="expediente"
-            documentos={documentos}
-            contextSelections={contextSelections}
-            onGenerarDocumento={handleGenerarDocumento}
-            selectedDocId={selectedDocId}
-            onSelectDoc={handleSelectDoc}
-          />
-        ) : (
-          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
-            Cargando asistente...
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* Tabs */}
+          <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--background)', flexShrink: 0 }}>
+            {([
+              { key: 'ia', label: 'Asistente', icon: <Bot size={12} /> },
+              { key: 'checklist', label: 'Checklist', icon: <CheckSquare size={12} /> },
+              { key: 'proveedores', label: 'Proveedores', icon: <Store size={12} /> },
+            ] as const).map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setPanelTab(tab.key)}
+                style={{
+                  flex: 1, padding: '9px 4px', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                  background: panelTab === tab.key ? 'var(--background)' : '#f8fafc',
+                  color: panelTab === tab.key ? '#0d1f3c' : '#94a3b8',
+                  fontWeight: panelTab === tab.key ? 700 : 500,
+                  fontSize: '0.72rem',
+                  borderBottom: panelTab === tab.key ? '2px solid #1d4ed8' : '2px solid transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                  transition: 'all 0.15s',
+                }}
+              >
+                {tab.icon}{tab.label}
+              </button>
+            ))}
           </div>
-        )
+          {/* Panel content */}
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            {panelTab === 'ia' && (
+              userId ? (
+                <AIPanelV2
+                  userId={userId}
+                  contextoId={expedienteId}
+                  contextoTipo="expediente"
+                  documentos={documentos}
+                  contextSelections={contextSelections}
+                  onGenerarDocumento={handleGenerarDocumento}
+                  selectedDocId={selectedDocId}
+                  onSelectDoc={handleSelectDoc}
+                />
+              ) : (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                  Cargando asistente...
+                </div>
+              )
+            )}
+            {panelTab === 'checklist' && <PanelChecklist expedienteId={expedienteId} />}
+            {panelTab === 'proveedores' && <PanelProveedores expedienteId={expedienteId} />}
+          </div>
+        </div>
       }
     />
   );
