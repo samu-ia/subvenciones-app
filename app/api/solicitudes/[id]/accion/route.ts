@@ -18,7 +18,7 @@ type Accion =
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // Solo admins
   const supabase = await createClient();
@@ -36,7 +36,7 @@ export async function POST(
   if (!body?.tipo) return NextResponse.json({ error: 'Falta tipo de acción' }, { status: 400 });
 
   const sb = createServiceClient();
-  const solicitudId = params.id;
+  const { id: solicitudId } = await params;
 
   // Obtener solicitud actual
   const { data: sol, error: errSol } = await sb
