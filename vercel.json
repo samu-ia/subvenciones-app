@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/subvenciones/ingest",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}

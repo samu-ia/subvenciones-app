@@ -80,11 +80,34 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET para verificar que el endpoint está vivo (Railway health checks)
-export async function GET() {
-  return NextResponse.json({
-    ok: true,
-    endpoint: 'POST /api/subvenciones/ingest',
-    descripcion: 'Lanza el pipeline de ingestión BDNS. Requiere Authorization: Bearer <INGEST_SECRET>',
-  });
+// GET para Vercel Cron Jobs (llaman GET con Authorization: Bearer <CRON_SECRET>)
+export async function GET(request: NextRequest) {
+  const authHeader = request.headers.get('authorization') ?? '';
+  const secret = process.env.INGEST_SECRET;
+  const token = authHeader.replace('Bearer ', '').trim();
+
+  // Vercel cron también puede enviar x-vercel-cron header
+  const isVercelCron = request.headers.get('x-vercel-cron') === '1';
+
+  if (!isVercelCron && (!secret || token !== secret)) {
+    return NextResponse.json({
+      ok: true,
+      endpoint: 'POST /api/subvenciones/ingest',
+      descripcion: 'Lanza el pipeline de ingestión BDNS. Requiere Authorization: Bearer <INGEST_SECRET>',
+    });
+  }
+
+  // Ejecutar pipeline desde cron
+  try {
+    const { createClient: createServiceClient } = await import('@supabase/supabase-js');
+    const supabase = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
+    const resultado = await ejecutarPipeline(supabase, { soloNuevas: true, limite: 100 });
+    return NextResponse.json({ ok: true, resultado });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+  }
 }
