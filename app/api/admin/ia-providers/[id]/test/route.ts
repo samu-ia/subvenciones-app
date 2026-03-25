@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { createProvider } from '@/lib/ai/provider-factory';
+import { createProvider } from '@/lib/ai/providers/factory';
 
 const CHEAP_MODELS: Record<string, string> = {
   openai: 'gpt-4o-mini',
