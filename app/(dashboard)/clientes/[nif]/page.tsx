@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { notFound, redirect } from 'next/navigation';
+import ClienteMatchesSection from './ClienteMatchesSection';
 
 interface Cliente {
   nif: string;
@@ -422,76 +423,7 @@ export default async function ClienteDetailPage({
       </div>
 
       {/* Matches activos */}
-      {matches && matches.length > 0 && (
-        <div style={{
-          backgroundColor: 'var(--surface)', borderRadius: '12px', padding: '24px',
-          boxShadow: 'var(--s1)', border: '1px solid #bfdbfe', marginBottom: '24px'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--ink)', margin: 0 }}>
-              Subvenciones relevantes ({matches.length})
-            </h2>
-            <Link href="/matches" style={{ fontSize: '13px', color: 'var(--blue)', textDecoration: 'none', fontWeight: '600' }}>
-              Ver todos los matches →
-            </Link>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            {(matches as any[]).map((m) => {
-              const sub = Array.isArray(m.subvencion) ? m.subvencion[0] : m.subvencion;
-              const pct = Math.round(m.score * 100);
-              const scoreColor = pct >= 65 ? '#f97316' : '#059669';
-              const scoreBg = pct >= 65 ? '#fff7ed' : '#ecfdf5';
-              const dias = sub?.plazo_fin
-                ? Math.ceil((new Date(sub.plazo_fin).getTime() - Date.now()) / 86_400_000)
-                : null;
-              return (
-                <div key={m.id} style={{
-                  display: 'flex', gap: '12px', alignItems: 'center',
-                  padding: '12px 14px', border: '1px solid var(--border)',
-                  borderRadius: '8px', background: m.estado === 'interesado' ? '#f0fdf4' : '#fff',
-                }}>
-                  <div style={{
-                    width: 44, height: 44, borderRadius: '10px', flexShrink: 0,
-                    background: scoreBg, border: `2px solid ${scoreColor}`,
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 800, color: scoreColor, lineHeight: 1 }}>{pct}</span>
-                    <span style={{ fontSize: '0.55rem', color: scoreColor, fontWeight: 600 }}>%</span>
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {sub?.titulo ?? '—'}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>
-                      {sub?.organismo ?? ''}
-                      {sub?.importe_maximo ? ` · hasta ${formatCurrency(sub.importe_maximo)}` : ''}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
-                    {dias !== null && dias >= 0 && (
-                      <span style={{
-                        fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '100px',
-                        color: dias <= 15 ? '#dc2626' : '#059669',
-                        background: dias <= 15 ? '#fef2f2' : '#ecfdf5',
-                      }}>
-                        {dias === 0 ? 'Hoy' : `${dias}d`}
-                      </span>
-                    )}
-                    <span style={{
-                      fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '100px',
-                      color: m.estado === 'interesado' ? '#059669' : m.estado === 'descartado' ? '#94a3b8' : '#1d4ed8',
-                      background: m.estado === 'interesado' ? '#ecfdf5' : m.estado === 'descartado' ? '#f1f5f9' : '#eff6ff',
-                    }}>
-                      {m.estado === 'interesado' ? 'Interesado' : m.estado === 'descartado' ? 'Descartado' : 'Nuevo'}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <ClienteMatchesSection initialMatches={(matches ?? []) as unknown as Parameters<typeof ClienteMatchesSection>[0]['initialMatches']} nif={nif} />
 
       {/* Solicitudes */}
       {solicitudes && solicitudes.length > 0 && (
