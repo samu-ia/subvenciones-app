@@ -5,10 +5,9 @@ import {
   Database, RefreshCw, Play, CheckCircle2, Clock, AlertCircle,
   ExternalLink, Search, Loader2, Settings, Brain, FileText,
   ChevronRight, AlertTriangle, Shield, BarChart3, X, RotateCcw,
-  Info, Zap, ChevronDown, ChevronUp,
+  Info, Zap, ChevronDown, ChevronUp, Eye, EyeOff,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import AIConfigPanel from "@/components/workspace/ai/AIConfigPanel";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -785,19 +784,36 @@ export default function SubvencionsBdPage() {
 
   // Config
   const [panelIA, setPanelIA] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
   const [proveedorActivo, setProveedorActivo] = useState<string | null>(null);
+
+  // Estado panel IA providers
+  const [iaProviders, setIaProviders] = useState<Array<{id:string;provider:string;api_key:string|null;base_url:string|null;enabled:boolean}>>([]);
+  const [iaKeys, setIaKeys] = useState<Record<string,string>>({});
+  const [iaShowKey, setIaShowKey] = useState<Record<string,boolean>>({});
+  const [iaSaving, setIaSaving] = useState<Record<string,boolean>>({});
+  const [iaTesting, setIaTesting] = useState<Record<string,boolean>>({});
+  const [iaTestResult, setIaTestResult] = useState<Record<string,string>>({});
+  const [iaMsg, setIaMsg] = useState('');
+
+  const PROVIDER_LABEL: Record<string,string> = { openai:'OpenAI', anthropic:'Anthropic', google:'Google Gemini', openrouter:'OpenRouter' };
+  const CHEAP_MODEL: Record<string,string> = { openai:'gpt-4o-mini', anthropic:'claude-3-haiku', google:'gemini-2.5-flash', openrouter:'openai/gpt-4o-mini' };
+
+  const cargarIaProviders = useCallback(async () => {
+    const r = await fetch('/api/admin/ia-providers');
+    if (!r.ok) return;
+    const data = await r.json();
+    setIaProviders(data);
+    const keys: Record<string,string> = {};
+    data.forEach((p: {id:string;api_key:string|null}) => { keys[p.id] = p.api_key ?? ''; });
+    setIaKeys(keys);
+    const activo = data.find((p: {enabled:boolean;api_key:string|null}) => p.enabled && p.api_key);
+    setProveedorActivo(activo?.provider ?? null);
+  }, []);
 
   const tamanio = 25;
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return;
-      setUserId(user.id);
-      const { data } = await supabase.from("ia_providers")
-        .select("provider").eq("enabled", true).not("api_key", "is", null).limit(1).maybeSingle();
-      setProveedorActivo(data?.provider ?? null);
-    });
+    cargarIaProviders();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1137,23 +1153,107 @@ export default function SubvencionsBdPage() {
         )}
       </div>
 
-      {/* Panel configuración IA */}
-      {panelIA && userId && (
+      {/* Panel configuración IA providers (pipeline) */}
+      {panelIA && (
         <div
-          onClick={() => setPanelIA(false)}
+          onClick={() => { setPanelIA(false); setIaMsg(''); }}
           style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(0,0,0,0.3)", display: "flex", alignItems: "flex-end", justifyContent: "flex-end" }}
         >
           <div
             onClick={e => e.stopPropagation()}
-            style={{ background: "#fff", borderRadius: "16px 0 0 0", width: 480, maxHeight: "90vh", overflow: "auto", padding: 24 }}
+            style={{ background: "var(--bg)", borderRadius: "16px 0 0 0", width: 440, maxHeight: "90vh", overflow: "auto", padding: 24, boxShadow: "-4px 0 24px rgba(0,0,0,0.15)" }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <span style={{ fontWeight: 800, fontSize: "1rem", color: "#1a3561" }}>Configuración IA</span>
-              <button onClick={() => setPanelIA(false)} style={{ background: "none", border: "none", cursor: "pointer" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <span style={{ fontWeight: 700, fontSize: "1rem", color: "var(--ink)" }}>Proveedores IA</span>
+              <button onClick={() => setPanelIA(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)" }}>
                 <X size={16} />
               </button>
             </div>
-            <AIConfigPanel userId={userId} workspaceType="expediente" />
+            <p style={{ fontSize: "0.78rem", color: "var(--muted)", marginBottom: 18 }}>
+              Configura la API key del proveedor que usará el pipeline de ingestión BDNS.
+            </p>
+
+            {iaProviders.length === 0 ? (
+              <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>Cargando...</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {iaProviders.map(p => (
+                  <div key={p.id} style={{
+                    border: `1.5px solid ${p.enabled ? "var(--blue)" : "var(--border)"}`,
+                    borderRadius: 12, padding: "14px 16px",
+                    background: "var(--surface)", opacity: p.enabled ? 1 : 0.75,
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                      <div>
+                        <div style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--ink)" }}>{PROVIDER_LABEL[p.provider] ?? p.provider}</div>
+                        <div style={{ fontSize: "0.72rem", color: "var(--muted)" }}>Modelo pipeline: <code>{CHEAP_MODEL[p.provider] ?? '—'}</code></div>
+                      </div>
+                      <div
+                        onClick={() => setIaProviders(prev => prev.map(x => x.id === p.id ? {...x, enabled: !x.enabled} : x))}
+                        style={{ width: 36, height: 20, borderRadius: 20, background: p.enabled ? "var(--blue)" : "var(--border)", position: "relative", cursor: "pointer", transition: "background 0.2s", flexShrink: 0 }}
+                      >
+                        <div style={{ position: "absolute", top: 2, left: p.enabled ? 18 : 2, width: 16, height: 16, borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                      <div style={{ flex: 1, position: "relative" }}>
+                        <input
+                          type={iaShowKey[p.id] ? "text" : "password"}
+                          value={iaKeys[p.id] ?? ''}
+                          onChange={e => setIaKeys(prev => ({...prev, [p.id]: e.target.value}))}
+                          placeholder="API Key..."
+                          style={{ width: "100%", padding: "7px 32px 7px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: "0.82rem", background: "var(--bg)", color: "var(--ink)", boxSizing: "border-box", fontFamily: "monospace" }}
+                        />
+                        <button onClick={() => setIaShowKey(prev => ({...prev, [p.id]: !prev[p.id]}))} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 0 }}>
+                          {iaShowKey[p.id] ? <EyeOff size={13}/> : <Eye size={13}/>}
+                        </button>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          setIaSaving(prev => ({...prev, [p.id]: true})); setIaMsg('');
+                          const r = await fetch(`/api/admin/ia-providers/${p.id}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ api_key: iaKeys[p.id] || null, enabled: p.enabled }) });
+                          setIaSaving(prev => ({...prev, [p.id]: false}));
+                          if (r.ok) { setIaMsg('Guardado'); cargarIaProviders(); }
+                          else { const d = await r.json(); setIaMsg(`Error: ${d.error}`); }
+                        }}
+                        disabled={iaSaving[p.id]}
+                        style={{ padding: "7px 14px", borderRadius: 8, background: "var(--blue)", color: "#fff", border: "none", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600, fontFamily: "inherit", whiteSpace: "nowrap" }}
+                      >
+                        {iaSaving[p.id] ? "..." : "Guardar"}
+                      </button>
+                    </div>
+
+                    <button
+                      onClick={async () => {
+                        setIaTesting(prev => ({...prev, [p.id]: true})); setIaTestResult(prev => ({...prev, [p.id]: ''}));
+                        const r = await fetch(`/api/admin/ia-providers/${p.id}/test`, { method: 'POST' });
+                        const d = await r.json();
+                        setIaTesting(prev => ({...prev, [p.id]: false}));
+                        setIaTestResult(prev => ({...prev, [p.id]: r.ok ? 'ok' : d.error ?? 'error'}));
+                      }}
+                      disabled={iaTesting[p.id] || !iaKeys[p.id]}
+                      style={{ padding: "5px 12px", borderRadius: 7, background: "transparent", color: "var(--ink2)", border: "1px solid var(--border)", cursor: "pointer", fontSize: "0.78rem", fontFamily: "inherit" }}
+                    >
+                      {iaTesting[p.id] ? "Probando..." : "Probar conexión"}
+                    </button>
+
+                    {iaTestResult[p.id] && (
+                      <div style={{ marginTop: 6, fontSize: "0.78rem", color: iaTestResult[p.id] === 'ok' ? '#16a34a' : '#dc2626', display: "flex", alignItems: "center", gap: 4 }}>
+                        {iaTestResult[p.id] === 'ok' ? <CheckCircle2 size={12}/> : <AlertCircle size={12}/>}
+                        {iaTestResult[p.id] === 'ok' ? 'Conexión correcta' : iaTestResult[p.id]}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {iaMsg && (
+              <div style={{ marginTop: 14, padding: "8px 12px", borderRadius: 8, background: iaMsg.startsWith('Error') ? '#fee2e2' : '#dcfce7', color: iaMsg.startsWith('Error') ? '#dc2626' : '#16a34a', fontSize: "0.82rem" }}>
+                {iaMsg}
+              </div>
+            )}
           </div>
         </div>
       )}
