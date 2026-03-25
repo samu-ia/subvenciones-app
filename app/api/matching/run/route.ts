@@ -26,8 +26,7 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    const { data: perfil } = await supabase.from('perfiles').select('rol').eq('id', user.id).maybeSingle();
-    if (perfil?.rol !== 'admin') return NextResponse.json({ error: 'Solo admins' }, { status: 403 });
+    if (!user.email?.endsWith('@ayudapyme.es')) return NextResponse.json({ error: 'Solo admins' }, { status: 403 });
   }
 
   const body = await request.json().catch(() => ({}));

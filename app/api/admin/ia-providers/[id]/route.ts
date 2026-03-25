@@ -6,8 +6,7 @@ async function requireAdmin() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  const { data: perfil } = await supabase.from('perfiles').select('rol').eq('id', user.id).maybeSingle();
-  if (perfil?.rol !== 'admin') return null;
+  if (!user.email?.endsWith('@ayudapyme.es')) return null;
   return user;
 }
 
