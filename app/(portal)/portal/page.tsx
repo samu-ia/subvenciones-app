@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -8,6 +8,7 @@ import {
   CheckCircle, AlertTriangle, Clock, Zap, Star,
   CreditCard, Landmark, ArrowRight, ArrowLeft,
   Shield, X, Check, Loader2, User, Building2, Save,
+  MessageCircle, Send, Bot,
 } from 'lucide-react';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -1010,9 +1011,194 @@ function VistaPerfilEmpresa({
   );
 }
 
+// ─── Mi Gestor (chat) ─────────────────────────────────────────────────────────
+
+interface MensajeGestor {
+  id: string;
+  remitente: 'cliente' | 'gestor' | 'ia';
+  contenido: string;
+  leido: boolean;
+  created_at: string;
+}
+
+function BurbujaMensaje({ msg }: { msg: MensajeGestor }) {
+  const esCliente = msg.remitente === 'cliente';
+  const esIA = msg.remitente === 'ia';
+  const hora = new Date(msg.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  const fecha = new Date(msg.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+  const hoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+
+  return (
+    <div style={{ display: 'flex', flexDirection: esCliente ? 'row-reverse' : 'row', gap: 10, alignItems: 'flex-end' }}>
+      {/* Avatar */}
+      {!esCliente && (
+        <div style={{ width: 32, height: 32, borderRadius: '50%', background: esIA ? '#ede9fe' : '#0d9488', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          {esIA ? <Bot size={14} color="#7c3aed" /> : <User size={14} color="#fff" />}
+        </div>
+      )}
+
+      <div style={{ maxWidth: '72%' }}>
+        {!esCliente && (
+          <p style={{ fontSize: '0.68rem', color: C.muted, marginBottom: 3, fontWeight: 600, paddingLeft: 4 }}>
+            {esIA ? 'Gestor IA · AyudaPyme' : 'Gestor · AyudaPyme'}
+          </p>
+        )}
+        <div style={{
+          background: esCliente ? 'linear-gradient(135deg,#0d1f3c,#1a3561)' : '#fff',
+          color: esCliente ? '#fff' : C.ink,
+          borderRadius: esCliente ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+          padding: '10px 14px',
+          fontSize: '0.85rem',
+          lineHeight: 1.6,
+          border: esCliente ? 'none' : `1px solid ${C.border}`,
+          boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+          whiteSpace: 'pre-wrap',
+        }}>
+          {msg.contenido}
+        </div>
+        <p style={{ fontSize: '0.65rem', color: C.muted, marginTop: 3, textAlign: esCliente ? 'right' : 'left', paddingInline: 4 }}>
+          {fecha === hoy ? hora : `${fecha} ${hora}`}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function VistaMiGestor({ nif }: { nif: string }) {
+  const [mensajes, setMensajes] = useState<MensajeGestor[]>([]);
+  const [texto, setTexto] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const endRef = useRef<HTMLDivElement>(null);
+
+  async function cargar() {
+    try {
+      const res = await fetch('/api/portal/gestor');
+      if (res.ok) {
+        const data = await res.json();
+        setMensajes(data.mensajes ?? []);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    cargar();
+    const interval = setInterval(cargar, 20_000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nif]);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [mensajes]);
+
+  async function enviar(e: React.FormEvent) {
+    e.preventDefault();
+    if (!texto.trim() || enviando) return;
+    const contenido = texto.trim();
+    setTexto('');
+    setEnviando(true);
+
+    // Optimistic update
+    const tempMsg: MensajeGestor = { id: 'temp', remitente: 'cliente', contenido, leido: true, created_at: new Date().toISOString() };
+    setMensajes(prev => [...prev, tempMsg]);
+
+    try {
+      const res = await fetch('/api/portal/gestor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contenido }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMensajes(data.mensajes ?? []);
+      }
+    } catch {
+      setMensajes(prev => prev.filter(m => m.id !== 'temp'));
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <div style={{ maxWidth: 720, margin: '0 auto', height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 16, border: `1px solid ${C.border}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+
+      {/* Header del chat */}
+      <div style={{ background: C.navy, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+        <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#0d9488', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '3px solid rgba(255,255,255,0.2)' }}>
+          <User size={20} color="#fff" />
+        </div>
+        <div style={{ flex: 1 }}>
+          <p style={{ color: '#fff', fontWeight: 800, fontSize: '0.95rem', margin: 0 }}>Tu Gestor · AyudaPyme</p>
+          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', margin: 0 }}>Normalmente responde en menos de 24h</p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#dcfce7', borderRadius: 20, padding: '4px 10px' }}>
+          <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#059669' }} />
+          <span style={{ fontSize: '0.7rem', color: '#065f46', fontWeight: 700 }}>Activo</span>
+        </div>
+      </div>
+
+      {/* Mensajes */}
+      <div style={{ flex: 1, overflow: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: 16, background: '#f8fafc' }}>
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+            <Loader2 size={20} color={C.teal} style={{ animation: 'spin 1s linear infinite' }} />
+          </div>
+        ) : mensajes.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 16, padding: '40px 20px' }}>
+            <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <MessageCircle size={28} color={C.teal} />
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: '1rem', fontWeight: 700, color: C.navy, marginBottom: 6 }}>Habla con tu gestor</p>
+              <p style={{ fontSize: '0.85rem', color: C.ink2, lineHeight: 1.6, maxWidth: 340 }}>
+                Pregunta lo que necesites sobre tus subvenciones, el estado de tus solicitudes, o cualquier duda sobre el proceso.
+              </p>
+            </div>
+            {[
+              '¿Cuáles son mis mejores opciones ahora mismo?',
+              '¿Cómo funciona el proceso de solicitud?',
+              '¿Cuándo me pagaréis si me conceden la subvención?',
+            ].map(sugerencia => (
+              <button key={sugerencia} onClick={() => setTexto(sugerencia)}
+                style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 20, padding: '8px 16px', fontSize: '0.8rem', color: C.ink2, cursor: 'pointer', fontFamily: 'inherit' }}>
+                {sugerencia}
+              </button>
+            ))}
+          </div>
+        ) : (
+          mensajes.map(m => <BurbujaMensaje key={m.id} msg={m} />)
+        )}
+        <div ref={endRef} />
+      </div>
+
+      {/* Input */}
+      <form onSubmit={enviar} style={{ padding: '14px 16px', background: '#fff', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0 }}>
+        <input
+          value={texto}
+          onChange={e => setTexto(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), enviar(e as unknown as React.FormEvent))}
+          placeholder="Escribe tu mensaje..."
+          disabled={enviando}
+          style={{ flex: 1, padding: '10px 14px', borderRadius: 24, border: `1.5px solid ${C.border}`, fontSize: '0.88rem', outline: 'none', fontFamily: 'inherit', background: enviando ? '#f8fafc' : '#fff', color: C.ink }}
+        />
+        <button
+          type="submit"
+          disabled={!texto.trim() || enviando}
+          style={{ width: 42, height: 42, borderRadius: '50%', background: (!texto.trim() || enviando) ? C.border : C.teal, border: 'none', cursor: (!texto.trim() || enviando) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+        >
+          {enviando ? <Loader2 size={16} color="#fff" style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={16} color="#fff" />}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
-type Vista = 'dashboard' | 'ayudas' | 'expedientes' | 'perfil';
+type Vista = 'dashboard' | 'ayudas' | 'expedientes' | 'perfil' | 'gestor';
 
 export default function PortalPage() {
   const router = useRouter();
@@ -1025,6 +1211,7 @@ export default function PortalPage() {
   const [vista, setVista] = useState<Vista>('dashboard');
   const [matchSolicitando, setMatchSolicitando] = useState<MatchItem | null>(null);
   const [toast, setToast] = useState('');
+  const [mensajesNoLeidos, setMensajesNoLeidos] = useState(0);
 
   // Auth check
   useEffect(() => {
@@ -1106,6 +1293,15 @@ export default function PortalPage() {
           .eq('nif', perfil.nif)
           .order('created_at', { ascending: false });
         setExpedientes(expData ?? []);
+
+        // Contar mensajes no leídos del gestor/IA
+        const { count } = await supabase
+          .from('mensajes_gestor')
+          .select('id', { count: 'exact', head: true })
+          .eq('nif', perfil.nif)
+          .in('remitente', ['gestor', 'ia'])
+          .eq('leido', false);
+        setMensajesNoLeidos(count ?? 0);
       } else {
         setCliente({ nif: '', nombre_empresa: user.email ?? 'Mi empresa' });
       }
@@ -1156,8 +1352,13 @@ export default function PortalPage() {
             <Zap size={11} /> {matchesFuego.length} muy recomendable{matchesFuego.length > 1 ? 's' : ''}
           </div>
         )}
-        <button onClick={() => {}} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+        <button onClick={() => setVista('gestor')} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
           <Bell size={16} color="#fff" />
+          {mensajesNoLeidos > 0 && (
+            <span style={{ position: 'absolute', top: 4, right: 4, width: 16, height: 16, background: '#f97316', borderRadius: '50%', fontSize: '0.6rem', fontWeight: 900, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {mensajesNoLeidos > 9 ? '9+' : mensajesNoLeidos}
+            </span>
+          )}
         </button>
         <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <User size={16} color="#fff" />
@@ -1176,6 +1377,7 @@ export default function PortalPage() {
             { key: 'dashboard', label: 'Inicio', icon: <Star size={15} /> },
             { key: 'ayudas', label: 'Mis subvenciones', icon: <FileText size={15} />, badge: matchesActivos.length || undefined },
             { key: 'expedientes', label: 'Expedientes', icon: <CheckCircle size={15} />, badge: expedientes.length || undefined },
+            { key: 'gestor', label: 'Mi Gestor', icon: <MessageCircle size={15} />, badge: mensajesNoLeidos || undefined },
             { key: 'perfil', label: 'Mi empresa', icon: <Building2 size={15} />, badge: !cliente?.cnae_descripcion ? '!' : undefined },
           ].map(item => (
             <button key={item.key} onClick={() => setVista(item.key as Vista)}
@@ -1345,13 +1547,20 @@ export default function PortalPage() {
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <span style={{
-                          background: exp.estado === 'en_tramite' ? '#eff6ff' : exp.estado === 'aprobado' ? '#dcfce7' : '#f1f5f9',
-                          color: exp.estado === 'en_tramite' ? C.blue : exp.estado === 'aprobado' ? C.green : C.muted,
-                          borderRadius: 20, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700,
-                        }}>
-                          {exp.estado}
-                        </span>
+                        {(() => {
+                          const estadoMap: Record<string, { bg: string; color: string; label: string }> = {
+                            en_tramitacion: { bg: '#eff6ff', color: C.blue,  label: 'En tramitación' },
+                            concedido:      { bg: '#dcfce7', color: C.green, label: 'Concedido' },
+                            denegado:       { bg: '#fef2f2', color: C.red,   label: 'Denegado' },
+                            cerrado:        { bg: '#f1f5f9', color: C.muted, label: 'Cerrado' },
+                          };
+                          const e = estadoMap[exp.estado] ?? { bg: '#f1f5f9', color: C.muted, label: exp.estado };
+                          return (
+                            <span style={{ background: e.bg, color: e.color, borderRadius: 20, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
+                              {e.label}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
                   ))}
@@ -1359,6 +1568,11 @@ export default function PortalPage() {
               )}
             </div>
           )}
+          {/* ── MI GESTOR ── */}
+          {vista === 'gestor' && cliente?.nif && (
+            <VistaMiGestor nif={cliente.nif} />
+          )}
+
           {/* ── PERFIL ── */}
           {vista === 'perfil' && (
             <VistaPerfilEmpresa

@@ -90,7 +90,7 @@ export default async function ClienteDetailPage({
   // Verificar que es admin
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email?.endsWith('@ayudapyme.es')) redirect('/login');
+  if (!user?.email?.toLowerCase().endsWith('@ayudapyme.es')) redirect('/login');
 
   // Usar service client para evitar RLS
   const sb = createServiceClient();
