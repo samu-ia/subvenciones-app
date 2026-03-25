@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
-  Building2, Calendar, FolderOpen, LogOut, Database, Settings, ClipboardList, Store,
+  Building2, Calendar, FolderOpen, LogOut, Database, Settings, ClipboardList, Store, TrendingUp,
 } from "lucide-react";
 
 const nav = [
@@ -12,8 +12,9 @@ const nav = [
   { href: "/reuniones", label: "Reuniones", icon: Calendar },
   { href: "/expedientes", label: "Expedientes", icon: FolderOpen },
   { href: "/solicitudes", label: "Solicitudes", icon: ClipboardList },
+  { href: "/subvenciones", label: "Subvenciones", icon: TrendingUp },
   { href: "/proveedores", label: "Proveedores", icon: Store },
-  { href: "/subvenciones-bd", label: "Subvenciones BD", icon: Database },
+  { href: "/subvenciones-bd", label: "Pipeline BDNS", icon: Database },
 ];
 
 const navBottom = [
