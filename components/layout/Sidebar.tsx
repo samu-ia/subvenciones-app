@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   Building2, Calendar, FolderOpen, LogOut, Database, Settings,
-  ClipboardList, Store, Bell, MessageCircle, LayoutDashboard, AlertTriangle,
+  ClipboardList, Store, Bell, MessageCircle, LayoutDashboard, AlertTriangle, Sparkles,
 } from "lucide-react";
 
 type NavItem = { href: string; label: string; icon: React.ComponentType<{ size?: number }>; badge?: boolean };
@@ -16,6 +16,7 @@ const nav: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/alertas", label: "Alertas", icon: AlertTriangle, badge: true },
   { href: "/novedades", label: "Novedades", icon: Bell },
+  { href: "/matches", label: "Matches", icon: Sparkles },
   { href: "/chats", label: "Chats", icon: MessageCircle },
   { href: "/clientes", label: "Clientes", icon: Building2 },
   { href: "/reuniones", label: "Reuniones", icon: Calendar },
