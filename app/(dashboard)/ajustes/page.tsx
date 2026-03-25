@@ -10,7 +10,7 @@ interface Stats {
   clientes: number;
   matches: number;
   solicitudes: number;
-  expedientes: number;
+  expedientes: { total: number; activos: number; concedidos: number } | number;
 }
 
 interface LogEntry {
@@ -238,7 +238,7 @@ export default function AjustesPage() {
                 { label: "Clientes", value: stats.clientes },
                 { label: "Matches", value: stats.matches },
                 { label: "Solicitudes", value: stats.solicitudes },
-                { label: "Expedientes", value: stats.expedientes },
+                { label: "Expedientes", value: typeof stats.expedientes === 'object' ? stats.expedientes.total : stats.expedientes },
               ].map(s => (
                 <div key={s.label} style={{
                   background: "var(--surface)", border: "1px solid var(--border)",

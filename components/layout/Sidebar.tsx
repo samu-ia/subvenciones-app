@@ -1,13 +1,20 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
-  Building2, Calendar, FolderOpen, LogOut, Database, Settings, ClipboardList, Store, Bell, MessageCircle,
+  Building2, Calendar, FolderOpen, LogOut, Database, Settings,
+  ClipboardList, Store, Bell, MessageCircle, LayoutDashboard, AlertTriangle,
 } from "lucide-react";
 
-const nav = [
+type NavItem = { href: string; label: string; icon: React.ComponentType<{ size?: number }>; badge?: boolean };
+
+const nav: NavItem[] = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/alertas", label: "Alertas", icon: AlertTriangle, badge: true },
   { href: "/novedades", label: "Novedades", icon: Bell },
   { href: "/chats", label: "Chats", icon: MessageCircle },
   { href: "/clientes", label: "Clientes", icon: Building2 },
@@ -26,6 +33,14 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
+  const [alertasCount, setAlertasCount] = useState(0);
+
+  useEffect(() => {
+    fetch('/api/alertas')
+      .then(r => r.json())
+      .then(d => setAlertasCount(d.total || 0))
+      .catch(() => {});
+  }, []);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -51,8 +66,9 @@ export default function Sidebar() {
             textTransform: "uppercase", letterSpacing: "0.1em",
             color: "var(--muted)", padding: "0 8px", marginBottom: 6,
           }}>Menú</div>
-          {nav.map(({ href, label, icon: Icon }) => {
+          {nav.map(({ href, label, icon: Icon, badge }) => {
             const active = pathname === href || pathname.startsWith(href + "/");
+            const showBadge = badge && alertasCount > 0;
             return (
               <Link key={href} href={href} style={{ textDecoration: "none" }}>
                 <div style={{
@@ -63,9 +79,22 @@ export default function Sidebar() {
                   background: active ? "var(--blue-bg)" : "transparent",
                   marginBottom: 1, cursor: "pointer",
                   transition: "all 0.15s",
+                  justifyContent: "space-between",
                 }}>
-                  <Icon size={16} />
-                  {label}
+                  <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                    <Icon size={16} />
+                    {label}
+                  </div>
+                  {showBadge && (
+                    <span style={{
+                      background: alertasCount >= 5 ? "#ef4444" : "#f97316",
+                      color: "#fff", fontSize: "0.65rem", fontWeight: 700,
+                      padding: "1px 6px", borderRadius: "100px", minWidth: "18px",
+                      textAlign: "center",
+                    }}>
+                      {alertasCount > 99 ? "99+" : alertasCount}
+                    </span>
+                  )}
                 </div>
               </Link>
             );

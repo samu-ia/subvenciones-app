@@ -196,6 +196,16 @@ interface Expediente {
   titulo?: string | null;
   organismo?: string | null;
   subvencion_id?: string | null;
+  fase?: string | null;
+  plazo_solicitud?: string | null;
+  plazo_aceptacion?: string | null;
+  plazo_justificacion?: string | null;
+  fecha_presentacion?: string | null;
+  fecha_resolucion_provisional?: string | null;
+  fecha_alegaciones_fin?: string | null;
+  fecha_resolucion_definitiva?: string | null;
+  fecha_fin_ejecucion?: string | null;
+  importe_concedido?: number | null;
   cliente: { nombre_normalizado: string | null }[];
 }
 
@@ -240,19 +250,54 @@ interface SolicitudData {
 
 // ─── Panel Ficha del Expediente ────────────────────────────────────────────────
 
+const FASES_EXPEDIENTE = [
+  { value: 'preparacion', label: '1. Preparación', color: '#6366f1' },
+  { value: 'presentada', label: '2. Presentada', color: '#3b82f6' },
+  { value: 'instruccion', label: '3. Instrucción', color: '#8b5cf6' },
+  { value: 'resolucion_provisional', label: '4. Res. Provisional', color: '#f59e0b' },
+  { value: 'alegaciones', label: '5. Alegaciones', color: '#f97316' },
+  { value: 'resolucion_definitiva', label: '6. Res. Definitiva', color: '#10b981' },
+  { value: 'aceptacion', label: '7. Aceptación ⚡', color: '#ef4444' },
+  { value: 'ejecucion', label: '8. Ejecución', color: '#06b6d4' },
+  { value: 'justificacion', label: '9. Justificación', color: '#6366f1' },
+  { value: 'cobro', label: '10. Cobrado ✓', color: '#22c55e' },
+  { value: 'denegada', label: 'Denegada', color: '#94a3b8' },
+  { value: 'desistida', label: 'Desistida', color: '#94a3b8' },
+];
+
 function PanelFicha({
   expediente,
   cliente,
   subvencion,
   solicitud,
   onQuickAction,
+  onFaseChange,
 }: {
   expediente: Expediente;
   cliente: ClienteCompleto | null;
   subvencion: SubvencionData | null;
   solicitud: SolicitudData | null;
   onQuickAction: (msg: string) => void;
+  onFaseChange?: (fase: string) => void;
 }) {
+  const [faseSaving, setFaseSaving] = useState(false);
+  const [currentFase, setCurrentFase] = useState(expediente.fase || 'preparacion');
+
+  async function cambiarFase(nuevaFase: string) {
+    setFaseSaving(true);
+    try {
+      await fetch(`/api/expedientes/${expediente.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fase: nuevaFase }),
+      });
+      setCurrentFase(nuevaFase);
+      onFaseChange?.(nuevaFase);
+    } finally {
+      setFaseSaving(false);
+    }
+  }
+
   const fmtE = (n?: number | null) => {
     if (!n) return 'N/D';
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M €`;
@@ -286,8 +331,57 @@ function PanelFicha({
     </div>
   );
 
+  const faseActual = FASES_EXPEDIENTE.find(f => f.value === currentFase);
+
   return (
     <div style={{ overflowY: 'auto', padding: '14px 14px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+      {/* Fase del expediente */}
+      <div>
+        <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.muted, marginBottom: 8 }}>Fase del expediente</div>
+        <div style={{ background: '#fff', borderRadius: 10, border: `1px solid ${C.border}`, padding: '10px 12px' }}>
+          {/* Indicador visual de progreso */}
+          <div style={{ display: 'flex', gap: 3, marginBottom: 10 }}>
+            {FASES_EXPEDIENTE.slice(0, 10).map((f, i) => {
+              const fIdx = FASES_EXPEDIENTE.slice(0,10).findIndex(x => x.value === currentFase);
+              const done = i < fIdx;
+              const active = i === fIdx;
+              return (
+                <div key={f.value} style={{
+                  flex: 1, height: 5, borderRadius: 3,
+                  background: done || active ? faseActual?.color || '#3b82f6' : '#e2e8f0',
+                  opacity: done ? 0.5 : active ? 1 : 1,
+                }} />
+              );
+            })}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <select
+              value={currentFase}
+              onChange={e => cambiarFase(e.target.value)}
+              disabled={faseSaving}
+              style={{
+                flex: 1, fontSize: '0.82rem', padding: '7px 10px', borderRadius: 8,
+                border: `2px solid ${faseActual?.color || C.border}`,
+                background: '#fff', fontFamily: 'inherit', cursor: 'pointer', fontWeight: 600,
+                color: faseActual?.color || C.navy,
+              }}
+            >
+              {FASES_EXPEDIENTE.map(f => (
+                <option key={f.value} value={f.value}>{f.label}</option>
+              ))}
+            </select>
+            {faseSaving && <span style={{ fontSize: '0.72rem', color: C.muted }}>Guardando...</span>}
+          </div>
+          {/* Importes concedido si hay */}
+          {expediente.importe_concedido && (
+            <div style={{ marginTop: 8, padding: '6px 0', fontSize: '0.8rem', display: 'flex', gap: 8 }}>
+              <span style={{ color: C.muted, width: 130, flexShrink: 0 }}>Importe concedido</span>
+              <span style={{ fontWeight: 700, color: C.green }}>{fmtE(expediente.importe_concedido)}</span>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Acciones rápidas */}
       <div>
@@ -953,6 +1047,7 @@ export default function ExpedienteWorkspacePage() {
                 subvencion={subvencionData}
                 solicitud={solicitudData}
                 onQuickAction={dispararQuickAction}
+                onFaseChange={(f) => setExpediente(prev => prev ? { ...prev, fase: f } : prev)}
               />
             )}
             {panelTab === 'ia' && (
