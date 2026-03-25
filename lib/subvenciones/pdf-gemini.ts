@@ -23,7 +23,7 @@ const MODELO = 'gemini-2.5-flash';
 
 // URL patrón extracto BDNS
 export function urlExtractoPdf(bdnsId: string): string {
-  return `https://www.infosubvenciones.es/bdnstrans/GE/es/convocatorias/${bdnsId}/extracto`;
+  return `https://www.infosubvenciones.es/bdnstrans/api/convocatorias/pdf?id=${bdnsId}&vpd=GE`;
 }
 
 const SYSTEM_PROMPT = `Eres un extractor de datos especializado en convocatorias de subvenciones y ayudas públicas españolas.
