@@ -97,13 +97,14 @@ function scoreLabel(score: number) {
 
 // ─── Modal flujo solicitud ────────────────────────────────────────────────────
 
-const PREGUNTAS_ENCAJE = [
-  '¿Tu empresa tiene más de 1 año de antigüedad?',
-  '¿Estás al corriente de pago con Hacienda y Seguridad Social?',
-  '¿No tienes ninguna subvención de la misma convocatoria activa actualmente?',
-  '¿Tienes capacidad administrativa para aportar documentación si se requiere?',
-  '¿Autorizas a AyudaPyme a gestionar esta solicitud en tu nombre?',
-];
+interface PreguntaIA {
+  id: string;
+  tipo: 'si_no' | 'texto_corto' | 'texto_largo' | 'numero';
+  categoria: 'encaje' | 'proyecto' | 'empresa' | 'documentacion';
+  pregunta: string;
+  contexto: string | null;
+  obligatoria: boolean;
+}
 
 type ModalPaso = 1 | 2 | 3;
 
@@ -118,9 +119,10 @@ function ModalSolicitud({
   onClose: () => void;
   onCompletado: () => void;
 }) {
-  const supabase = createClient();
   const [paso, setPaso] = useState<ModalPaso>(1);
-  const [respuestas, setRespuestas] = useState<boolean[]>(Array(PREGUNTAS_ENCAJE.length).fill(null));
+  const [preguntas, setPreguntas] = useState<PreguntaIA[]>([]);
+  const [cargandoPreguntas, setCargandoPreguntas] = useState(true);
+  const [respuestas, setRespuestas] = useState<Record<string, string | boolean | number>>({});
   const [firmante, setFirmante] = useState(cliente.nombre_empresa ?? '');
   const [dni, setDni] = useState(cliente.nif ?? '');
   const [aceptaContrato, setAceptaContrato] = useState(false);
@@ -130,9 +132,38 @@ function ModalSolicitud({
 
   const subv = match.subvencion;
   const scoreInfo = scoreLabel(match.score);
-  const encajePositivo = respuestas.filter(r => r === true).length;
-  const todasRespondidas = respuestas.every(r => r !== null);
   const dias = diasRestantes(subv.plazo_fin);
+
+  // Cargar preguntas dinámicas al abrir el modal
+  useEffect(() => {
+    setCargandoPreguntas(true);
+    fetch('/api/portal/preguntas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subvencion_id: subv.id }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        setPreguntas(data.preguntas ?? []);
+        setRespuestas({});
+      })
+      .catch(() => setPreguntas([]))
+      .finally(() => setCargandoPreguntas(false));
+  }, [subv.id]);
+
+  const obligatorias = preguntas.filter(p => p.obligatoria);
+  const todasRespondidas = obligatorias.every(p => {
+    const r = respuestas[p.id];
+    if (r === undefined || r === null) return false;
+    if (typeof r === 'string') return r.trim().length > 0;
+    return true;
+  });
+  const encajePositivo = preguntas
+    .filter(p => p.categoria === 'encaje' && respuestas[p.id] === true).length;
+
+  function setResp(id: string, val: string | boolean | number) {
+    setRespuestas(prev => ({ ...prev, [id]: val }));
+  }
 
   async function avanzarPaso1() {
     if (!todasRespondidas) return;
@@ -153,29 +184,34 @@ function ModalSolicitud({
     setGuardando(true);
     setError('');
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const solicitudData = {
-        nif: cliente.nif,
-        subvencion_id: subv.id,
-        user_id: user?.id,
-        match_id: match.id,
-        estado: 'activo',
-        respuestas_encaje: PREGUNTAS_ENCAJE.map((p, i) => ({ pregunta: p, respuesta: respuestas[i] })),
-        encaje_score: encajePositivo,
-        encaje_confirmado_at: new Date().toISOString(),
-        porcentaje_exito: 15,
-        nombre_firmante: firmante,
-        dni_firmante: dni,
-        contrato_firmado: true,
-        contrato_firmado_at: new Date().toISOString(),
-        metodo_pago: metodoPago,
-        metodo_pago_ok: true,
-        metodo_pago_ok_at: new Date().toISOString(),
-      };
-      const { error: e } = await supabase.from('solicitudes').upsert(solicitudData, { onConflict: 'nif,subvencion_id' });
-      if (e) throw e;
-      // Actualizar match a interesado
-      await supabase.from('cliente_subvencion_match').update({ estado: 'interesado' }).eq('id', match.id);
+      const respuestasIA = preguntas.map(p => ({
+        pregunta: p.pregunta,
+        respuesta: respuestas[p.id] ?? null,
+        tipo: p.tipo,
+        categoria: p.categoria,
+      }));
+      const encajeScore = encajePositivo / Math.max(preguntas.filter(p => p.categoria === 'encaje').length, 1);
+
+      const res = await fetch('/api/portal/solicitudes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nif: cliente.nif,
+          subvencion_id: subv.id,
+          match_id: match.id,
+          preguntas_ia: preguntas,
+          respuestas_ia: respuestasIA,
+          encaje_score: encajeScore,
+          nombre_firmante: firmante,
+          dni_firmante: dni,
+          contrato_firmado: true,
+          metodo_pago: metodoPago,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? 'Error al guardar');
+      }
       onCompletado();
     } catch (err) {
       setError((err as Error).message ?? 'Error al guardar');
@@ -249,54 +285,112 @@ function ModalSolicitud({
         {/* Contenido */}
         <div style={{ flex: 1, overflow: 'auto', padding: '24px 28px' }}>
 
-          {/* PASO 1: Verificar encaje */}
+          {/* PASO 1: Cuestionario IA */}
           {paso === 1 && (
             <div>
-              <p style={{ fontSize: '0.85rem', color: C.ink2, marginBottom: 20, lineHeight: 1.6 }}>
-                Antes de iniciar la gestión, necesitamos verificar que tu empresa cumple los requisitos básicos. Responde estas {PREGUNTAS_ENCAJE.length} preguntas:
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {PREGUNTAS_ENCAJE.map((preg, i) => (
-                  <div key={i} style={{ background: '#f8fafc', borderRadius: 12, padding: '14px 16px' }}>
-                    <p style={{ fontSize: '0.83rem', color: C.ink, fontWeight: 600, marginBottom: 10 }}>{preg}</p>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        onClick={() => { const r = [...respuestas]; r[i] = true; setRespuestas(r); }}
-                        style={{
-                          flex: 1, padding: '8px', borderRadius: 8, fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
-                          background: respuestas[i] === true ? '#dcfce7' : '#fff',
-                          border: `1.5px solid ${respuestas[i] === true ? '#22c55e' : '#e2e8f0'}`,
-                          color: respuestas[i] === true ? '#166534' : C.ink2,
-                        }}
-                      >
-                        ✓ Sí
-                      </button>
-                      <button
-                        onClick={() => { const r = [...respuestas]; r[i] = false; setRespuestas(r); }}
-                        style={{
-                          flex: 1, padding: '8px', borderRadius: 8, fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
-                          background: respuestas[i] === false ? '#fef2f2' : '#fff',
-                          border: `1.5px solid ${respuestas[i] === false ? '#ef4444' : '#e2e8f0'}`,
-                          color: respuestas[i] === false ? '#dc2626' : C.ink2,
-                        }}
-                      >
-                        ✗ No
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {todasRespondidas && (
-                <div style={{
-                  marginTop: 16, background: encajePositivo >= 4 ? '#f0fdf4' : '#fef9c3',
-                  border: `1px solid ${encajePositivo >= 4 ? '#bbf7d0' : '#fde68a'}`,
-                  borderRadius: 10, padding: '12px 16px', fontSize: '0.82rem',
-                  color: encajePositivo >= 4 ? '#166534' : '#92400e',
-                }}>
-                  {encajePositivo >= 4
-                    ? `✓ Perfecto, cumples ${encajePositivo}/5 criterios — buena base para esta solicitud.`
-                    : `⚠ Cumples ${encajePositivo}/5 criterios — puede haber dificultades. Podemos continuar pero revisaremos el expediente.`}
+              {cargandoPreguntas ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0', gap: 12 }}>
+                  <Loader2 size={24} color={C.teal} style={{ animation: 'spin 1s linear infinite' }} />
+                  <p style={{ fontSize: '0.85rem', color: C.muted }}>Generando cuestionario personalizado...</p>
                 </div>
+              ) : (
+                <>
+                  <p style={{ fontSize: '0.85rem', color: C.ink2, marginBottom: 20, lineHeight: 1.6 }}>
+                    Responde estas {preguntas.length} preguntas para verificar el encaje con esta convocatoria y preparar tu solicitud:
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {preguntas.map((preg) => {
+                      const categoriaColor: Record<string, string> = {
+                        encaje: '#dbeafe', proyecto: '#d1fae5',
+                        empresa: '#fef3c7', documentacion: '#fce7f3',
+                      };
+                      const resp = respuestas[preg.id];
+                      return (
+                        <div key={preg.id} style={{ background: '#f8fafc', borderRadius: 12, padding: '14px 16px', border: '1px solid #e8ecf4' }}>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                            <span style={{ background: categoriaColor[preg.categoria] ?? '#f1f5f9', borderRadius: 20, padding: '2px 8px', fontSize: '0.68rem', fontWeight: 700, color: C.ink2, textTransform: 'uppercase' }}>
+                              {preg.categoria}
+                            </span>
+                            {preg.obligatoria && <span style={{ color: C.red, fontSize: '0.7rem' }}>*</span>}
+                          </div>
+                          <p style={{ fontSize: '0.83rem', color: C.ink, fontWeight: 600, marginBottom: 6 }}>{preg.pregunta}</p>
+                          {preg.contexto && (
+                            <p style={{ fontSize: '0.75rem', color: C.muted, marginBottom: 10, lineHeight: 1.5 }}>{preg.contexto}</p>
+                          )}
+
+                          {preg.tipo === 'si_no' && (
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <button
+                                onClick={() => setResp(preg.id, true)}
+                                style={{
+                                  flex: 1, padding: '8px', borderRadius: 8, fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
+                                  background: resp === true ? '#dcfce7' : '#fff',
+                                  border: `1.5px solid ${resp === true ? '#22c55e' : '#e2e8f0'}`,
+                                  color: resp === true ? '#166534' : C.ink2,
+                                }}
+                              >✓ Sí</button>
+                              <button
+                                onClick={() => setResp(preg.id, false)}
+                                style={{
+                                  flex: 1, padding: '8px', borderRadius: 8, fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
+                                  background: resp === false ? '#fef2f2' : '#fff',
+                                  border: `1.5px solid ${resp === false ? '#ef4444' : '#e2e8f0'}`,
+                                  color: resp === false ? '#dc2626' : C.ink2,
+                                }}
+                              >✗ No</button>
+                            </div>
+                          )}
+
+                          {preg.tipo === 'texto_corto' && (
+                            <input
+                              value={typeof resp === 'string' ? resp : ''}
+                              onChange={e => setResp(preg.id, e.target.value)}
+                              placeholder="Tu respuesta..."
+                              style={{ width: '100%', padding: '9px 12px', border: `1.5px solid ${resp ? '#0d9488' : '#e2e8f0'}`, borderRadius: 8, fontSize: '0.83rem', outline: 'none', boxSizing: 'border-box', color: C.ink }}
+                            />
+                          )}
+
+                          {preg.tipo === 'texto_largo' && (
+                            <textarea
+                              value={typeof resp === 'string' ? resp : ''}
+                              onChange={e => setResp(preg.id, e.target.value)}
+                              placeholder="Describe con detalle..."
+                              rows={4}
+                              style={{ width: '100%', padding: '9px 12px', border: `1.5px solid ${resp ? '#0d9488' : '#e2e8f0'}`, borderRadius: 8, fontSize: '0.83rem', outline: 'none', boxSizing: 'border-box', color: C.ink, resize: 'vertical', fontFamily: 'inherit' }}
+                            />
+                          )}
+
+                          {preg.tipo === 'numero' && (
+                            <input
+                              type="number"
+                              value={typeof resp === 'number' ? resp : ''}
+                              onChange={e => setResp(preg.id, e.target.valueAsNumber)}
+                              placeholder="0"
+                              style={{ width: '100%', padding: '9px 12px', border: `1.5px solid ${resp !== undefined ? '#0d9488' : '#e2e8f0'}`, borderRadius: 8, fontSize: '0.83rem', outline: 'none', boxSizing: 'border-box', color: C.ink }}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {todasRespondidas && (() => {
+                    const totalEncaje = preguntas.filter(p => p.categoria === 'encaje').length;
+                    const bueno = encajePositivo >= Math.ceil(totalEncaje * 0.7);
+                    return (
+                      <div style={{
+                        marginTop: 16,
+                        background: bueno ? '#f0fdf4' : '#fef9c3',
+                        border: `1px solid ${bueno ? '#bbf7d0' : '#fde68a'}`,
+                        borderRadius: 10, padding: '12px 16px', fontSize: '0.82rem',
+                        color: bueno ? '#166534' : '#92400e',
+                      }}>
+                        {bueno
+                          ? `✓ Perfecto, cumples ${encajePositivo}/${totalEncaje} criterios de encaje — buena base para esta solicitud.`
+                          : `⚠ Cumples ${encajePositivo}/${totalEncaje} criterios de encaje — puede haber dificultades. Podemos continuar y revisaremos el expediente.`}
+                      </div>
+                    );
+                  })()}
+                </>
               )}
             </div>
           )}
@@ -436,16 +530,16 @@ function ModalSolicitud({
           {paso === 1 && (
             <button
               onClick={avanzarPaso1}
-              disabled={!todasRespondidas}
+              disabled={cargandoPreguntas || !todasRespondidas}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
-                background: todasRespondidas ? C.navy : '#e2e8f0',
-                color: todasRespondidas ? '#fff' : C.muted,
+                background: (!cargandoPreguntas && todasRespondidas) ? C.navy : '#e2e8f0',
+                color: (!cargandoPreguntas && todasRespondidas) ? '#fff' : C.muted,
                 border: 'none', borderRadius: 10, padding: '10px 20px',
-                fontSize: '0.88rem', fontWeight: 700, cursor: todasRespondidas ? 'pointer' : 'not-allowed',
+                fontSize: '0.88rem', fontWeight: 700, cursor: (!cargandoPreguntas && todasRespondidas) ? 'pointer' : 'not-allowed',
               }}
             >
-              Continuar <ArrowRight size={14} />
+              {cargandoPreguntas ? <><Loader2 size={14} /> Cargando...</> : <>Continuar <ArrowRight size={14} /></>}
             </button>
           )}
           {paso === 2 && (
