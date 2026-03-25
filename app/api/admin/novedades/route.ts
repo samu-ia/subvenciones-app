@@ -1,9 +1,5 @@
 /**
  * GET /api/admin/novedades
- *
- * Panel de novedades para admins:
- * - Solicitudes recientes (últimas 48h o sin revisar)
- * - Matches de alto score sin solicitud (oportunidades por activar)
  */
 
 import { NextResponse } from 'next/server';
@@ -22,31 +18,17 @@ export async function GET() {
 
   const sb = createServiceClient();
 
-  const [
-    { data: solicitudesRecientes },
-    { data: matchesSinSolicitud },
-  ] = await Promise.all([
-    // Solicitudes de los últimos 7 días, con datos relacionados
+  const [{ data: solicitudesRaw }, { data: matchesRaw }] = await Promise.all([
     sb
       .from('solicitudes')
-      .select(`
-        id, nif, estado, encaje_score, contrato_firmado, metodo_pago_ok,
-        informe_viabilidad, created_at, updated_at,
-        subvencion:subvenciones(id, titulo, organismo, importe_maximo, estado_convocatoria),
-        cliente:cliente(nombre_empresa, nombre_normalizado, ciudad, comunidad_autonoma)
-      `)
+      .select('id, nif, estado, encaje_score, contrato_firmado, metodo_pago_ok, informe_viabilidad, created_at, updated_at, subvencion:subvenciones(id, titulo, organismo, importe_maximo, estado_convocatoria)')
       .gte('created_at', new Date(Date.now() - 7 * 86_400_000).toISOString())
       .order('created_at', { ascending: false })
       .limit(50),
 
-    // Matches de alto score sin solicitud todavía
     sb
       .from('cliente_subvencion_match')
-      .select(`
-        id, nif, score, motivos, estado, notificado_cliente, created_at,
-        subvencion:subvenciones(id, titulo, organismo, importe_maximo, plazo_fin, estado_convocatoria),
-        cliente:cliente(nombre_empresa, nombre_normalizado, ciudad, comunidad_autonoma)
-      `)
+      .select('id, nif, score, motivos, estado, notificado_cliente, created_at, subvencion:subvenciones(id, titulo, organismo, importe_maximo, plazo_fin, estado_convocatoria)')
       .gte('score', 0.5)
       .not('estado', 'in', '("descartado","excluido")')
       .is('notificado_cliente', false)
@@ -54,17 +36,38 @@ export async function GET() {
       .limit(50),
   ]);
 
-  // Filtrar matches que ya tienen solicitud activa
-  const nifSubvIds = new Set(
-    (solicitudesRecientes ?? []).map((s: Record<string, unknown>) => `${s.nif}::${(s.subvencion as Record<string, unknown>)?.id}`)
-  );
-  const matchesFiltrados = (matchesSinSolicitud ?? []).filter((m: Record<string, unknown>) => {
-    const key = `${m.nif}::${(m.subvencion as Record<string, unknown>)?.id}`;
-    return !nifSubvIds.has(key);
-  });
+  // Fetch client names manually (no FK from solicitudes/match -> cliente)
+  const allNifs = [...new Set([
+    ...(solicitudesRaw ?? []).map((s: Record<string, unknown>) => s.nif as string),
+    ...(matchesRaw ?? []).map((m: Record<string, unknown>) => m.nif as string),
+  ])];
 
-  return NextResponse.json({
-    solicitudes: solicitudesRecientes ?? [],
-    matches_pendientes: matchesFiltrados,
-  });
+  let clienteMap: Record<string, Record<string, unknown>> = {};
+  if (allNifs.length > 0) {
+    const { data: clientes } = await sb
+      .from('cliente')
+      .select('nif, nombre_empresa, nombre_normalizado, ciudad, comunidad_autonoma')
+      .in('nif', allNifs);
+    clienteMap = Object.fromEntries(
+      (clientes ?? []).map((c: Record<string, unknown>) => [c.nif as string, c])
+    );
+  }
+
+  const solicitudesRecientes = (solicitudesRaw ?? []).map((s: Record<string, unknown>) => ({
+    ...s, cliente: clienteMap[s.nif as string] ?? null,
+  }));
+
+  const matchesSinSolicitud = (matchesRaw ?? []).map((m: Record<string, unknown>) => ({
+    ...m, cliente: clienteMap[m.nif as string] ?? null,
+  }));
+
+  const nifSubvIds = new Set(
+    solicitudesRecientes.map((s: Record<string, unknown>) =>
+      `${s.nif}::${(s.subvencion as Record<string, unknown>)?.id}`)
+  );
+  const matchesFiltrados = matchesSinSolicitud.filter((m: Record<string, unknown>) =>
+    !nifSubvIds.has(`${m.nif}::${(m.subvencion as Record<string, unknown>)?.id}`)
+  );
+
+  return NextResponse.json({ solicitudes: solicitudesRecientes, matches_pendientes: matchesFiltrados });
 }
