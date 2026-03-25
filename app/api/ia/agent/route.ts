@@ -10,50 +10,69 @@ import type {
 
 // ─── System prompt del agente ─────────────────────────────────────────────────
 
-const AGENT_SYSTEM_PROMPT = `Eres un agente IA especializado en gestión de expedientes y subvenciones.
+const AGENT_SYSTEM_PROMPT = `Eres un agente IA especializado en gestión de expedientes y subvenciones públicas españolas.
 Tu función principal es ACTUAR sobre los documentos del notebook, no solo responder por chat.
-Tienes acceso completo al contenido de los documentos del notebook Y al texto extraído de los archivos adjuntos (PDFs, etc.) que aparecen en el contexto.
 
 ## REGLA FUNDAMENTAL
-Siempre que el usuario pida generar, redactar, preparar, escribir, crear o completar cualquier contenido (notas, actas, informes, emails, checklists, memorias, cronogramas, etc.), debes CREAR O EDITAR UN DOCUMENTO en el notebook. Nunca respondas ese contenido solo en el chat.
+Siempre que el usuario pida generar, redactar, preparar, escribir, crear, completar o borrar cualquier contenido o documento, debes ejecutar la acción correspondiente en el notebook. Nunca respondas ese contenido solo en el chat.
 
 ## CUÁNDO USAR EL JSON DE ACCIONES
 USA EL JSON (obligatorio) cuando el usuario:
-- Pida redactar, escribir, generar, preparar o crear cualquier tipo de documento
-- Pida notas de reunión, actas, resúmenes, informes, borradores, emails
-- Pida organizar, estructurar o preparar el expediente
-- Pida completar, rellenar o actualizar un documento existente
-- Cualquier solicitud de contenido que pueda guardarse como documento
+- Pida redactar, escribir, generar, preparar, crear o completar cualquier documento
+- Pida notas de reunión, actas, resúmenes, informes, borradores, emails, checklists, memorias
+- Pida actualizar, corregir, ampliar o reemplazar un documento existente
+- Pida BORRAR o ELIMINAR un documento
+- Cualquier solicitud que modifique el notebook
 
 SOLO usa texto plano (sin JSON) para:
-- Preguntas cortas de consulta ("¿cuándo vence el plazo?")
-- Conversación casual sin generación de contenido
+- Preguntas cortas de consulta ("¿cuándo vence el plazo?", "¿qué documentos hacen falta?")
+- Conversación casual sin modificación de documentos
 
 ## FORMATO DE RESPUESTA CON ACCIONES
 
-Responde ÚNICAMENTE con este JSON (sin texto antes ni después):
+Responde ÚNICAMENTE con este JSON (sin texto antes ni después, sin bloques de código markdown):
 
 {
   "actions": [
-    { "type": "create_document", "nombre": "Título del documento", "contenido": "## Título\\n\\nContenido completo en Markdown...", "tipo_documento": "notas" },
-    { "type": "respond", "content": "Breve descripción de lo que has creado." }
+    { "type": "create_document", "nombre": "Título", "contenido": "## Título\\n\\nContenido...", "tipo_documento": "memoria" },
+    { "type": "respond", "content": "He creado el documento Título con la memoria del proyecto." }
   ]
 }
 
-REGLAS DEL JSON:
-- El campo "respond" va SIEMPRE al final, es obligatorio
-- El contenido de los documentos debe ser completo y detallado, en Markdown
+REGLAS CRÍTICAS DEL JSON:
+- El campo "respond" va SIEMPRE al final y es OBLIGATORIO
+- El contenido de los documentos debe estar en Markdown bien formateado:
+  - Usa ## para secciones principales, ### para subsecciones
+  - Usa **negrita** para términos clave
+  - Usa listas - para enumeraciones
+  - Usa > para notas o advertencias importantes
+  - Separa secciones con líneas en blanco (\\n\\n)
 - Usa \\n para saltos de línea dentro de las strings JSON
-- No pongas texto fuera del JSON
+- No pongas NINGÚN texto fuera del JSON cuando uses acciones
+- Para borrar un documento, usa su ID exacto del campo [ID: ...] del contexto
 
 ## TIPOS DE DOCUMENTO VÁLIDOS
 notas, memoria, checklist, email, informe, proyecto_tecnico, memoria_economica, cronograma, acta, otro
 
 ## ACCIONES DISPONIBLES
-- create_folder: { "type": "create_folder", "folder_name": "Nombre" }
-- create_document: { "type": "create_document", "nombre": "...", "contenido": "...", "tipo_documento": "...", "folder_name": "..." (opcional) }
-- edit_document: { "type": "edit_document", "nombre": "nombre exacto del doc existente", "contenido": "...", "append": false }
-- respond: { "type": "respond", "content": "mensaje al usuario" }
+
+### Crear documento nuevo
+{ "type": "create_document", "nombre": "Nombre del doc", "contenido": "## Título\\n\\nContenido en Markdown", "tipo_documento": "memoria" }
+
+### Editar documento completo (reemplaza todo el contenido)
+{ "type": "edit_document", "document_id": "uuid-del-documento", "nombre": "nombre exacto", "contenido": "## Nuevo contenido completo", "append": false }
+
+### Añadir al final de un documento existente
+{ "type": "edit_document", "document_id": "uuid-del-documento", "nombre": "nombre exacto", "contenido": "\\n\\n## Nueva sección\\n\\nContenido adicional", "append": true }
+
+### Editar una sección concreta (busca y reemplaza un fragmento)
+{ "type": "edit_section", "document_id": "uuid-del-documento", "nombre": "nombre exacto", "buscar": "texto exacto a reemplazar", "reemplazar": "texto nuevo" }
+
+### Borrar un documento
+{ "type": "delete_document", "document_id": "uuid-del-documento", "nombre": "nombre del doc a confirmar" }
+
+### Responder al usuario (siempre al final)
+{ "type": "respond", "content": "Descripción de lo que has hecho" }
 `;
 
 // ─── Parser de la respuesta del LLM ──────────────────────────────────────────
@@ -186,7 +205,6 @@ async function executeActions(
 
     if (action.type === 'edit_section') {
       try {
-        // Buscar el documento por ID o por nombre
         let docId = action.document_id;
         let docNombre = action.nombre;
         if (!docId && action.nombre) {
@@ -201,7 +219,6 @@ async function executeActions(
           continue;
         }
 
-        // Leer contenido actual de la BD (fuente de verdad)
         const { data: existing, error: readError } = await supabase
           .from('documentos')
           .select('contenido')
@@ -210,12 +227,26 @@ async function executeActions(
         if (readError) throw readError;
 
         const contenidoActual = existing?.contenido ?? '';
-        if (!contenidoActual.includes(action.buscar)) {
-          results.push({ action, success: false, error: `No se encontró el fragmento a reemplazar en "${docNombre}". Verifica que el texto coincide exactamente.` });
-          continue;
-        }
 
-        const nuevoContenido = contenidoActual.replace(action.buscar, action.reemplazar);
+        // Intentar match exacto primero, luego normalizado (espacios/saltos)
+        let nuevoContenido: string;
+        if (contenidoActual.includes(action.buscar)) {
+          nuevoContenido = contenidoActual.replace(action.buscar, action.reemplazar);
+        } else {
+          // Normalizar: colapsar múltiples espacios/saltos a uno solo
+          const normalize = (s: string) => s.replace(/\s+/g, ' ').trim();
+          const contenidoNorm = normalize(contenidoActual);
+          const buscarNorm = normalize(action.buscar);
+          if (contenidoNorm.includes(buscarNorm)) {
+            nuevoContenido = contenidoActual.replace(
+              new RegExp(action.buscar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'), 'g'),
+              action.reemplazar,
+            );
+          } else {
+            results.push({ action, success: false, error: `No se encontró el fragmento en "${docNombre}". Usa edit_document para reemplazar el documento completo.` });
+            continue;
+          }
+        }
 
         const { error } = await supabase
           .from('documentos')
@@ -226,6 +257,35 @@ async function executeActions(
         results.push({ action, success: true, documentId: docId, documentName: docNombre });
       } catch (err) {
         console.error('[agent] edit_section error:', JSON.stringify(err));
+        const msg = err instanceof Error ? err.message : (err as any)?.message ?? JSON.stringify(err);
+        results.push({ action, success: false, error: msg });
+      }
+      continue;
+    }
+
+    if (action.type === 'delete_document') {
+      try {
+        let docId = action.document_id;
+        if (!docId && action.nombre) {
+          const match = documentos.find(
+            d => d.nombre.toLowerCase() === action.nombre!.toLowerCase()
+          );
+          docId = match?.id;
+        }
+        if (!docId) {
+          results.push({ action, success: false, error: `Documento "${action.nombre}" no encontrado para borrar` });
+          continue;
+        }
+
+        const { error } = await supabase
+          .from('documentos')
+          .delete()
+          .eq('id', docId);
+
+        if (error) throw error;
+        results.push({ action, success: true, documentId: docId, documentName: action.nombre });
+      } catch (err) {
+        console.error('[agent] delete_document error:', JSON.stringify(err));
         const msg = err instanceof Error ? err.message : (err as any)?.message ?? JSON.stringify(err);
         results.push({ action, success: false, error: msg });
       }
@@ -267,27 +327,125 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Leer NIF del expediente si aplica (para asociar documentos)
+    // Leer datos del expediente (NIF, subvención, cliente, solicitud)
     let nif: string | null = null;
+    let expedienteContext = '';
     if (contextoTipo === 'expediente') {
       const { data: exp } = await supabase
         .from('expediente')
-        .select('nif')
+        .select('nif, titulo, organismo, subvencion_id, estado')
         .eq('id', contextoId)
         .single();
       nif = exp?.nif ?? null;
+
+      if (nif) {
+        // Cargar cliente, solicitud con respuestas y subvención en paralelo
+        const [{ data: clienteDB }, { data: solDB }, { data: subvDB }] = await Promise.all([
+          supabase.from('cliente').select('nombre_empresa,cnae_codigo,cnae_descripcion,comunidad_autonoma,ciudad,num_empleados,facturacion_anual,forma_juridica,anos_antiguedad,descripcion_actividad,tamano_empresa').eq('nif', nif).maybeSingle(),
+          supabase.from('solicitudes').select('respuestas_ia,encaje_score,informe_viabilidad').eq('expediente_id', contextoId).maybeSingle(),
+          exp?.subvencion_id ? supabase.from('subvenciones').select('titulo,organismo,objeto,para_quien,importe_maximo,plazo_fin,url_oficial,estado_convocatoria').eq('id', exp.subvencion_id).maybeSingle() : Promise.resolve({ data: null }),
+        ]);
+
+        // Construir sección de contexto estructurado
+        const lines: string[] = ['\n\n## CONTEXTO DEL EXPEDIENTE'];
+
+        lines.push('\n### SUBVENCIÓN');
+        lines.push(`- Expediente: ${exp?.titulo ?? 'N/D'} | Estado: ${exp?.estado ?? 'N/D'}`);
+        if (subvDB) {
+          lines.push(`- Organismo: ${subvDB.organismo ?? 'N/D'}`);
+          lines.push(`- Importe máximo: ${subvDB.importe_maximo ? Number(subvDB.importe_maximo).toLocaleString('es-ES') + ' €' : 'N/D'}`);
+          lines.push(`- Plazo fin: ${subvDB.plazo_fin ?? 'N/D'}`);
+          if (subvDB.objeto) lines.push(`- Objeto: ${subvDB.objeto}`);
+          if (subvDB.para_quien) lines.push(`- Para quién: ${subvDB.para_quien}`);
+        }
+
+        lines.push('\n### CLIENTE');
+        if (clienteDB) {
+          lines.push(`- Empresa: ${clienteDB.nombre_empresa ?? nif} | NIF: ${nif}`);
+          lines.push(`- Sector/CNAE: ${clienteDB.cnae_descripcion ?? 'N/D'} (${clienteDB.cnae_codigo ?? ''})`);
+          lines.push(`- Tamaño: ${clienteDB.tamano_empresa ?? 'N/D'} | Empleados: ${clienteDB.num_empleados ?? 'N/D'}`);
+          lines.push(`- Facturación anual: ${clienteDB.facturacion_anual ? Number(clienteDB.facturacion_anual).toLocaleString('es-ES') + ' €' : 'N/D'}`);
+          lines.push(`- Forma jurídica: ${clienteDB.forma_juridica ?? 'N/D'} | Antigüedad: ${clienteDB.anos_antiguedad ?? 'N/D'} años`);
+          lines.push(`- Localización: ${[clienteDB.ciudad, clienteDB.comunidad_autonoma].filter(Boolean).join(', ') || 'N/D'}`);
+          if (clienteDB.descripcion_actividad) lines.push(`- Actividad: ${clienteDB.descripcion_actividad}`);
+        }
+
+        if (solDB?.respuestas_ia) {
+          type RespIA = { pregunta: string; respuesta: unknown; tipo: string; categoria: string };
+          const respuestas = solDB.respuestas_ia as RespIA[];
+          const proyecto = respuestas.filter(r => r.categoria === 'proyecto');
+          const encaje = respuestas.filter(r => r.categoria === 'encaje');
+          if (proyecto.length > 0) {
+            lines.push('\n### LO QUE EL CLIENTE QUIERE HACER CON LA AYUDA');
+            proyecto.forEach(r => lines.push(`- ${r.pregunta}: ${r.respuesta}`));
+          }
+          if (encaje.length > 0) {
+            lines.push('\n### CRITERIOS DE ENCAJE VERIFICADOS');
+            encaje.forEach(r => lines.push(`- ${r.pregunta}: ${r.respuesta ? 'SÍ ✓' : 'NO ✗'}`));
+          }
+          if (solDB.encaje_score != null) {
+            lines.push(`\n**Puntuación de encaje:** ${Math.round((solDB.encaje_score as number) * 100)}%`);
+          }
+        }
+
+        expedienteContext = lines.join('\n');
+      }
     }
 
-    // Construir system prompt con lista de documentos actuales (con contenido)
-    const docsIndex = documentos.length > 0
-      ? `\n\n## DOCUMENTOS EXISTENTES EN EL NOTEBOOK\n` +
-        documentos.map((d, i) => {
-          const preview = d.contenido
-            ? `\n\`\`\`\n${d.contenido.slice(0, 2000)}${d.contenido.length > 2000 ? '\n...[contenido truncado]' : ''}\n\`\`\``
-            : ' (sin contenido)';
-          return `${i + 1}. [ID: ${d.id}] "${d.nombre}" (tipo: ${d.tipo_documento ?? 'nota'})${preview}`;
-        }).join('\n\n')
-      : '\n\n## DOCUMENTOS EXISTENTES EN EL NOTEBOOK\n(El notebook está vacío)';
+    // ── RAG lite: puntuar documentos por relevancia a la query ────────────────
+    function scoreDocRelevance(doc: { nombre: string; tipo_documento?: string | null; contenido?: string | null }, query: string): number {
+      const q = query.toLowerCase();
+      const words = q.split(/\s+/).filter(w => w.length > 3);
+      let score = 0;
+      const nombre = doc.nombre.toLowerCase();
+      const contenido = (doc.contenido ?? '').toLowerCase();
+      const tipo = (doc.tipo_documento ?? '').toLowerCase();
+
+      // Coincidencia en nombre (peso alto)
+      if (nombre.includes(q)) score += 10;
+      words.forEach(w => { if (nombre.includes(w)) score += 3; });
+
+      // Coincidencia en tipo
+      if (tipo && q.includes(tipo)) score += 4;
+
+      // Coincidencia en contenido (peso medio)
+      words.forEach(w => {
+        const count = (contenido.match(new RegExp(w, 'g')) ?? []).length;
+        score += Math.min(count, 5); // cap para evitar docs muy largos que dominen
+      });
+
+      // Bonus si el doc tiene contenido
+      if (contenido.length > 100) score += 1;
+
+      return score;
+    }
+
+    // Construir system prompt con RAG: docs relevantes primero, resto solo metadatos
+    const MAX_DOC_CHARS = 3000;   // chars por documento relevante
+    const MAX_TOTAL_CHARS = 12000; // total contexto de docs
+
+    let totalChars = 0;
+    const docsConScore = documentos.map(d => ({
+      doc: d,
+      score: scoreDocRelevance(d, message),
+    })).sort((a, b) => b.score - a.score);
+
+    const docsIndex = documentos.length === 0
+      ? '\n\n## DOCUMENTOS EXISTENTES EN EL NOTEBOOK\n(El notebook está vacío)'
+      : '\n\n## DOCUMENTOS EXISTENTES EN EL NOTEBOOK\n' +
+        docsConScore.map(({ doc: d }, i) => {
+          const isRelevant = i < 4 && totalChars < MAX_TOTAL_CHARS; // top 4 con contenido
+          const contenido = d.contenido ?? '';
+          let preview = ' (sin contenido)';
+          if (isRelevant && contenido.length > 0) {
+            const chars = Math.min(contenido.length, MAX_DOC_CHARS, MAX_TOTAL_CHARS - totalChars);
+            preview = `\n\`\`\`\n${contenido.slice(0, chars)}${contenido.length > chars ? '\n...[truncado]' : ''}\n\`\`\``;
+            totalChars += chars;
+          } else if (!isRelevant && contenido.length > 0) {
+            preview = ` (${contenido.length} chars — no incluido en contexto)`;
+          }
+          return `[ID: ${d.id}] "${d.nombre}" (tipo: ${d.tipo_documento ?? 'nota'})${preview}`;
+        }).join('\n\n');
 
     // Leer archivos adjuntos con texto extraído
     const { data: archivosData } = await supabase
@@ -301,7 +459,7 @@ export async function POST(request: NextRequest) {
         archivosData.map(a => `### 📎 ${a.nombre}\n${a.texto_extraido}`).join('\n\n')
       : '';
 
-    const systemPrompt = AGENT_SYSTEM_PROMPT + docsIndex + archivosContext + (context ? `\n\n## CONTEXTO DE DOCUMENTOS\n${context}` : '');
+    const systemPrompt = AGENT_SYSTEM_PROMPT + expedienteContext + docsIndex + archivosContext + (context ? `\n\n## CONTEXTO DE DOCUMENTOS SELECCIONADOS\n${context}` : '');
 
     // Añadir hint si el mensaje parece pedir generación de contenido
     const contentKeywords = /redact|escrib|generat|prepar|crea|elabor|haz|hace|desarrolla|hace\s+un|resume|resume|acta|informe|nota|document/i;

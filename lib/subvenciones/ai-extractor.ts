@@ -20,7 +20,30 @@ import type { IaExtraccionResult, IaExtraccionConGrounding } from '@/lib/types/s
 // ─── Configuración ────────────────────────────────────────────────────────────
 
 // Máx caracteres de texto que enviamos al LLM por petición
-const MAX_TEXTO_LLM = 12_000;
+// Distribución del contexto: cabecera del doc (intro/objeto) + cola (requisitos/plazos/docs)
+const MAX_CABECERA_CHARS = 8_000;
+const MAX_COLA_CHARS = 4_000;
+const MAX_TEXTO_LLM = MAX_CABECERA_CHARS + MAX_COLA_CHARS; // 12K total
+
+/**
+ * Extrae el fragmento más informativo del texto para no desperdiciar contexto.
+ * - Los primeros 8K suelen tener: objeto, beneficiarios, importes.
+ * - Los últimos 4K suelen tener: requisitos, documentación, plazos finales.
+ * Si el texto cabe completo, lo devuelve tal cual.
+ */
+function smartChunk(texto: string): string {
+  if (texto.length <= MAX_TEXTO_LLM) return texto;
+  const cabecera = texto.slice(0, MAX_CABECERA_CHARS);
+  const cola = texto.slice(-MAX_COLA_CHARS);
+  // Evitar cortar a mitad de palabra
+  const corteCabecera = cabecera.lastIndexOf(' ');
+  const corteCola = cola.indexOf(' ');
+  return (
+    cabecera.slice(0, corteCabecera > MAX_CABECERA_CHARS - 200 ? corteCabecera : MAX_CABECERA_CHARS) +
+    '\n\n[... TEXTO OMITIDO ...]\n\n' +
+    cola.slice(corteCola > 0 && corteCola < 200 ? corteCola : 0)
+  );
+}
 
 // Modelos por defecto por proveedor (preferir modelos baratos para extracción masiva)
 const MODELOS_DEFAULT: Record<string, string> = {
@@ -157,10 +180,8 @@ export async function extraerConIa(
   config: ExtractorConfig
 ): Promise<{ resultado: IaExtraccionResult; modelo: string; tokensUsados: number }> {
 
-  // Truncar texto para no exceder contexto ni coste
-  const textoTruncado = texto.length > MAX_TEXTO_LLM
-    ? texto.slice(0, MAX_TEXTO_LLM) + '\n\n[TEXTO TRUNCADO...]'
-    : texto;
+  // Extraer fragmento más informativo: cabecera (objeto/importes) + cola (requisitos/plazos)
+  const textoTruncado = smartChunk(texto);
 
   const provider = createProvider({
     provider: config.provider as Parameters<typeof createProvider>[0]['provider'],

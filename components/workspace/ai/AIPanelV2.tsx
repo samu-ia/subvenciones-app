@@ -66,6 +66,8 @@ interface AIPanelProps {
   selectedDocId?: string | null;
   onSelectDoc?: (docId: string) => void;
   collapseButton?: React.ReactNode;
+  /** Acción rápida externa: cambia `key` para re-disparar el mismo texto */
+  quickAction?: { text: string; key: number } | null;
 }
 
 type Tab = 'chat' | 'tools' | 'settings';
@@ -83,6 +85,7 @@ export default function AIPanelV2({
   selectedDocId,
   onSelectDoc,
   collapseButton,
+  quickAction,
 }: AIPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>('chat');
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
@@ -246,9 +249,9 @@ export default function AIPanelV2({
       }
       setLastError(null);
 
-      // Notificar al workspace de los docs creados/editados para que actualice la lista
+      // Notificar al workspace de los docs creados/editados/borrados
       data.actions
-        .filter((r: AgentActionResult) => r.success && (r.action.type === 'create_document' || r.action.type === 'edit_document' || r.action.type === 'edit_section') && r.documentId)
+        .filter((r: AgentActionResult) => r.success && r.documentId)
         .forEach((r: AgentActionResult) => {
           window.dispatchEvent(new CustomEvent('agent-doc-action', {
             detail: {
@@ -282,6 +285,14 @@ export default function AIPanelV2({
 
   // Asignar la función correcta al ref según el modo activo
   submitRef.current = agentMode ? submitAgente : submitMensaje;
+
+  // Disparar mensaje externo (quick actions desde panel Ficha)
+  useEffect(() => {
+    if (!quickAction?.text) return;
+    setAgentMode(true);
+    setTimeout(() => submitRef.current(quickAction.text, []), 50);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quickAction?.key]);
 
   // ─── Ejecutar herramienta ────────────────────────────────────────────────
   const ejecutarHerramienta = async (tool: AITool) => {

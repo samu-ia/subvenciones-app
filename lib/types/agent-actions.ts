@@ -43,6 +43,13 @@ export interface AgentActionEditSection {
   reemplazar: string;      // nuevo contenido para ese fragmento
 }
 
+/** Borrar un documento del notebook */
+export interface AgentActionDeleteDocument {
+  type: 'delete_document';
+  document_id?: string;
+  nombre?: string;
+}
+
 /** Respuesta pura de chat (sin acciones sobre documentos) */
 export interface AgentActionRespond {
   type: 'respond';
@@ -54,6 +61,7 @@ export type AgentAction =
   | AgentActionCreateDocument
   | AgentActionEditDocument
   | AgentActionEditSection
+  | AgentActionDeleteDocument
   | AgentActionRespond;
 
 // ─── Resultado de ejecutar una acción ─────────────────────────────────────────

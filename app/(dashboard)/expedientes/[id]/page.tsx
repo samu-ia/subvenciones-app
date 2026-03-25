@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
-import { ArrowLeft, Briefcase, User, Bot, CheckSquare, Store, Check, Square, ExternalLink, Mail, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Briefcase, User, Bot, CheckSquare, Store, Check, Square, ExternalLink, Mail, RefreshCw, FileText } from 'lucide-react';
 import WorkspaceLayout from '@/components/workspace/WorkspaceLayout';
 import NotebookLeftPanel from '@/components/workspace/docs/NotebookLeftPanel';
 import RichTextEditor from '@/components/workspace/editor/RichTextEditor';
@@ -193,9 +193,10 @@ interface Expediente {
   numero_bdns: number | null;
   estado: string;
   created_at: string;
-  cliente: {
-    nombre_normalizado: string | null;
-  }[];
+  titulo?: string | null;
+  organismo?: string | null;
+  subvencion_id?: string | null;
+  cliente: { nombre_normalizado: string | null }[];
 }
 
 interface Documento {
@@ -205,6 +206,205 @@ interface Documento {
   tipo_documento: string | null;
   generado_por_ia: boolean;
   updated_at: string;
+}
+
+interface ClienteCompleto {
+  nombre_empresa?: string | null;
+  cnae_descripcion?: string | null;
+  comunidad_autonoma?: string | null;
+  ciudad?: string | null;
+  num_empleados?: number | null;
+  facturacion_anual?: number | null;
+  forma_juridica?: string | null;
+  anos_antiguedad?: number | null;
+  descripcion_actividad?: string | null;
+  tamano_empresa?: string | null;
+}
+
+interface SubvencionData {
+  titulo?: string | null;
+  organismo?: string | null;
+  objeto?: string | null;
+  para_quien?: string | null;
+  importe_maximo?: number | null;
+  plazo_fin?: string | null;
+  url_oficial?: string | null;
+  estado_convocatoria?: string | null;
+}
+
+interface SolicitudData {
+  respuestas_ia?: Array<{ pregunta: string; respuesta: unknown; tipo: string; categoria: string }> | null;
+  encaje_score?: number | null;
+  informe_viabilidad?: string | null;
+}
+
+// ─── Panel Ficha del Expediente ────────────────────────────────────────────────
+
+function PanelFicha({
+  expediente,
+  cliente,
+  subvencion,
+  solicitud,
+  onQuickAction,
+}: {
+  expediente: Expediente;
+  cliente: ClienteCompleto | null;
+  subvencion: SubvencionData | null;
+  solicitud: SolicitudData | null;
+  onQuickAction: (msg: string) => void;
+}) {
+  const fmtE = (n?: number | null) => {
+    if (!n) return 'N/D';
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M €`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K €`;
+    return `${n.toLocaleString('es-ES')} €`;
+  };
+  const fmtFecha = (s?: string | null) => s ? new Date(s).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/D';
+  const diasRestantes = subvencion?.plazo_fin ? Math.ceil((new Date(subvencion.plazo_fin).getTime() - Date.now()) / 86_400_000) : null;
+
+  const respuestas = solicitud?.respuestas_ia ?? [];
+  const proyecto = respuestas.filter(r => r.categoria === 'proyecto');
+  const encaje = respuestas.filter(r => r.categoria === 'encaje');
+
+  let informeData: Record<string, unknown> | null = null;
+  try { if (solicitud?.informe_viabilidad) informeData = JSON.parse(solicitud.informe_viabilidad as string); } catch { /* no JSON */ }
+
+  const QUICK_ACTIONS = [
+    { emoji: '📋', label: 'Memoria completa', msg: 'Genera la memoria de solicitud completa y detallada usando todos los datos del cliente y la subvención. Crea un documento tipo "memoria" con todas las secciones rellenas con datos reales.' },
+    { emoji: '💰', label: 'Presupuesto detallado', msg: 'Genera una memoria económica y presupuesto detallado de la inversión basándote en lo que el cliente dijo que haría con la ayuda. Crea una tabla con conceptos, importes y justificación. Tipo "memoria_economica".' },
+    { emoji: '📅', label: 'Cronograma', msg: 'Genera un cronograma de ejecución del proyecto en formato tabla Markdown con fases, actividades, fechas estimadas y responsables. Tipo "cronograma".' },
+    { emoji: '✉️', label: 'Email — pedir documentos', msg: 'Redacta un email profesional para enviar al cliente solicitándole la documentación necesaria para tramitar esta subvención. Incluye la lista de documentos del checklist. Tipo "email".' },
+    { emoji: '📝', label: 'Proyecto técnico', msg: 'Genera el proyecto técnico completo que justifique la necesidad de la subvención, con descripción técnica detallada del proyecto, tecnología o inversión a realizar. Tipo "proyecto_tecnico".' },
+    { emoji: '🔎', label: 'Resumen ejecutivo', msg: 'Genera un resumen ejecutivo de 1 página con los puntos clave del expediente: empresa, subvención, encaje, proyecto y próximos pasos. Tipo "informe".' },
+  ];
+
+  const C = { border: '#e8ecf4', bg: '#f8fafc', navy: '#0d1f3c', muted: '#94a3b8', green: '#059669', amber: '#d97706', red: '#dc2626' };
+  const row = (label: string, value: string | null | undefined) => (
+    <div style={{ display: 'flex', gap: 8, padding: '6px 0', borderBottom: `1px solid ${C.border}`, fontSize: '0.8rem' }}>
+      <span style={{ color: C.muted, flexShrink: 0, width: 130 }}>{label}</span>
+      <span style={{ color: C.navy, fontWeight: 500, flex: 1 }}>{value || 'N/D'}</span>
+    </div>
+  );
+
+  return (
+    <div style={{ overflowY: 'auto', padding: '14px 14px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+      {/* Acciones rápidas */}
+      <div>
+        <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.muted, marginBottom: 8 }}>Generar con IA</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+          {QUICK_ACTIONS.map(a => (
+            <button key={a.label} onClick={() => onQuickAction(a.msg)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 10px', borderRadius: 8, border: `1px solid ${C.border}`, background: '#fff', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, color: C.navy, textAlign: 'left', fontFamily: 'inherit' }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#eff6ff'; e.currentTarget.style.borderColor = '#3b82f6'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = C.border; }}
+            >
+              <span style={{ fontSize: '1rem', lineHeight: 1 }}>{a.emoji}</span>
+              {a.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Subvención */}
+      {subvencion && (
+        <div>
+          <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.muted, marginBottom: 6 }}>Subvención</div>
+          <div style={{ background: '#fff', borderRadius: 10, border: `1px solid ${C.border}`, padding: '10px 12px' }}>
+            {row('Título', subvencion.titulo)}
+            {row('Organismo', subvencion.organismo)}
+            {row('Importe máx.', fmtE(subvencion.importe_maximo))}
+            <div style={{ display: 'flex', gap: 8, padding: '6px 0', borderBottom: `1px solid ${C.border}`, fontSize: '0.8rem' }}>
+              <span style={{ color: C.muted, flexShrink: 0, width: 130 }}>Plazo fin</span>
+              <span style={{ color: diasRestantes != null && diasRestantes < 30 ? C.red : C.navy, fontWeight: 600 }}>
+                {fmtFecha(subvencion.plazo_fin)}{diasRestantes != null ? ` (${diasRestantes > 0 ? diasRestantes + 'd' : 'VENCIDO'})` : ''}
+              </span>
+            </div>
+            {subvencion.objeto && row('Objeto', subvencion.objeto)}
+            {subvencion.url_oficial && (
+              <div style={{ padding: '6px 0', fontSize: '0.8rem' }}>
+                <a href={subvencion.url_oficial} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <ExternalLink size={11} /> Ver convocatoria oficial
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Cliente */}
+      <div>
+        <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.muted, marginBottom: 6 }}>Empresa</div>
+        <div style={{ background: '#fff', borderRadius: 10, border: `1px solid ${C.border}`, padding: '10px 12px' }}>
+          {row('NIF', expediente.nif)}
+          {row('Sector', cliente?.cnae_descripcion)}
+          {row('Tamaño', cliente?.tamano_empresa)}
+          {row('Empleados', cliente?.num_empleados?.toString())}
+          {row('Facturación', fmtE(cliente?.facturacion_anual))}
+          {row('Forma jurídica', cliente?.forma_juridica)}
+          {row('Antigüedad', cliente?.anos_antiguedad != null ? `${cliente.anos_antiguedad} años` : null)}
+          {row('Localización', [cliente?.ciudad, cliente?.comunidad_autonoma].filter(Boolean).join(', '))}
+          {cliente?.descripcion_actividad && row('Actividad', cliente.descripcion_actividad)}
+        </div>
+      </div>
+
+      {/* Informe de viabilidad */}
+      {informeData && (
+        <div>
+          <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.muted, marginBottom: 6 }}>Informe de Viabilidad</div>
+          <div style={{ background: '#fff', borderRadius: 10, border: `1px solid ${C.border}`, padding: '10px 12px' }}>
+            {informeData.puntuacion_encaje != null && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: Number(informeData.puntuacion_encaje) >= 70 ? '#ecfdf5' : '#fff7ed', border: `2px solid ${Number(informeData.puntuacion_encaje) >= 70 ? C.green : C.amber}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: 800, color: Number(informeData.puntuacion_encaje) >= 70 ? C.green : C.amber, flexShrink: 0 }}>
+                  {informeData.puntuacion_encaje as number}%
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: C.navy }}>{String(informeData.recomendacion ?? '').toUpperCase()}</div>
+                  <div style={{ fontSize: '0.72rem', color: C.muted }}>{String(informeData.recomendacion_motivo ?? '')}</div>
+                </div>
+              </div>
+            )}
+            {informeData.resumen_ejecutivo != null && <p style={{ fontSize: '0.78rem', color: '#334155', lineHeight: 1.6, margin: '0 0 8px' }}>{String(informeData.resumen_ejecutivo)}</p>}
+          </div>
+        </div>
+      )}
+
+      {/* Respuestas del cuestionario */}
+      {proyecto.length > 0 && (
+        <div>
+          <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.muted, marginBottom: 6 }}>Lo que el cliente quiere hacer</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {proyecto.map((r, i) => (
+              <div key={i} style={{ background: '#fff', borderRadius: 8, border: `1px solid ${C.border}`, padding: '10px 12px' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: C.muted, marginBottom: 4 }}>{r.pregunta}</div>
+                <div style={{ fontSize: '0.8rem', color: C.navy, lineHeight: 1.5 }}>{String(r.respuesta ?? '—')}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Encaje */}
+      {encaje.length > 0 && (
+        <div>
+          <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.muted, marginBottom: 6 }}>
+            Criterios de encaje
+            {solicitud?.encaje_score != null && (
+              <span style={{ marginLeft: 6, color: C.navy }}>{Math.round((solicitud.encaje_score as number) * 100)}%</span>
+            )}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {encaje.map((r, i) => (
+              <div key={i} style={{ display: 'flex', gap: 8, padding: '5px 8px', background: '#fff', borderRadius: 6, border: `1px solid ${C.border}`, fontSize: '0.78rem' }}>
+                <span style={{ color: r.respuesta ? C.green : C.red, fontWeight: 700, flexShrink: 0 }}>{r.respuesta ? '✓' : '✗'}</span>
+                <span style={{ color: C.navy }}>{r.pregunta}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function ExpedienteWorkspacePage() {
@@ -222,10 +422,19 @@ export default function ExpedienteWorkspacePage() {
   const [archivos, setArchivos] = useState<Array<{ id: string; nombre: string; mime_type?: string | null; tamano_bytes?: number; storage_path?: string }>>([]);
   const [contextSelections, setContextSelections] = useState<Record<string, ContextMode>>({});
   const [archivoSignedUrl, setArchivoSignedUrl] = useState<string | null>(null);
-  const [panelTab, setPanelTab] = useState<'ia' | 'checklist' | 'proveedores'>('ia');
+  const [panelTab, setPanelTab] = useState<'ia' | 'checklist' | 'proveedores' | 'ficha'>('ficha');
   const [setupLoading, setSetupLoading] = useState(false);
+  const [clienteData, setClienteData] = useState<ClienteCompleto | null>(null);
+  const [subvencionData, setSubvencionData] = useState<SubvencionData | null>(null);
+  const [solicitudData, setSolicitudData] = useState<SolicitudData | null>(null);
+  const [quickAction, setQuickAction] = useState<{ text: string; key: number } | null>(null);
 
   const selectedDoc = documentos.find(d => d.id === selectedDocId);
+
+  function dispararQuickAction(msg: string) {
+    setPanelTab('ia');
+    setQuickAction(prev => ({ text: msg, key: (prev?.key ?? 0) + 1 }));
+  }
 
   // Generar signed URL cuando se selecciona un archivo
   useEffect(() => {
@@ -279,7 +488,7 @@ export default function ExpedienteWorkspacePage() {
           setSelectedDocId(newDoc.id);
           setDocContent(newDoc.contenido || '');
         }
-      } else if (detail.type === 'edit_document') {
+      } else if (detail.type === 'edit_document' || detail.type === 'edit_section') {
         // Actualizar el contenido del doc editado en el estado local
         setDocumentos(prev => prev.map(d =>
           d.id === detail.documentId ? { ...d, contenido: detail.contenido ?? d.contenido } : d
@@ -288,6 +497,21 @@ export default function ExpedienteWorkspacePage() {
         setSelectedDocId(id => {
           if (id === detail.documentId) setDocContent(detail.contenido ?? '');
           return id;
+        });
+      } else if (detail.type === 'delete_document') {
+        // Borrar doc de la lista
+        setDocumentos(prev => {
+          const newDocs = prev.filter(d => d.id !== detail.documentId);
+          // Si estaba seleccionado, pasar al primero disponible
+          setSelectedDocId(id => {
+            if (id === detail.documentId) {
+              const next = newDocs[0];
+              if (next) setDocContent(next.contenido || '');
+              return next?.id ?? null;
+            }
+            return id;
+          });
+          return newDocs;
         });
       }
     };
@@ -319,7 +543,21 @@ export default function ExpedienteWorkspacePage() {
       .eq('id', expedienteId)
       .single();
 
-    if (expData) setExpediente(expData);
+    if (expData) {
+      setExpediente(expData);
+
+      // Cargar datos enriquecidos en paralelo
+      const [{ data: cliData }, { data: solData }, subvResult] = await Promise.all([
+        supabase.from('cliente').select('nombre_empresa,cnae_descripcion,comunidad_autonoma,ciudad,num_empleados,facturacion_anual,forma_juridica,anos_antiguedad,descripcion_actividad,tamano_empresa').eq('nif', expData.nif).maybeSingle(),
+        supabase.from('solicitudes').select('respuestas_ia,encaje_score,informe_viabilidad').eq('expediente_id', expedienteId).maybeSingle(),
+        expData.subvencion_id
+          ? supabase.from('subvenciones').select('titulo,organismo,objeto,para_quien,importe_maximo,plazo_fin,url_oficial,estado_convocatoria').eq('id', expData.subvencion_id).maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
+      setClienteData(cliData);
+      setSolicitudData(solData);
+      setSubvencionData(subvResult.data);
+    }
 
     const { data: docsData } = await supabase
       .from('documentos')
@@ -683,6 +921,7 @@ export default function ExpedienteWorkspacePage() {
           {/* Tabs */}
           <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--background)', flexShrink: 0 }}>
             {([
+              { key: 'ficha', label: 'Ficha', icon: <FileText size={12} /> },
               { key: 'ia', label: 'Asistente', icon: <Bot size={12} /> },
               { key: 'checklist', label: 'Checklist', icon: <CheckSquare size={12} /> },
               { key: 'proveedores', label: 'Proveedores', icon: <Store size={12} /> },
@@ -707,6 +946,15 @@ export default function ExpedienteWorkspacePage() {
           </div>
           {/* Panel content */}
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            {panelTab === 'ficha' && expediente && (
+              <PanelFicha
+                expediente={expediente}
+                cliente={clienteData}
+                subvencion={subvencionData}
+                solicitud={solicitudData}
+                onQuickAction={dispararQuickAction}
+              />
+            )}
             {panelTab === 'ia' && (
               userId ? (
                 <AIPanelV2
@@ -718,6 +966,7 @@ export default function ExpedienteWorkspacePage() {
                   onGenerarDocumento={handleGenerarDocumento}
                   selectedDocId={selectedDocId}
                   onSelectDoc={handleSelectDoc}
+                  quickAction={quickAction}
                 />
               ) : (
                 <div style={{ padding: '20px', textAlign: 'center', color: 'var(--muted-foreground)' }}>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Bell, RefreshCw, Loader2, Zap, Clock, CheckCircle,
@@ -266,6 +267,7 @@ function ChatAdmin({ nif, nombre, onVolver }: { nif: string; nombre: string; onV
 // ─── Página principal ──────────────────────────────────────────────────────────
 
 export default function NovedadesPage() {
+  const router = useRouter();
   const [data, setData] = useState<{ solicitudes: SolicitudReciente[]; matches_pendientes: MatchPendiente[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [notificando, setNotificando] = useState<string | null>(null);
@@ -364,12 +366,16 @@ export default function NovedadesPage() {
               const badge = ESTADO_LABEL[s.estado] ?? { label: s.estado, color: '#374151', bg: '#f3f4f6' };
               const nombreCliente = s.cliente?.nombre_empresa || s.cliente?.nombre_normalizado || s.nif;
               return (
-                <div key={s.id} style={{
-                  display: 'grid', gridTemplateColumns: '32px 1.8fr 2fr 130px 80px 80px 32px',
-                  gap: 12, padding: '14px 16px', alignItems: 'center',
-                  borderBottom: i < solicitudes.length - 1 ? '1px solid #f1f5f9' : 'none',
-                  background: '#fff',
-                }}>
+                <div key={s.id}
+                  onClick={(e) => { if ((e.target as HTMLElement).closest('a, button')) return; router.push('/clientes/' + s.nif); }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                  onMouseLeave={e => (e.currentTarget.style.background = '#fff')}
+                  style={{
+                    display: 'grid', gridTemplateColumns: '32px 1.8fr 2fr 130px 80px 80px 32px',
+                    gap: 12, padding: '14px 16px', alignItems: 'center',
+                    borderBottom: i < solicitudes.length - 1 ? '1px solid #f1f5f9' : 'none',
+                    background: '#fff', cursor: 'pointer',
+                  }}>
                   <div style={{ width: 28, height: 28, borderRadius: 8, background: '#f0f9ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Building2 size={13} color="#1d4ed8" />
                   </div>
@@ -399,7 +405,7 @@ export default function NovedadesPage() {
                   {/* Fecha */}
                   <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{fmt(s.created_at)}</div>
                   {/* Link */}
-                  <Link href={`/solicitudes`} style={{ color: '#cbd5e1' }}><ChevronRight size={14} /></Link>
+                  <ChevronRight size={14} color="#cbd5e1" />
                 </div>
               );
             })}

@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
   // Generar informe en background si hay respuestas
   if (body.respuestas_ia?.length) {
     const [{ data: subv }, { data: cliente }, { data: iaProvider }] = await Promise.all([
-      sb.from('subvenciones').select('titulo, organismo, objeto, para_quien, requisitos, documentacion_exigida, importe_maximo').eq('id', body.subvencion_id).maybeSingle(),
+      sb.from('subvenciones').select('titulo, organismo, objeto, para_quien, importe_maximo').eq('id', body.subvencion_id).maybeSingle(),
       sb.from('cliente').select('nombre_empresa, actividad, tamano_empresa, comunidad_autonoma, num_empleados, facturacion_anual').eq('nif', body.nif).maybeSingle(),
       sb.from('ia_providers').select('provider, api_key, base_url').eq('enabled', true).not('api_key', 'is', null).limit(1).maybeSingle(),
     ]);

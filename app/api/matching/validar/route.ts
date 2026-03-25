@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     { data: iaProvider },
   ] = await Promise.all([
     sb.from('subvenciones')
-      .select('titulo,organismo,objeto,para_quien,beneficiarios,requisitos,gastos_subvencionables,documentacion_exigida,importe_maximo,plazo_fin,ambito_geografico,comunidad_autonoma')
+      .select('titulo,organismo,objeto,para_quien,importe_maximo,plazo_fin,ambito_geografico,comunidad_autonoma')
       .eq('id', subvencion_id)
       .maybeSingle(),
     sb.from('subvencion_sectores')

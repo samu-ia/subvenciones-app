@@ -89,6 +89,19 @@ export async function POST(
     .eq('nif', exp.nif)
     .maybeSingle();
 
+  // ── Cargar solicitud con respuestas del cuestionario ──────────────────────
+  const { data: solicitud } = await sb
+    .from('solicitudes')
+    .select('id, respuestas_ia, preguntas_ia, encaje_score, informe_viabilidad, nombre_firmante')
+    .eq('expediente_id', expedienteId)
+    .maybeSingle();
+
+  type RespuestaIA = { pregunta: string; respuesta: unknown; tipo: string; categoria: string };
+  const respuestasIA: RespuestaIA[] = (solicitud?.respuestas_ia as RespuestaIA[] | null) ?? [];
+  const respuestasProyecto = respuestasIA.filter(r => r.categoria === 'proyecto');
+  const respuestasEncaje  = respuestasIA.filter(r => r.categoria === 'encaje');
+  const respuestasEmpresa = respuestasIA.filter(r => r.categoria === 'empresa' || r.categoria === 'documentacion');
+
   // ── Cargar subvención + texto bases reguladoras ───────────────────────────
   let subvTexto = '';
   let subvData: Record<string, unknown> = {};
@@ -193,21 +206,41 @@ Incluye entre 10 y 15 elementos. Sé específico con la subvención.`;
   // ── Generar / actualizar documento Memoria ────────────────────────────────
   let memoriaContenido = generarMemoriaBase(exp, cliente, subvData);
 
-  if (hasAI && subvTexto) {
-    const systemMemoria = `Eres un consultor de subvenciones. Genera una memoria de solicitud profesional en formato Markdown. Sé específico y usa los datos proporcionados.`;
-    const promptMemoria = `Genera una memoria de solicitud para:
-Subvención: "${exp.titulo}"
-Organismo: ${exp.organismo}
-Empresa: ${cliente?.nombre_empresa ?? exp.nif}
-Actividad: ${cliente?.cnae_descripcion ?? 'no especificada'}
-${cliente?.descripcion_actividad ? `Descripción: ${cliente.descripcion_actividad}` : ''}
-Empleados: ${cliente?.num_empleados ?? 'N/D'}
-Facturación: ${cliente?.facturacion_anual ? `${cliente.facturacion_anual} €` : 'N/D'}
-Localización: ${cliente?.ciudad ?? ''}, ${cliente?.comunidad_autonoma ?? ''}
+  if (hasAI) {
+    const proyectoTexto = respuestasProyecto.map(r => `- ${r.pregunta}: ${r.respuesta}`).join('\n');
+    const systemMemoria = `Eres un consultor experto en subvenciones públicas españolas. Genera una memoria de solicitud profesional, detallada y lista para presentar. Usa siempre Markdown estructurado con secciones claras.`;
+    const promptMemoria = `Genera una memoria de solicitud completa para:
 
-Información de la subvención: ${subvTexto.slice(0, 1500)}
+SUBVENCIÓN: "${exp.titulo}"
+ORGANISMO: ${exp.organismo}
+${subvTexto ? `BASES (fragmento): ${subvTexto.slice(0, 1500)}` : ''}
 
-La memoria debe incluir secciones: Datos del solicitante, Descripción del proyecto, Objetivos, Necesidad de la ayuda, Impacto esperado. En Markdown.`;
+EMPRESA SOLICITANTE:
+- Nombre: ${cliente?.nombre_empresa ?? exp.nif}
+- Actividad: ${cliente?.cnae_descripcion ?? 'no especificada'}
+${cliente?.descripcion_actividad ? `- Descripción actividad: ${cliente.descripcion_actividad}` : ''}
+- Empleados: ${cliente?.num_empleados ?? 'N/D'}
+- Facturación anual: ${cliente?.facturacion_anual ? `${Number(cliente.facturacion_anual).toLocaleString('es-ES')} €` : 'N/D'}
+- Localización: ${[cliente?.ciudad, cliente?.comunidad_autonoma].filter(Boolean).join(', ') || 'N/D'}
+- Forma jurídica: ${cliente?.forma_juridica ?? 'SL'}
+- Antigüedad: ${cliente?.anos_antiguedad ?? 'N/D'} años
+
+${proyectoTexto ? `RESPUESTAS DEL CLIENTE (lo que el cliente explicó que hará con la ayuda):
+${proyectoTexto}` : ''}
+
+${respuestasEncaje.length ? `CRITERIOS DE ENCAJE VERIFICADOS:
+${respuestasEncaje.map(r => `- ${r.pregunta}: ${r.respuesta ? 'SÍ' : 'NO'}`).join('\n')}` : ''}
+
+Genera la memoria en Markdown con estas secciones:
+1. Datos del Solicitante (tabla)
+2. Descripción del Proyecto (basándote en las respuestas del cliente, detallada)
+3. Objetivos (principal + específicos)
+4. Justificación de la Necesidad
+5. Plan de Ejecución y Cronograma
+6. Impacto Esperado (empleos, facturación, sector)
+7. Presupuesto Estimado (tabla con conceptos)
+
+Usa los datos reales del cliente. No uses placeholders si tienes el dato.`;
     try {
       const aiMemoria = await callAI(promptMemoria, systemMemoria, sb);
       if (aiMemoria.length > 200) memoriaContenido = aiMemoria;
@@ -236,6 +269,57 @@ La memoria debe incluir secciones: Datos del solicitante, Descripción del proye
       orden: 0,
       generado_por_ia: true,
     });
+  }
+
+  // ── Crear doc "Respuestas del cliente" si hay cuestionario ───────────────
+  if (respuestasIA.length > 0) {
+    const categorias: Record<string, string> = { encaje: 'Criterios de Encaje', proyecto: 'Descripción del Proyecto', empresa: 'Datos de Empresa', documentacion: 'Documentación' };
+    const grupos = ['encaje', 'proyecto', 'empresa', 'documentacion'];
+    let contenidoRespuestas = `# Respuestas del Cliente al Cuestionario\n\n`;
+    contenidoRespuestas += `**Encaje global:** ${solicitud?.encaje_score != null ? `${Math.round((solicitud.encaje_score as number) * 100)}%` : 'N/D'}\n\n---\n\n`;
+
+    for (const cat of grupos) {
+      const items = respuestasIA.filter(r => r.categoria === cat);
+      if (items.length === 0) continue;
+      contenidoRespuestas += `## ${categorias[cat] ?? cat}\n\n`;
+      for (const r of items) {
+        const respStr = r.tipo === 'si_no' ? (r.respuesta ? '✓ Sí' : '✗ No') : String(r.respuesta ?? '—');
+        contenidoRespuestas += `**${r.pregunta}**\n\n${respStr}\n\n`;
+      }
+    }
+
+    const { data: docRespExist } = await sb.from('documentos').select('id').eq('expediente_id', expedienteId).eq('tipo_documento', 'cuestionario').maybeSingle();
+    if (docRespExist) {
+      await sb.from('documentos').update({ contenido: contenidoRespuestas }).eq('id', docRespExist.id);
+    } else {
+      await sb.from('documentos').insert({ nombre: 'Respuestas del cliente', tipo_documento: 'cuestionario', contenido: contenidoRespuestas, expediente_id: expedienteId, nif: exp.nif, orden: 1, generado_por_ia: false });
+    }
+  }
+
+  // ── Crear doc "Informe de viabilidad" si existe en la solicitud ───────────
+  if (solicitud?.informe_viabilidad) {
+    try {
+      const informe = JSON.parse(solicitud.informe_viabilidad as string) as Record<string, unknown>;
+      let contenidoInforme = `# Informe de Viabilidad IA\n\n`;
+      if (informe.puntuacion_encaje != null) contenidoInforme += `**Puntuación de encaje:** ${informe.puntuacion_encaje}%\n\n`;
+      if (informe.recomendacion) contenidoInforme += `**Recomendación:** ${informe.recomendacion} — ${informe.recomendacion_motivo ?? ''}\n\n---\n\n`;
+      if (informe.resumen_ejecutivo) contenidoInforme += `## Resumen Ejecutivo\n\n${informe.resumen_ejecutivo}\n\n`;
+      if (Array.isArray(informe.puntos_fuertes) && informe.puntos_fuertes.length) {
+        contenidoInforme += `## Puntos Fuertes\n\n${(informe.puntos_fuertes as string[]).map(p => `- ${p}`).join('\n')}\n\n`;
+      }
+      if (Array.isArray(informe.puntos_atencion) && informe.puntos_atencion.length) {
+        contenidoInforme += `## Puntos de Atención\n\n${(informe.puntos_atencion as string[]).map(p => `- ⚠ ${p}`).join('\n')}\n\n`;
+      }
+      if (Array.isArray(informe.pasos_siguientes) && informe.pasos_siguientes.length) {
+        contenidoInforme += `## Próximos Pasos\n\n${(informe.pasos_siguientes as string[]).map((p, i) => `${i + 1}. ${p}`).join('\n')}\n\n`;
+      }
+      const { data: docInfExist } = await sb.from('documentos').select('id').eq('expediente_id', expedienteId).eq('tipo_documento', 'informe').maybeSingle();
+      if (docInfExist) {
+        await sb.from('documentos').update({ contenido: contenidoInforme }).eq('id', docInfExist.id);
+      } else {
+        await sb.from('documentos').insert({ nombre: 'Informe de viabilidad', tipo_documento: 'informe', contenido: contenidoInforme, expediente_id: expedienteId, nif: exp.nif, orden: 2, generado_por_ia: true });
+      }
+    } catch { /* informe no es JSON válido */ }
   }
 
   // ── Matchear proveedores ───────────────────────────────────────────────────

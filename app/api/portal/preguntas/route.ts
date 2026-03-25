@@ -140,17 +140,25 @@ export async function POST(request: NextRequest) {
 
   const sb = createServiceClient();
 
-  // Obtener datos completos de la subvención
+  // Obtener datos completos de la subvención (columnas reales de la tabla)
   const { data: subv } = await sb
     .from('subvenciones')
-    .select('titulo, organismo, objeto, beneficiarios, requisitos, gastos_subvencionables, documentacion_exigida, importe_maximo, plazo_fin, resumen_ia, para_quien')
+    .select('titulo, organismo, objeto, importe_maximo, plazo_fin, resumen_ia, para_quien')
     .eq('id', body.subvencion_id)
     .maybeSingle();
 
   if (!subv) return NextResponse.json({ error: 'Subvención no encontrada' }, { status: 404 });
 
+  // Cargar requisitos desde tabla relacionada
+  const { data: requisitos } = await sb
+    .from('subvencion_requisitos')
+    .select('tipo, descripcion, obligatorio')
+    .eq('subvencion_id', body.subvencion_id);
+
+  const subvConRequisitos = { ...subv, requisitos: requisitos ?? [], beneficiarios: null, gastos_subvencionables: null, documentacion_exigida: null };
+
   // Si no hay datos IA (sin PDF procesado), devolver fallback directamente
-  if (!subv.objeto && !subv.requisitos && !subv.documentacion_exigida) {
+  if (!subv.objeto && (!requisitos || requisitos.length === 0)) {
     return NextResponse.json({ preguntas: preguntasFallback(), fuente: 'fallback' });
   }
 
@@ -168,7 +176,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const prompt = buildPrompt(subv as Record<string, unknown>);
+    const prompt = buildPrompt(subvConRequisitos as Record<string, unknown>);
     const rawResponse = await llamarIA(prompt, {
       provider: iaProvider.provider,
       apiKey: iaProvider.api_key,
