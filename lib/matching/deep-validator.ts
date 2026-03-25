@@ -157,7 +157,8 @@ function normCA(s?: string | null): string {
 }
 
 function runHardChecks(input: InputFase2): HardCheckResult {
-  const { subvencion: s, cliente: c, respuestas = [] } = input;
+  const { subvencion: s, cliente: c, respuestas: _resp } = input;
+  const respuestas = _resp ?? [];
 
   // 1. Convocatoria cerrada o suspendida
   if (s.estado_convocatoria === 'cerrada') {

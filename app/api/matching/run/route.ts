@@ -14,6 +14,11 @@ import { createClient } from '@/lib/supabase/server';
 import { calcularMatch } from '@/lib/matching/engine';
 import type { ClienteMatchProfile, SubvencionMatchProfile } from '@/lib/matching/engine';
 
+// Foco geográfico: solo Galicia + nacionales/estatales mientras escalamos
+// Cambiar a false cuando tengamos cobertura nacional completa
+const GALICIA_FOCUS = process.env.GALICIA_FOCUS !== "false";
+
+
 export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
@@ -53,19 +58,31 @@ export async function POST(request: NextRequest) {
     `)
     .not('estado_convocatoria', 'in', '("cerrada","suspendida")');
 
-  if (!subvenciones?.length) {
+  // Filtro Galicia: solo subvenciones de Galicia o ámbito nacional/estatal/europeo
+  const subvFiltradas = GALICIA_FOCUS
+    ? (subvenciones ?? []).filter(s => {
+        const ca = (s.comunidad_autonoma ?? '').toLowerCase();
+        const amb = (s.ambito_geografico ?? '').toLowerCase();
+        const esGalicia = ca.includes('galicia');
+        const esNacional = ['nacional', 'estatal', 'europeo', 'europe', 'ue'].some(k => amb.includes(k));
+        const sinCA = !ca; // sin CA especificada = aplicable a todos
+        return esGalicia || esNacional || sinCA;
+      })
+    : (subvenciones ?? []);
+
+  if (!subvFiltradas.length) {
     return NextResponse.json({ ok: true, message: 'Sin subvenciones activas', matches: 0 });
   }
 
   // Cargar sectores y tipos por subvención
-  const subvIds = subvenciones.map(s => s.id);
+  const subvIds = subvFiltradas.map(s => s.id);
   const [{ data: sectores }, { data: tipos }] = await Promise.all([
     sb.from('subvencion_sectores').select('subvencion_id,cnae_codigo,nombre_sector,excluido').in('subvencion_id', subvIds),
     sb.from('subvencion_tipos_empresa').select('subvencion_id,tipo,excluido').in('subvencion_id', subvIds),
   ]);
 
   // Construir perfiles de subvenciones
-  const subvProfiles: SubvencionMatchProfile[] = subvenciones.map(s => ({
+  const subvProfiles: SubvencionMatchProfile[] = subvFiltradas.map(s => ({
     ...s,
     sectores: sectores?.filter(sec => sec.subvencion_id === s.id) ?? [],
     tipos_empresa: tipos?.filter(t => t.subvencion_id === s.id) ?? [],
@@ -138,7 +155,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     clientes_procesados: clientes?.length ?? 0,
-    subvenciones_activas: subvenciones.length,
+    subvenciones_activas: subvFiltradas.length,
     nuevos,
     actualizados,
     excluidos,

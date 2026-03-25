@@ -1676,6 +1676,19 @@ export default function PortalPage() {
                 </div>
               )}
 
+              {/* Indicador foco Galicia */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '8px 14px', borderRadius: 20,
+                background: '#f0fdf4', border: '1px solid #bbf7d0',
+                marginBottom: 16, width: 'fit-content',
+              }}>
+                <span style={{ fontSize: '0.8rem' }}>🌍</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#065f46' }}>
+                  Galicia · Cobertura nacional próximamente
+                </span>
+              </div>
+
               {/* Top 3 matches */}
               <h2 style={{ fontSize: '1rem', fontWeight: 800, color: C.navy, marginBottom: 14 }}>
                 Top subvenciones para ti

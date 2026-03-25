@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
         veredicto: resultado.veredicto,
         confianza: resultado.confianza,
         motivo_principal: resultado.motivo_principal,
-        procesado_at: resultado.procesado_at,
+        validated_at: resultado.validated_at,
         requiere_revision_manual: resultado.requiere_revision_manual,
       },
     };
