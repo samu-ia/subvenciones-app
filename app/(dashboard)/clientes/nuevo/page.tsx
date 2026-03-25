@@ -31,7 +31,6 @@ export default function NuevoClientePage() {
     codigo_postal: '',
     ciudad: '',
     comunidad_autonoma: '',
-    origen: '',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -208,13 +207,6 @@ export default function NuevoClientePage() {
                 {CCAA.map(cc => <option key={cc} value={cc}>{cc}</option>)}
               </select>
             </div>
-          </div>
-
-          {/* Origen */}
-          <div>
-            <label style={labelStyle}>Origen del lead</label>
-            <input type="text" name="origen" value={formData.origen}
-              onChange={handleChange} placeholder="web, referido, feria, gestoría..." style={inputStyle} />
           </div>
 
           {/* Botones */}

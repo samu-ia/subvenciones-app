@@ -48,6 +48,39 @@ export default function LandingClient() {
       <main>
         <Hero onAuthClick={() => setAuthOpen(true)} />
         <AboutUs />
+
+        {/* Sección de registro destacada */}
+        <section style={{ background: '#0d1f3c', padding: '64px 24px', textAlign: 'center' }}>
+          <div style={{ maxWidth: 580, margin: '0 auto' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(13,148,136,0.2)', border: '1px solid rgba(13,148,136,0.4)', borderRadius: 20, padding: '4px 14px', fontSize: '0.78rem', color: '#5eead4', fontWeight: 700, marginBottom: 20 }}>
+              ✓ Sin riesgo · Solo pagas si ganamos
+            </div>
+            <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', lineHeight: 1.2, marginBottom: 16 }}>
+              Consigue subvenciones a éxito
+            </h2>
+            <p style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.65)', marginBottom: 32, lineHeight: 1.6 }}>
+              Crea tu cuenta gratuita y descubre en minutos qué subvenciones están disponibles para tu empresa.
+              Nuestro equipo tramita todo — tú solo recibes el dinero.
+            </p>
+            <button
+              onClick={() => setAuthOpen(true)}
+              style={{
+                background: '#0d9488', color: '#fff', border: 'none', borderRadius: 12,
+                padding: '16px 36px', fontSize: '1rem', fontWeight: 800, cursor: 'pointer',
+                fontFamily: 'inherit', letterSpacing: '-0.01em',
+              }}
+            >
+              Crear cuenta gratuita →
+            </button>
+            <p style={{ marginTop: 14, fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)' }}>
+              ¿Ya tienes cuenta?{' '}
+              <button onClick={() => setAuthOpen(true)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', fontSize: '0.78rem', textDecoration: 'underline', fontFamily: 'inherit' }}>
+                Iniciar sesión
+              </button>
+            </p>
+          </div>
+        </section>
+
         <FAQ />
         <ContactSection />
         <MultiStepForm />

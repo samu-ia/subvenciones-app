@@ -1011,6 +1011,149 @@ function VistaPerfilEmpresa({
   );
 }
 
+// ─── Setup empresa (onboarding primer acceso) ─────────────────────────────────
+
+const CCAA_SETUP = [
+  'Andalucía','Aragón','Asturias','Baleares','Canarias','Cantabria',
+  'Castilla-La Mancha','Castilla y León','Cataluña','Extremadura',
+  'Galicia','La Rioja','Madrid','Murcia','Navarra','País Vasco','Valencia','Ceuta','Melilla',
+];
+
+function SetupEmpresa({ onComplete }: { onComplete: (nif: string) => void }) {
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [form, setForm] = useState({
+    nif: '', nombre_empresa: '', telefono: '',
+    actividad: '', tamano_empresa: '', comunidad_autonoma: '',
+  });
+
+  const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
+
+  const inputS: React.CSSProperties = {
+    width: '100%', padding: '11px 14px', borderRadius: 10,
+    border: `1.5px solid ${C.border}`, fontSize: '0.9rem',
+    color: C.ink, background: '#fff', outline: 'none',
+    fontFamily: 'inherit', boxSizing: 'border-box',
+  };
+  const labelS: React.CSSProperties = {
+    display: 'block', fontSize: '0.72rem', fontWeight: 700,
+    color: C.ink2, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em',
+  };
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.nif.trim()) { setError('El NIF es obligatorio'); return; }
+    setLoading(true); setError('');
+    const res = await fetch('/api/portal/setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    });
+    const data = await res.json();
+    if (!res.ok) { setError(data.error ?? 'Error al guardar'); setLoading(false); return; }
+    onComplete(data.nif);
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
+      <div style={{ background: C.navy, borderRadius: 14, padding: '10px 18px', marginBottom: 32, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ width: 30, height: 30, background: '#fff', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.7rem', color: C.navy }}>AP</div>
+        <span style={{ color: '#fff', fontWeight: 800, fontSize: '0.9rem' }}>AyudaPyme</span>
+      </div>
+
+      <div style={{ background: '#fff', borderRadius: 20, padding: '36px 32px', width: '100%', maxWidth: 520, boxShadow: '0 4px 32px rgba(13,31,60,0.1)' }}>
+        <div style={{ marginBottom: 28 }}>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: C.navy, margin: '0 0 8px' }}>
+            {step === 1 ? '¡Bienvenido a AyudaPyme!' : 'Cuéntanos sobre tu empresa'}
+          </h2>
+          <p style={{ fontSize: '0.85rem', color: C.ink2, margin: 0 }}>
+            {step === 1
+              ? 'Introduce el NIF de tu empresa para empezar a encontrar subvenciones.'
+              : 'Con estos datos buscamos las subvenciones más adecuadas para ti.'}
+          </p>
+        </div>
+
+        {/* Steps */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 28 }}>
+          {[1, 2].map(s => (
+            <div key={s} style={{ flex: 1, height: 4, borderRadius: 4, background: s <= step ? C.teal : C.border }} />
+          ))}
+        </div>
+
+        {error && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', fontSize: '0.83rem', color: '#dc2626', marginBottom: 16 }}>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={step === 1 ? (e => { e.preventDefault(); if (!form.nif.trim()) { setError('El NIF es obligatorio'); return; } setError(''); setStep(2); }) : submit}>
+          {step === 1 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label style={labelS}>NIF / CIF de tu empresa *</label>
+                <input type="text" value={form.nif} onChange={e => set('nif', e.target.value.toUpperCase())}
+                  placeholder="B12345678" required style={{ ...inputS, textTransform: 'uppercase' }} />
+              </div>
+              <div>
+                <label style={labelS}>Nombre de la empresa</label>
+                <input type="text" value={form.nombre_empresa} onChange={e => set('nombre_empresa', e.target.value)}
+                  placeholder="Razón social o nombre comercial" style={inputS} />
+              </div>
+              <div>
+                <label style={labelS}>Teléfono de contacto</label>
+                <input type="tel" value={form.telefono} onChange={e => set('telefono', e.target.value)}
+                  placeholder="600 123 456" style={inputS} />
+              </div>
+              <button type="submit" style={{ marginTop: 8, padding: '13px', borderRadius: 10, border: 'none', background: C.teal, color: '#fff', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Continuar →
+              </button>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label style={labelS}>¿A qué se dedica tu empresa?</label>
+                <input type="text" value={form.actividad} onChange={e => set('actividad', e.target.value)}
+                  placeholder="Ej: Tecnología, construcción, hostelería..." style={inputS} />
+              </div>
+              <div>
+                <label style={labelS}>Tamaño</label>
+                <select value={form.tamano_empresa} onChange={e => set('tamano_empresa', e.target.value)} style={inputS}>
+                  <option value="">Seleccionar...</option>
+                  <option value="Autónomo">Autónomo</option>
+                  <option value="Microempresa">Microempresa (&lt;10 empleados)</option>
+                  <option value="Pequeña">Pequeña (10–49)</option>
+                  <option value="Mediana">Mediana (50–249)</option>
+                  <option value="Grande">Grande (250+)</option>
+                </select>
+              </div>
+              <div>
+                <label style={labelS}>Comunidad Autónoma</label>
+                <select value={form.comunidad_autonoma} onChange={e => set('comunidad_autonoma', e.target.value)} style={inputS}>
+                  <option value="">Seleccionar...</option>
+                  {CCAA_SETUP.map(cc => <option key={cc} value={cc}>{cc}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+                <button type="button" onClick={() => setStep(1)}
+                  style={{ flex: 1, padding: '13px', borderRadius: 10, border: `1.5px solid ${C.border}`, background: '#fff', color: C.ink2, fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  ← Atrás
+                </button>
+                <button type="submit" disabled={loading}
+                  style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: loading ? C.muted : C.teal, color: '#fff', fontWeight: 700, fontSize: '0.9rem', cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                  {loading ? 'Guardando...' : 'Acceder al portal →'}
+                </button>
+              </div>
+            </div>
+          )}
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ─── Mi Gestor (chat) ─────────────────────────────────────────────────────────
 
 interface MensajeGestor {
@@ -1243,6 +1386,7 @@ export default function PortalPage() {
   const supabase = createClient();
 
   const [checking, setChecking] = useState(true);
+  const [setupPendiente, setSetupPendiente] = useState(false);
   const [cliente, setCliente] = useState<ClienteData | null>(null);
   const [matches, setMatches] = useState<MatchItem[]>([]);
   const [expedientes, setExpedientes] = useState<Expediente[]>([]);
@@ -1341,7 +1485,8 @@ export default function PortalPage() {
           .eq('leido', false);
         setMensajesNoLeidos(count ?? 0);
       } else {
-        setCliente({ nif: '', nombre_empresa: user.email ?? 'Mi empresa' });
+        // Usuario nuevo sin empresa vinculada → mostrar onboarding
+        setSetupPendiente(true);
       }
 
       setChecking(false);
@@ -1368,6 +1513,17 @@ export default function PortalPage() {
         <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
       </div>
     );
+  }
+
+  if (setupPendiente) {
+    return <SetupEmpresa onComplete={async (nif) => {
+      // Recargar datos tras setup
+      const { data: cli } = await supabase.from('cliente')
+        .select('nif,nombre_empresa,nombre_normalizado,ciudad,comunidad_autonoma,cnae_descripcion,tamano_empresa,num_empleados,facturacion_anual')
+        .eq('nif', nif).maybeSingle();
+      setCliente(cli);
+      setSetupPendiente(false);
+    }} />;
   }
 
   const nombre = cliente?.nombre_empresa ?? cliente?.nombre_normalizado ?? 'tu empresa';

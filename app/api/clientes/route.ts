@@ -15,7 +15,7 @@ export async function GET() {
   const sb = createServiceClient();
   const { data, error } = await sb
     .from('cliente')
-    .select('nif, nombre_empresa, nombre_normalizado, email_normalizado, telefono, actividad, tamano_empresa, ciudad, comunidad_autonoma, cnae_codigo, num_empleados, facturacion_anual, origen, created_at')
+    .select('nif, nombre_empresa, nombre_normalizado, email_normalizado, telefono, actividad, tamano_empresa, ciudad, comunidad_autonoma, cnae_codigo, num_empleados, facturacion_anual, created_at')
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -45,7 +45,6 @@ export async function POST(request: NextRequest) {
       codigo_postal: body.codigo_postal?.trim() || null,
       ciudad: body.ciudad?.trim() || null,
       comunidad_autonoma: body.comunidad_autonoma?.trim() || null,
-      origen: body.origen?.trim() || null,
       cnae_codigo: body.cnae_codigo?.trim() || null,
       cnae_descripcion: body.cnae_descripcion?.trim() || null,
       num_empleados: body.num_empleados ? Number(body.num_empleados) : null,

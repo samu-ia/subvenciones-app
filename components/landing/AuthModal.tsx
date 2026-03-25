@@ -18,7 +18,6 @@ export default function AuthModal({ onClose }: AuthModalProps) {
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [nombre, setNombre] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -44,7 +43,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
     setLoading(true); setError('');
     const { data: regData, error: regError } = await supabase.auth.signUp({
       email, password,
-      options: { data: { nombre_completo: nombre, rol: 'cliente' } },
+      options: { data: { rol: 'cliente' } },
     });
     if (regError) {
       // Mensaje más claro para errores comunes
@@ -64,7 +63,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
       return;
     }
     // Si requiere confirmación de email
-    setSuccess('¡Cuenta creada! Revisa tu bandeja de entrada para confirmar tu email y poder acceder.');
+    setSuccess('¡Cuenta creada! Revisa tu bandeja de entrada para confirmar tu email. Una vez confirmado podrás acceder a tu portal de subvenciones.');
     setLoading(false);
   }
 
@@ -141,11 +140,17 @@ export default function AuthModal({ onClose }: AuthModalProps) {
         <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--navy)', marginBottom: 6 }}>
           {titles[mode]}
         </h2>
-        <p style={{ fontSize: '0.82rem', color: 'var(--ink2)', marginBottom: 28 }}>
+        <p style={{ fontSize: '0.82rem', color: 'var(--ink2)', marginBottom: mode === 'register' ? 12 : 28 }}>
           {mode === 'login' && 'Accede a tu panel de subvenciones.'}
-          {mode === 'register' && 'Crea tu cuenta y empieza a encontrar subvenciones.'}
+          {mode === 'register' && 'Gratuito · Sin compromiso · Solo pagas si conseguimos la subvención.'}
           {mode === 'forgot' && 'Te enviaremos un enlace para restablecer tu contraseña.'}
         </p>
+        {mode === 'register' && (
+          <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: 10, padding: '10px 14px', fontSize: '0.8rem', color: '#065f46', marginBottom: 20, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <span style={{ fontSize: '1rem' }}>✓</span>
+            <span>Después de crear tu cuenta configurarás los datos de tu empresa y verás las subvenciones disponibles.</span>
+          </div>
+        )}
 
         {success ? (
           <div style={{
@@ -158,13 +163,6 @@ export default function AuthModal({ onClose }: AuthModalProps) {
         ) : (
           <form onSubmit={mode === 'login' ? handleLogin : mode === 'register' ? handleRegister : handleForgot}
             style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-            {mode === 'register' && (
-              <Field label="Nombre completo">
-                <input type="text" value={nombre} onChange={e => setNombre(e.target.value)}
-                  required placeholder="Tu nombre" style={inputStyle} />
-              </Field>
-            )}
 
             <Field label="Email">
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
