@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Building2, User, Users, Building, Factory, ArrowRight, ArrowLeft, Check, Sparkles } from 'lucide-react';
+import { Building2, User, Users, Building, Factory, ArrowRight, ArrowLeft, Check, Sparkles, Search, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 type CompanySize = 'autonomo' | 'micro' | 'pequena' | 'mediana' | 'grande' | null;
@@ -103,11 +103,36 @@ export default function MultiStepForm() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [nifLookupEstado, setNifLookupEstado] = useState<'idle' | 'buscando' | 'ok' | 'no'>('idle');
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if (name === 'cif_nif') setNifLookupEstado('idle');
   };
+
+  async function buscarDatosEmpresa(nif: string) {
+    if (!nif || nif.length < 8) return;
+    setNifLookupEstado('buscando');
+    try {
+      const res = await fetch(`/api/clientes/lookup?nif=${encodeURIComponent(nif)}`);
+      const data = await res.json();
+      if (data.found) {
+        setFormData(prev => ({
+          ...prev,
+          nombre_titular:   data.nombre_empresa ? (prev.nombre_titular || data.nombre_empresa) : prev.nombre_titular,
+          domicilio_fiscal: data.ciudad && !prev.domicilio_fiscal ? '' : prev.domicilio_fiscal,
+          codigo_postal:    data.codigo_postal || prev.codigo_postal,
+          ciudad:           data.ciudad        || prev.ciudad,
+        }));
+        setNifLookupEstado('ok');
+      } else {
+        setNifLookupEstado('no');
+      }
+    } catch {
+      setNifLookupEstado('idle');
+    }
+  }
 
   const next = () => { setStep((s) => s + 1); setErrorMessage(null); };
   const prev = () => { setStep((s) => s - 1); setErrorMessage(null); };
@@ -287,8 +312,44 @@ export default function MultiStepForm() {
                     Estos datos son necesarios para ponernos en contacto contigo.
                   </p>
                   <div className="space-y-4">
+                    {/* NIF/CIF con autocomplete */}
+                    <div>
+                      <label htmlFor="cif_nif" className="block text-sm font-medium text-foreground mb-2">
+                        Identificación (NIF/CIF/NIE) *
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          id="cif_nif"
+                          name="cif_nif"
+                          value={formData.cif_nif}
+                          onChange={handleInput}
+                          onBlur={e => buscarDatosEmpresa(e.target.value.trim())}
+                          placeholder="Ej: 12345678A, B12345678..."
+                          className="input-field flex-1"
+                          style={{ textTransform: 'uppercase' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => buscarDatosEmpresa(formData.cif_nif.trim())}
+                          disabled={nifLookupEstado === 'buscando' || formData.cif_nif.length < 8}
+                          className="btn-secondary flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap"
+                        >
+                          {nifLookupEstado === 'buscando'
+                            ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Buscando</>
+                            : <><Search className="w-3.5 h-3.5" /> Buscar</>
+                          }
+                        </button>
+                      </div>
+                      {nifLookupEstado === 'ok' && (
+                        <p className="mt-1.5 text-xs text-green-600 flex items-center gap-1">
+                          <Check className="w-3.5 h-3.5" /> Datos completados automáticamente
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Resto de campos */}
                     {[
-                      { id: 'cif_nif', label: 'Identificación (NIF/CIF/NIE) *', type: 'text', placeholder: 'Ej: 12345678A, B12345678...' },
                       { id: 'email_facturacion', label: 'Email *', type: 'email', placeholder: 'tu@email.com' },
                       { id: 'nombre_titular', label: 'Nombre del responsable *', type: 'text', placeholder: 'Nombre completo' },
                       { id: 'telefono', label: 'Número de teléfono *', type: 'tel', placeholder: 'Ej: 600123456' },
