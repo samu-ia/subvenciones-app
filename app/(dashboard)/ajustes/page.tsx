@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Database, Cpu, Play, RefreshCw, Eye, EyeOff, CheckCircle, XCircle } from "lucide-react";
+import { Database, Cpu, Play, RefreshCw, Eye, EyeOff, CheckCircle, XCircle, Bell, Mail, MessageSquare, Send, Loader2 } from "lucide-react";
 
-type Tab = "pipeline" | "ia";
+type Tab = "pipeline" | "ia" | "notif";
 
 interface Stats {
   subvenciones: number;
@@ -61,6 +61,21 @@ export default function AjustesPage() {
   const [soloNuevas, setSoloNuevas] = useState(true);
   const [pipelineMsg, setPipelineMsg] = useState("");
 
+  // Notif state
+  interface NotifChannelUI {
+    canal: string; provider: string; enabled: boolean;
+    from_name: string; from_address: string;
+    config_masked: Record<string, string>;
+    _edit: Record<string, string>; // live editable values (unmasked)
+  }
+  const [notifChannels, setNotifChannels] = useState<NotifChannelUI[]>([]);
+  const [loadingNotif, setLoadingNotif] = useState(false);
+  const [savingNotif, setSavingNotif] = useState<Record<string, boolean>>({});
+  const [testingNotif, setTestingNotif] = useState<Record<string, boolean>>({});
+  const [testNotifTo, setTestNotifTo] = useState<Record<string, string>>({});
+  const [notifMsg, setNotifMsg] = useState('');
+  const [testNotifResult, setTestNotifResult] = useState<Record<string, string>>({});
+
   // IA state
   const [providers, setProviders] = useState<IAProvider[]>([]);
   const [loadingIA, setLoadingIA] = useState(true);
@@ -71,6 +86,66 @@ export default function AjustesPage() {
   const [testResults, setTestResults] = useState<Record<string, string>>({});
   const [iaMsg, setIaMsg] = useState("");
 
+  async function fetchNotifChannels() {
+    setLoadingNotif(true);
+    try {
+      const r = await fetch('/api/admin/notif-channels');
+      if (r.ok) {
+        const data = await r.json();
+        setNotifChannels(data.map((c: Record<string, unknown>) => ({
+          ...c,
+          from_name: c.from_name ?? '',
+          from_address: c.from_address ?? '',
+          _edit: {},  // empty = show masked values
+        })));
+      }
+    } finally { setLoadingNotif(false); }
+  }
+
+  async function saveNotifChannel(ch: NotifChannelUI) {
+    setSavingNotif(prev => ({ ...prev, [ch.canal]: true }));
+    setNotifMsg('');
+    try {
+      const r = await fetch(`/api/admin/notif-channels/${ch.canal}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enabled: ch.enabled,
+          from_name: ch.from_name,
+          from_address: ch.from_address,
+          provider: ch.provider,
+          config: ch._edit,
+        }),
+      });
+      if (r.ok) { setNotifMsg('Guardado correctamente'); fetchNotifChannels(); }
+      else { const d = await r.json(); setNotifMsg(`Error: ${d.error}`); }
+    } finally { setSavingNotif(prev => ({ ...prev, [ch.canal]: false })); }
+  }
+
+  async function testNotifChannel(ch: NotifChannelUI) {
+    setTestingNotif(prev => ({ ...prev, [ch.canal]: true }));
+    setTestNotifResult(prev => ({ ...prev, [ch.canal]: '' }));
+    try {
+      const r = await fetch(`/api/admin/notif-channels/${ch.canal}/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: testNotifTo[ch.canal] || undefined }),
+      });
+      const d = await r.json();
+      setTestNotifResult(prev => ({ ...prev, [ch.canal]: r.ok ? 'ok' : (d.error ?? 'error') }));
+    } finally { setTestingNotif(prev => ({ ...prev, [ch.canal]: false })); }
+  }
+
+  function updateNotifChannel(canal: string, field: string, value: unknown) {
+    setNotifChannels(prev => prev.map(c => c.canal === canal ? { ...c, [field]: value } : c));
+  }
+
+  function updateNotifConfig(canal: string, key: string, value: string) {
+    setNotifChannels(prev => prev.map(c =>
+      c.canal === canal ? { ...c, _edit: { ...c._edit, [key]: value } } : c
+    ));
+  }
+
   useEffect(() => {
     fetchStats();
     fetchLogs();
@@ -78,6 +153,7 @@ export default function AjustesPage() {
 
   useEffect(() => {
     if (tab === "ia") fetchProviders();
+    if (tab === "notif") fetchNotifChannels();
   }, [tab]);
 
   async function fetchStats() {
@@ -221,6 +297,11 @@ export default function AjustesPage() {
         <button style={tabStyle("ia")} onClick={() => setTab("ia")}>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <Cpu size={15} /> Proveedores IA
+          </span>
+        </button>
+        <button style={tabStyle("notif")} onClick={() => setTab("notif")}>
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Bell size={15} /> Notificaciones
           </span>
         </button>
       </div>
@@ -529,6 +610,199 @@ export default function AjustesPage() {
               fontSize: "0.82rem",
             }}>
               {iaMsg}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* NOTIFICACIONES TAB */}
+      {tab === "notif" && (
+        <div>
+          <p style={{ fontSize: "0.85rem", color: "var(--muted)", marginBottom: 24 }}>
+            Configura el envío automático de notificaciones a clientes cuando detectes una subvención relevante.
+            Puedes activar email (Resend) y/o WhatsApp (Twilio).
+          </p>
+
+          {loadingNotif ? (
+            <div style={{ color: "var(--muted)", fontSize: "0.85rem" }}>Cargando...</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              {notifChannels.map(ch => {
+                const isEmail = ch.canal === 'email';
+                const Icon = isEmail ? Mail : MessageSquare;
+                const fields = isEmail
+                  ? [{ key: 'api_key', label: 'API Key (Resend)', placeholder: 're_xxxxxxxxxxxx', type: 'password' }]
+                  : [
+                      { key: 'account_sid', label: 'Account SID (Twilio)', placeholder: 'ACxxxxxxxxxx', type: 'text' },
+                      { key: 'auth_token', label: 'Auth Token (Twilio)', placeholder: '••••••••••••', type: 'password' },
+                    ];
+
+                return (
+                  <div key={ch.canal} style={{
+                    background: "var(--surface)", border: `1px solid ${ch.enabled ? "var(--blue)" : "var(--border)"}`,
+                    borderRadius: 12, padding: "20px 22px",
+                  }}>
+                    {/* Header */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 8, background: ch.enabled ? "var(--blue-bg)" : "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Icon size={18} color={ch.enabled ? "var(--blue)" : "var(--muted)"} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--ink)" }}>
+                            {isEmail ? 'Email (Resend)' : 'WhatsApp (Twilio)'}
+                          </div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
+                            {isEmail
+                              ? 'Envía emails HTML con los detalles de la subvención'
+                              : 'Envía mensajes WhatsApp al móvil del cliente'}
+                          </div>
+                        </div>
+                      </div>
+                      {/* Toggle */}
+                      <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                        <span style={{ fontSize: "0.82rem", color: "var(--ink2)" }}>{ch.enabled ? "Activo" : "Inactivo"}</span>
+                        <div
+                          onClick={() => updateNotifChannel(ch.canal, 'enabled', !ch.enabled)}
+                          style={{
+                            width: 42, height: 24, borderRadius: 12,
+                            background: ch.enabled ? "var(--blue)" : "var(--border)",
+                            position: "relative", cursor: "pointer", transition: "background 0.2s",
+                          }}
+                        >
+                          <div style={{
+                            position: "absolute", top: 3,
+                            left: ch.enabled ? 21 : 3,
+                            width: 18, height: 18, borderRadius: "50%",
+                            background: "#fff", transition: "left 0.2s",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                          }} />
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* Remitente */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                      <div>
+                        <label style={{ fontSize: "0.75rem", color: "var(--muted)", display: "block", marginBottom: 4, fontWeight: 600 }}>
+                          Nombre remitente
+                        </label>
+                        <input
+                          value={ch.from_name}
+                          onChange={e => updateNotifChannel(ch.canal, 'from_name', e.target.value)}
+                          placeholder="AyudaPyme"
+                          style={{ width: "100%", padding: "8px 10px", borderRadius: 7, border: "1px solid var(--border)", fontSize: "0.85rem", background: "var(--bg)", color: "var(--ink)", boxSizing: "border-box" }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: "0.75rem", color: "var(--muted)", display: "block", marginBottom: 4, fontWeight: 600 }}>
+                          {isEmail ? 'Email remitente' : 'Número WhatsApp (+34...)'}
+                        </label>
+                        <input
+                          value={ch.from_address}
+                          onChange={e => updateNotifChannel(ch.canal, 'from_address', e.target.value)}
+                          placeholder={isEmail ? "hola@ayudapyme.es" : "+34600000000"}
+                          style={{ width: "100%", padding: "8px 10px", borderRadius: 7, border: "1px solid var(--border)", fontSize: "0.85rem", background: "var(--bg)", color: "var(--ink)", boxSizing: "border-box" }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Credenciales */}
+                    <div style={{ display: "grid", gridTemplateColumns: isEmail ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 18 }}>
+                      {fields.map(f => (
+                        <div key={f.key}>
+                          <label style={{ fontSize: "0.75rem", color: "var(--muted)", display: "block", marginBottom: 4, fontWeight: 600 }}>
+                            {f.label}
+                          </label>
+                          <input
+                            type={f.type}
+                            value={ch._edit[f.key] ?? ch.config_masked[f.key] ?? ''}
+                            onChange={e => updateNotifConfig(ch.canal, f.key, e.target.value)}
+                            onFocus={e => { if (e.target.value.includes('•')) updateNotifConfig(ch.canal, f.key, ''); }}
+                            placeholder={f.placeholder}
+                            style={{ width: "100%", padding: "8px 10px", borderRadius: 7, border: "1px solid var(--border)", fontSize: "0.85rem", background: "var(--bg)", color: "var(--ink)", boxSizing: "border-box", fontFamily: "monospace" }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Acciones */}
+                    <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                      <button
+                        onClick={() => saveNotifChannel(ch)}
+                        disabled={savingNotif[ch.canal]}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 6,
+                          padding: "8px 16px", borderRadius: 8,
+                          background: "var(--blue)", color: "#fff",
+                          border: "none", cursor: savingNotif[ch.canal] ? "not-allowed" : "pointer",
+                          fontSize: "0.83rem", fontWeight: 600, opacity: savingNotif[ch.canal] ? 0.7 : 1,
+                          fontFamily: "inherit",
+                        }}
+                      >
+                        {savingNotif[ch.canal] ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <CheckCircle size={13} />}
+                        Guardar
+                      </button>
+
+                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        <input
+                          value={testNotifTo[ch.canal] ?? ''}
+                          onChange={e => setTestNotifTo(prev => ({ ...prev, [ch.canal]: e.target.value }))}
+                          placeholder={isEmail ? "prueba@tuempresa.es" : "+34600000000"}
+                          style={{ padding: "7px 10px", borderRadius: 7, border: "1px solid var(--border)", fontSize: "0.82rem", background: "var(--bg)", color: "var(--ink)", width: 190 }}
+                        />
+                        <button
+                          onClick={() => testNotifChannel(ch)}
+                          disabled={testingNotif[ch.canal]}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 6,
+                            padding: "8px 14px", borderRadius: 8,
+                            background: "transparent", color: "var(--ink2)",
+                            border: "1px solid var(--border)", cursor: "pointer",
+                            fontSize: "0.82rem", fontWeight: 500, opacity: testingNotif[ch.canal] ? 0.7 : 1,
+                            fontFamily: "inherit",
+                          }}
+                        >
+                          {testingNotif[ch.canal] ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Send size={13} />}
+                          Enviar prueba
+                        </button>
+                      </div>
+
+                      {testNotifResult[ch.canal] && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.8rem",
+                          color: testNotifResult[ch.canal] === 'ok' ? "#16a34a" : "#dc2626" }}>
+                          {testNotifResult[ch.canal] === 'ok'
+                            ? <><CheckCircle size={13} /> Enviado correctamente</>
+                            : <><XCircle size={13} /> {testNotifResult[ch.canal]}</>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {notifChannels.length === 0 && (
+                <div style={{ textAlign: "center", padding: 40, color: "var(--muted)", fontSize: "0.85rem" }}>
+                  No hay canales. Ejecuta la migración de BD para crearlos.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Info */}
+          <div style={{ marginTop: 24, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, padding: "14px 16px", fontSize: "0.82rem", color: "#92400e" }}>
+            <strong>Cómo funciona:</strong> Al clicar "Notificar al cliente" en Novedades → Oportunidades,
+            el sistema envía automáticamente un email y/o WhatsApp al cliente con los detalles de la subvención y
+            un enlace a su portal para que pueda solicitar la ayuda directamente.
+            El canal debe estar activo y el cliente debe tener email/teléfono registrado.
+          </div>
+
+          {notifMsg && (
+            <div style={{ marginTop: 14, padding: "8px 12px", borderRadius: 7,
+              background: notifMsg.startsWith("Error") ? "#fee2e2" : "#dcfce7",
+              color: notifMsg.startsWith("Error") ? "#dc2626" : "#16a34a",
+              fontSize: "0.82rem" }}>
+              {notifMsg}
             </div>
           )}
         </div>
