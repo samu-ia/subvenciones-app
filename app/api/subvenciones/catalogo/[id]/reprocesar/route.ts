@@ -25,14 +25,13 @@ export async function POST(
     if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
 
     // Solo admins
-    const { data: perfil } = await supabase
-      .from('perfiles').select('rol').eq('id', user.id).maybeSingle();
-    if (perfil?.rol !== 'admin') {
+    if (!user.email?.endsWith('@ayudapyme.es')) {
       return NextResponse.json({ error: 'Solo administradores' }, { status: 403 });
     }
 
     // Verificar que existe la subvención
-    const { data: subv } = await supabase
+    const serviceSupabase = createServiceClient();
+    const { data: subv } = await serviceSupabase
       .from('subvenciones').select('id, bdns_id, titulo').eq('id', id).maybeSingle();
     if (!subv) return NextResponse.json({ error: 'Subvención no encontrada' }, { status: 404 });
 
@@ -41,7 +40,7 @@ export async function POST(
     const motivo = body.motivo ?? 'Solicitado manualmente desde el panel';
 
     // Verificar si ya hay un job pendiente del mismo tipo
-    const { data: jobExistente } = await supabase
+    const { data: jobExistente } = await serviceSupabase
       .from('subvencion_reanalisis_jobs')
       .select('id')
       .eq('subvencion_id', id)
@@ -58,7 +57,6 @@ export async function POST(
     }
 
     // Crear job
-    const serviceSupabase = createServiceClient();
     const { data: job, error } = await serviceSupabase
       .from('subvencion_reanalisis_jobs')
       .insert({

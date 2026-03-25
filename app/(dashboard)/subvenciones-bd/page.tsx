@@ -860,12 +860,12 @@ export default function SubvencionsBdPage() {
       const res = await fetch(`/api/subvenciones/catalogo/${id}/reprocesar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tipo_job: tipoJob, motivo: "Solicitud manual desde panel admin" }),
+        body: JSON.stringify({ tipo_job: tipoJob, motivo: "Solicitud manual desde panel admin", inmediato: true }),
       });
       const data = await res.json();
       if (data.ok) {
-        setFeedbackIngesta(`Job "${tipoJob}" creado. ID: ${data.job_id?.slice(0, 8)}…`);
-        setTimeout(() => cargarDetalle(id), 1500);
+        setFeedbackIngesta(`Reprocesando con Gemini PDF… Los datos se actualizarán en unos segundos.`);
+        setTimeout(() => cargarDetalle(id), 5000);
       } else {
         setFeedbackIngesta(data.message ?? data.error ?? "Error al crear job");
       }
