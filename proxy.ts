@@ -38,6 +38,17 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
+  // Dashboard admin: solo @ayudapyme.es
+  const DASHBOARD_PATHS = [
+    '/clientes', '/reuniones', '/expedientes', '/solicitudes',
+    '/subvenciones', '/subvenciones-bd', '/proveedores', '/ajustes',
+  ];
+  const esDashboard = DASHBOARD_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'));
+  if (esDashboard && !user.email?.endsWith('@ayudapyme.es')) {
+    // Redirigir al portal del cliente
+    return NextResponse.redirect(new URL('/portal', request.url));
+  }
+
   return supabaseResponse;
 }
 
