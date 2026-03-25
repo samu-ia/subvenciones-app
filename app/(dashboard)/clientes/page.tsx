@@ -2,15 +2,16 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { Search } from 'lucide-react';
 
 interface Cliente {
   nif: string;
+  nombre_empresa: string | null;
   nombre_normalizado: string | null;
   actividad: string | null;
   tamano_empresa: string | null;
   ciudad: string | null;
+  comunidad_autonoma: string | null;
 }
 
 export default function ClientesPage() {
@@ -20,22 +21,15 @@ export default function ClientesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchClientes() {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('cliente')
-        .select('nif, nombre_normalizado, actividad, tamano_empresa, ciudad')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error cargando clientes:', error);
-      } else {
-        setClientes(data || []);
-        setFilteredClientes(data || []);
-      }
-      setLoading(false);
-    }
-    fetchClientes();
+    fetch('/api/clientes')
+      .then(r => r.json())
+      .then(data => {
+        const lista = Array.isArray(data) ? data : [];
+        setClientes(lista);
+        setFilteredClientes(lista);
+      })
+      .catch(e => console.error('Error cargando clientes:', e))
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -205,7 +199,7 @@ export default function ClientesPage() {
                   fontWeight: '600',
                   color: 'var(--navy)'
                 }}>
-                  {cliente.nombre_normalizado || cliente.nif}
+                  {cliente.nombre_empresa || cliente.nombre_normalizado || cliente.nif}
                 </div>
                 <div style={{
                   fontSize: '14px',
