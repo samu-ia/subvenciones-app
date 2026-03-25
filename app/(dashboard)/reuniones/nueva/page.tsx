@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 interface Cliente {
   nif: string;
+  nombre_empresa: string | null;
   nombre_normalizado: string | null;
 }
 
@@ -23,63 +23,33 @@ export default function NuevaReunionPage() {
     tipo: 'exploratoria',
     fecha_programada: '',
     duracion_minutos: 60,
-    objetivo: ''
+    objetivo: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    async function fetchClientes() {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from('cliente')
-        .select('nif, nombre_normalizado')
-        .order('nombre_normalizado');
-      
-      if (data) {
-        setClientes(data);
-      }
-    }
-    fetchClientes();
+    fetch('/api/clientes')
+      .then(r => r.json())
+      .then(data => Array.isArray(data) ? setClientes(data) : null)
+      .catch(() => null);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-
     try {
-      const supabase = createClient();
-      
-      // Convertir fecha local a ISO string
-      const fechaISO = new Date(formData.fecha_programada).toISOString();
-
-      const { data, error: insertError } = await supabase
-        .from('reuniones')
-        .insert([{
-          cliente_nif: formData.cliente_nif,
-          titulo: formData.titulo,
-          tipo: formData.tipo,
-          fecha_programada: fechaISO,
-          duracion_minutos: formData.duracion_minutos,
-          objetivo: formData.objetivo,
-          estado: 'pendiente'
-        }])
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error('Error creando reunión:', insertError);
-        setError('Error al crear la reunión. Por favor, intenta de nuevo.');
-        setLoading(false);
-        return;
-      }
-
-      // Redirigir a la página de la reunión creada
+      const res = await fetch('/api/reuniones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Error al crear la reunión');
       router.push(`/reuniones/${data.id}`);
     } catch (err) {
-      console.error('Error:', err);
-      setError('Error inesperado. Por favor, intenta de nuevo.');
+      setError(err instanceof Error ? err.message : 'Error inesperado');
       setLoading(false);
     }
   };
@@ -164,7 +134,7 @@ export default function NuevaReunionPage() {
               <option value="">Selecciona un cliente</option>
               {clientes.map(cliente => (
                 <option key={cliente.nif} value={cliente.nif}>
-                  {cliente.nombre_normalizado || cliente.nif}
+                  {cliente.nombre_empresa || cliente.nombre_normalizado || cliente.nif}
                 </option>
               ))}
             </select>

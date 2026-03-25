@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 interface Cliente {
   nif: string;
+  nombre_empresa: string | null;
   nombre_normalizado: string | null;
 }
 
@@ -19,63 +19,35 @@ export default function NuevoExpedientePage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [formData, setFormData] = useState({
     nif: clienteNif || '',
-    numero_bdns: '',
-    estado: 'lead_caliente'
+    titulo: '',
+    estado: 'en_tramitacion',
+    notas: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    async function fetchClientes() {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from('cliente')
-        .select('nif, nombre_normalizado')
-        .order('nombre_normalizado');
-      
-      if (data) {
-        setClientes(data);
-      }
-    }
-    fetchClientes();
+    fetch('/api/clientes')
+      .then(r => r.json())
+      .then(data => Array.isArray(data) ? setClientes(data) : null)
+      .catch(() => null);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-
     try {
-      const supabase = createClient();
-      
-      const insertData: any = {
-        nif: formData.nif,
-        estado: formData.estado
-      };
-
-      // Solo agregar numero_bdns si se proporcionó
-      if (formData.numero_bdns) {
-        insertData.numero_bdns = parseInt(formData.numero_bdns);
-      }
-
-      const { data, error: insertError } = await supabase
-        .from('expediente')
-        .insert([insertData])
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error('Error creando expediente:', insertError);
-        setError('Error al crear el expediente. Por favor, intenta de nuevo.');
-        setLoading(false);
-        return;
-      }
-
-      // Redirigir a la página del expediente creado
+      const res = await fetch('/api/expedientes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Error al crear el expediente');
       router.push(`/expedientes/${data.id}`);
     } catch (err) {
-      console.error('Error:', err);
-      setError('Error inesperado. Por favor, intenta de nuevo.');
+      setError(err instanceof Error ? err.message : 'Error inesperado');
       setLoading(false);
     }
   };
@@ -160,57 +132,38 @@ export default function NuevoExpedientePage() {
               <option value="">Selecciona un cliente</option>
               {clientes.map(cliente => (
                 <option key={cliente.nif} value={cliente.nif}>
-                  {cliente.nombre_normalizado || cliente.nif}
+                  {cliente.nombre_empresa || cliente.nombre_normalizado || cliente.nif}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Número BDNS */}
+          {/* Título */}
           <div>
             <label style={{
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: '600',
-              color: 'var(--ink)',
-              marginBottom: '8px'
+              display: 'block', fontSize: '14px', fontWeight: '600',
+              color: 'var(--ink)', marginBottom: '8px'
             }}>
-              Número BDNS
+              Título de la subvención
             </label>
             <input
-              type="number"
-              value={formData.numero_bdns}
-              onChange={(e) => setFormData({ ...formData, numero_bdns: e.target.value })}
-              placeholder="Ej: 123456"
+              type="text"
+              value={formData.titulo}
+              onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
+              placeholder="Ej: Ayudas para digitalización PYME 2025"
               style={{
-                width: '100%',
-                padding: '12px',
-                fontSize: '15px',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                backgroundColor: 'white',
-                color: 'var(--ink)',
-                outline: 'none'
+                width: '100%', padding: '12px', fontSize: '15px',
+                border: '1px solid var(--border)', borderRadius: '8px',
+                backgroundColor: 'white', color: 'var(--ink)', outline: 'none'
               }}
             />
-            <p style={{
-              fontSize: '13px',
-              color: 'var(--muted)',
-              marginTop: '6px',
-              marginBottom: 0
-            }}>
-              Opcional - Puedes dejarlo en blanco si aún no tienes el número
-            </p>
           </div>
 
           {/* Estado */}
           <div>
             <label style={{
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: '600',
-              color: 'var(--ink)',
-              marginBottom: '8px'
+              display: 'block', fontSize: '14px', fontWeight: '600',
+              color: 'var(--ink)', marginBottom: '8px'
             }}>
               Estado inicial *
             </label>
@@ -219,22 +172,38 @@ export default function NuevoExpedientePage() {
               value={formData.estado}
               onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
               style={{
-                width: '100%',
-                padding: '12px',
-                fontSize: '15px',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                backgroundColor: 'white',
-                color: 'var(--ink)',
-                outline: 'none'
+                width: '100%', padding: '12px', fontSize: '15px',
+                border: '1px solid var(--border)', borderRadius: '8px',
+                backgroundColor: 'white', color: 'var(--ink)', outline: 'none'
               }}
             >
-              <option value="lead_caliente">Lead Caliente</option>
-              <option value="en_proceso">En Proceso</option>
-              <option value="presentado">Presentado</option>
-              <option value="resuelto">Resuelto</option>
-              <option value="descartado">Descartado</option>
+              <option value="en_tramitacion">En tramitación</option>
+              <option value="concedido">Concedido</option>
+              <option value="denegado">Denegado</option>
+              <option value="cerrado">Cerrado</option>
             </select>
+          </div>
+
+          {/* Notas */}
+          <div>
+            <label style={{
+              display: 'block', fontSize: '14px', fontWeight: '600',
+              color: 'var(--ink)', marginBottom: '8px'
+            }}>
+              Notas internas
+            </label>
+            <textarea
+              value={formData.notas}
+              onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
+              placeholder="Observaciones, próximos pasos..."
+              rows={3}
+              style={{
+                width: '100%', padding: '12px', fontSize: '15px',
+                border: '1px solid var(--border)', borderRadius: '8px',
+                backgroundColor: 'white', color: 'var(--ink)',
+                outline: 'none', fontFamily: 'inherit', resize: 'vertical'
+              }}
+            />
           </div>
 
           {/* Botones */}
