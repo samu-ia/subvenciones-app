@@ -178,6 +178,7 @@ export default function NuevoExpedientePage() {
               }}
             >
               <option value="en_tramitacion">En tramitación</option>
+              <option value="presentado">Presentado</option>
               <option value="concedido">Concedido</option>
               <option value="denegado">Denegado</option>
               <option value="cerrado">Cerrado</option>

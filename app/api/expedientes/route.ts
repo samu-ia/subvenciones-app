@@ -5,13 +5,25 @@ import { createServiceClient } from '@/lib/supabase/service';
 async function requireAdmin() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email?.endsWith('@ayudapyme.es')) return null;
+  if (!user?.email?.toLowerCase().endsWith('@ayudapyme.es')) return null;
   return user;
 }
 
+export async function GET() {
+  if (!await requireAdmin()) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+
+  const sb = createServiceClient();
+  const { data, error } = await sb
+    .from('expediente')
+    .select('id, nif, numero_bdns, estado, titulo, created_at, cliente:nif(nombre_empresa, nombre_normalizado)')
+    .order('created_at', { ascending: false });
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data ?? []);
+}
+
 export async function POST(request: NextRequest) {
-  const user = await requireAdmin();
-  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+  if (!await requireAdmin()) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
 
   const body = await request.json().catch(() => null);
   if (!body?.nif) return NextResponse.json({ error: 'nif es obligatorio' }, { status: 400 });

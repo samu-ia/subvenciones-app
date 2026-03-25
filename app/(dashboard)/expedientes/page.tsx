@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
 import { FolderOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -10,26 +9,25 @@ interface Expediente {
   nif: string;
   numero_bdns: number | null;
   estado: string;
+  titulo: string | null;
   created_at: string;
-  cliente: {
-    nombre_normalizado: string | null;
-  }[];
+  cliente: { nombre_empresa?: string | null; nombre_normalizado: string | null } | null;
 }
 
 const estadoBadgeStyles: Record<string, { bg: string; color: string }> = {
-  lead_caliente: { bg: 'var(--amber-bg)', color: 'var(--amber)' },
-  en_proceso: { bg: 'var(--blue-bg)', color: 'var(--blue)' },
-  presentado: { bg: 'var(--blue-bg)', color: 'var(--blue)' },
-  resuelto: { bg: 'var(--green-bg)', color: 'var(--green)' },
-  descartado: { bg: 'var(--red-bg)', color: 'var(--red)' }
+  en_tramitacion: { bg: 'var(--blue-bg)', color: 'var(--blue)' },
+  presentado:     { bg: 'var(--blue-bg)', color: 'var(--blue)' },
+  concedido:      { bg: 'var(--green-bg)', color: 'var(--green)' },
+  denegado:       { bg: 'var(--red-bg)', color: 'var(--red)' },
+  cerrado:        { bg: 'var(--bg)', color: 'var(--ink2)' },
 };
 
 const estadoLabels: Record<string, string> = {
-  lead_caliente: 'Lead Caliente',
-  en_proceso: 'En Proceso',
-  presentado: 'Presentado',
-  resuelto: 'Resuelto',
-  descartado: 'Descartado'
+  en_tramitacion: 'En tramitación',
+  presentado:     'Presentado',
+  concedido:      'Concedido',
+  denegado:       'Denegado',
+  cerrado:        'Cerrado',
 };
 
 export default function ExpedientesPage() {
@@ -37,30 +35,11 @@ export default function ExpedientesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchExpedientes() {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('expediente')
-        .select(`
-          id,
-          nif,
-          numero_bdns,
-          estado,
-          created_at,
-          cliente:nif (
-            nombre_normalizado
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error cargando expedientes:', error);
-      } else {
-        setExpedientes(data || []);
-      }
-      setLoading(false);
-    }
-    fetchExpedientes();
+    fetch('/api/expedientes')
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setExpedientes(data); })
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
   const formatDate = (dateStr: string) => {
@@ -157,7 +136,7 @@ export default function ExpedientesPage() {
           {/* Table Header */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '2fr 1.5fr 1.5fr 1fr 1.5fr',
+            gridTemplateColumns: '2fr 2fr 1.5fr 1fr 1.5fr',
             gap: '16px',
             padding: '16px 24px',
             backgroundColor: 'var(--bg)',
@@ -169,8 +148,8 @@ export default function ExpedientesPage() {
             letterSpacing: '0.5px'
           }}>
             <div>Cliente</div>
+            <div>Subvención</div>
             <div>NIF</div>
-            <div>Nº BDNS</div>
             <div>Estado</div>
             <div>Fecha Creación</div>
           </div>
@@ -178,7 +157,7 @@ export default function ExpedientesPage() {
           {/* Table Body */}
           {expedientes.map((expediente: Expediente) => {
             const style = estadoBadgeStyles[expediente.estado] || { bg: 'var(--bg)', color: 'var(--ink2)' };
-            const clienteNombre = expediente.cliente?.[0]?.nombre_normalizado || expediente.nif;
+            const clienteNombre = expediente.cliente?.nombre_empresa || expediente.cliente?.nombre_normalizado || expediente.nif;
             
             return (
               <Link
@@ -190,7 +169,7 @@ export default function ExpedientesPage() {
                   className="table-row"
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: '2fr 1.5fr 1.5fr 1fr 1.5fr',
+                    gridTemplateColumns: '2fr 2fr 1.5fr 1fr 1.5fr',
                     gap: '16px',
                     padding: '20px 24px',
                     borderBottom: '1px solid var(--border)',
@@ -207,16 +186,18 @@ export default function ExpedientesPage() {
                   <div style={{
                     fontSize: '14px',
                     color: 'var(--ink2)',
-                    fontFamily: 'monospace'
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
                   }}>
-                    {expediente.nif}
+                    {expediente.titulo || (expediente.numero_bdns ? `BDNS ${expediente.numero_bdns}` : '—')}
                   </div>
                   <div style={{
                     fontSize: '14px',
                     color: 'var(--ink2)',
                     fontFamily: 'monospace'
                   }}>
-                    {expediente.numero_bdns || '—'}
+                    {expediente.nif}
                   </div>
                   <div>
                     <span style={{

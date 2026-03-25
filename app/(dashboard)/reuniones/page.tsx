@@ -3,7 +3,6 @@
 import { Calendar, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
 
 interface Reunion {
   id: string;
@@ -12,9 +11,7 @@ interface Reunion {
   estado: string | null;
   fecha_programada: string | null;
   cliente_nif: string | null;
-  cliente: {
-    nombre_normalizado: string | null;
-  }[];
+  cliente: { nombre_empresa?: string | null; nombre_normalizado: string | null } | null;
 }
 
 export default function ReunionesPage() {
@@ -22,31 +19,11 @@ export default function ReunionesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchReuniones() {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('reuniones')
-        .select(`
-          id,
-          titulo,
-          tipo,
-          estado,
-          fecha_programada,
-          cliente_nif,
-          cliente:cliente_nif (
-            nombre_normalizado
-          )
-        `)
-        .order('fecha_programada', { ascending: false });
-
-      if (error) {
-        console.error('Error cargando reuniones:', error);
-      } else {
-        setReuniones(data || []);
-      }
-      setLoading(false);
-    }
-    fetchReuniones();
+    fetch('/api/reuniones')
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setReuniones(data); })
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
   const formatDate = (dateStr: string | null) => {
@@ -167,7 +144,7 @@ export default function ReunionesPage() {
                     fontSize: '14px',
                     color: 'var(--muted)'
                   }}>
-                    {reunion.cliente?.[0]?.nombre_normalizado || reunion.cliente_nif || 'Sin cliente'}
+                    {reunion.cliente?.nombre_empresa || reunion.cliente?.nombre_normalizado || reunion.cliente_nif || 'Sin cliente'}
                   </div>
                 </div>
                 <div style={{
