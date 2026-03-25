@@ -8,7 +8,7 @@ import {
   CheckCircle, AlertTriangle, Clock, Zap, Star,
   CreditCard, Landmark, ArrowRight, ArrowLeft,
   Shield, X, Check, Loader2, User, Building2, Save,
-  MessageCircle, Send, Bot, Paperclip, X,
+  MessageCircle, Send, Bot, Paperclip,
 } from 'lucide-react';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
