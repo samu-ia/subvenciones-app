@@ -316,9 +316,27 @@ async function main() {
     }
 
     if (matchesCliente.length > 0) {
+      // Cargar estados existentes para no sobreescribir interesado/descartado
+      const subvIds = matchesCliente.map(m => m.subvencion_id);
+      const { data: existentes } = await sb
+        .from('cliente_subvencion_match')
+        .select('subvencion_id, estado')
+        .eq('nif', cliente.nif)
+        .in('subvencion_id', subvIds);
+      const estadosExistentes = Object.fromEntries((existentes ?? []).map(e => [e.subvencion_id, e.estado]));
+
+      const loteConEstado = matchesCliente.map(m => {
+        const estadoActual = estadosExistentes[m.subvencion_id];
+        // Preservar estado si ya fue gestionado manualmente
+        const estado = (estadoActual && ['interesado', 'descartado', 'visto'].includes(estadoActual))
+          ? estadoActual
+          : 'nuevo';
+        return { ...m, estado };
+      });
+
       // Upsert en lotes de 50
-      for (let i = 0; i < matchesCliente.length; i += 50) {
-        const lote = matchesCliente.slice(i, i + 50);
+      for (let i = 0; i < loteConEstado.length; i += 50) {
+        const lote = loteConEstado.slice(i, i + 50);
         const { error } = await sb
           .from('cliente_subvencion_match')
           .upsert(lote, { onConflict: 'nif,subvencion_id', ignoreDuplicates: false });

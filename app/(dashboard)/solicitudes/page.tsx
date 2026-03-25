@@ -144,8 +144,8 @@ function ModalDetalle({
     setLoading(false);
   }
 
-  const canActivar = ['contrato_firmado', 'pago_pendiente', 'encaje_confirmado'].includes(sol.estado);
-  const canRechazar = !['rechazado', 'cancelado', 'activo'].includes(sol.estado);
+  const canActivar = ['activo', 'contrato_firmado', 'pago_pendiente', 'encaje_confirmado'].includes(sol.estado);
+  const canRechazar = !['rechazado', 'cancelado'].includes(sol.estado);
 
   return (
     <div style={{

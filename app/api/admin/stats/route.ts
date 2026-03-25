@@ -24,7 +24,7 @@ export async function GET() {
   ] = await Promise.all([
     sb.from('subvenciones').select('*', { count: 'exact', head: true }),
     sb.from('cliente').select('*', { count: 'exact', head: true }),
-    sb.from('matches').select('*', { count: 'exact', head: true }),
+    sb.from('cliente_subvencion_match').select('*', { count: 'exact', head: true }).eq('es_hard_exclude', false),
     sb.from('solicitudes').select('*', { count: 'exact', head: true }),
     sb.from('expediente').select('*', { count: 'exact', head: true }),
     sb.from('expediente').select('*', { count: 'exact', head: true })
@@ -32,7 +32,7 @@ export async function GET() {
     sb.from('expediente').select('*', { count: 'exact', head: true })
       .eq('estado', 'concedido'),
     sb.from('cliente_subvencion_match').select('*', { count: 'exact', head: true })
-      .eq('notificado_admin', false).gte('score', 70),
+      .eq('estado', 'nuevo').gte('score', 0.5).eq('es_hard_exclude', false),
     sb.from('solicitudes').select('*', { count: 'exact', head: true })
       .in('estado', ['contrato_pendiente', 'pago_pendiente', 'encaje_confirmado']),
   ]);

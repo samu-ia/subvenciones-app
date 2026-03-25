@@ -17,7 +17,11 @@ export async function POST(
 
   const { error } = await sb
     .from('cliente_subvencion_match')
-    .update({ notificado_cliente: true, notificado_cliente_at: new Date().toISOString() })
+    .update({
+      notificado_cliente: true,
+      notificado_cliente_at: new Date().toISOString(),
+      estado: 'visto',  // marcar como visto para que no aparezca como "nuevo" en Matches
+    })
     .eq('id', matchId);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
