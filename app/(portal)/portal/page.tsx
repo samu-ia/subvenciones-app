@@ -19,10 +19,15 @@ interface ClienteData {
   nombre_normalizado?: string;
   ciudad?: string;
   comunidad_autonoma?: string;
+  cnae_codigo?: string;
   cnae_descripcion?: string;
   tamano_empresa?: string;
   num_empleados?: number;
   facturacion_anual?: number;
+  provincia?: string;
+  forma_juridica?: string;
+  anos_antiguedad?: number;
+  descripcion_actividad?: string;
 }
 
 interface MatchItem {
@@ -756,16 +761,16 @@ function VistaPerfilEmpresa({
 }) {
   const [form, setForm] = useState({
     nombre_empresa: cliente?.nombre_empresa ?? '',
-    cnae_codigo: (cliente as any)?.cnae_codigo ?? '',
+    cnae_codigo: cliente?.cnae_codigo ?? '',
     cnae_descripcion: cliente?.cnae_descripcion ?? '',
     comunidad_autonoma: cliente?.comunidad_autonoma ?? '',
-    provincia: (cliente as any)?.provincia ?? '',
+    provincia: cliente?.provincia ?? '',
     ciudad: cliente?.ciudad ?? '',
     num_empleados: String(cliente?.num_empleados ?? ''),
     facturacion_anual: String(cliente?.facturacion_anual ?? ''),
-    forma_juridica: (cliente as any)?.forma_juridica ?? '',
-    anos_antiguedad: String((cliente as any)?.anos_antiguedad ?? ''),
-    descripcion_actividad: (cliente as any)?.descripcion_actividad ?? '',
+    forma_juridica: cliente?.forma_juridica ?? '',
+    anos_antiguedad: String(cliente?.anos_antiguedad ?? ''),
+    descripcion_actividad: cliente?.descripcion_actividad ?? '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -1409,7 +1414,7 @@ export default function PortalPage() {
       if (perfil?.nif) {
         // Cargar datos del cliente
         const { data: cli } = await supabase.from('cliente')
-          .select('nif,nombre_empresa,nombre_normalizado,ciudad,comunidad_autonoma,cnae_descripcion,tamano_empresa,num_empleados,facturacion_anual')
+          .select('nif,nombre_empresa,nombre_normalizado,ciudad,comunidad_autonoma,cnae_codigo,cnae_descripcion,tamano_empresa,num_empleados,facturacion_anual,provincia,forma_juridica,anos_antiguedad,descripcion_actividad')
           .eq('nif', perfil.nif).maybeSingle();
         setCliente(cli);
 
@@ -1521,7 +1526,7 @@ export default function PortalPage() {
     return <SetupEmpresa onComplete={async (nif) => {
       // Recargar datos tras setup
       const { data: cli } = await supabase.from('cliente')
-        .select('nif,nombre_empresa,nombre_normalizado,ciudad,comunidad_autonoma,cnae_descripcion,tamano_empresa,num_empleados,facturacion_anual')
+        .select('nif,nombre_empresa,nombre_normalizado,ciudad,comunidad_autonoma,cnae_codigo,cnae_descripcion,tamano_empresa,num_empleados,facturacion_anual,provincia,forma_juridica,anos_antiguedad,descripcion_actividad')
         .eq('nif', nif).maybeSingle();
       setCliente(cli);
       setSetupPendiente(false);

@@ -146,6 +146,7 @@ export default function NuevoClientePage() {
               <label style={labelStyle}>Tamaño Empresa</label>
               <select name="tamano_empresa" value={formData.tamano_empresa} onChange={handleChange} style={inputStyle}>
                 <option value="">Seleccionar...</option>
+                <option value="Autónomo">Autónomo</option>
                 <option value="Microempresa">Microempresa (&lt; 10 empleados)</option>
                 <option value="Pequeña">Pequeña (10–49)</option>
                 <option value="Mediana">Mediana (50–249)</option>

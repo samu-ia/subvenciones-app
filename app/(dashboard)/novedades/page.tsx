@@ -405,7 +405,7 @@ export default function NovedadesPage() {
             })}
           </div>
         )
-      ) : (
+      ) : tab === 'oportunidades' ? (
         // ── OPORTUNIDADES ─────────────────────────────────────────────────────
         oportunidades.length === 0 ? (
           <Empty text="No hay oportunidades pendientes de notificar" />
@@ -467,7 +467,7 @@ export default function NovedadesPage() {
             })}
           </div>
         )
-      )}
+      ) : null}
 
       {/* ── MENSAJES ── */}
       {!loading && tab === 'mensajes' && (
