@@ -8,10 +8,13 @@ interface Cliente {
   nif: string;
   nombre_empresa: string | null;
   nombre_normalizado: string | null;
+  email_normalizado: string | null;
   actividad: string | null;
   tamano_empresa: string | null;
   ciudad: string | null;
   comunidad_autonoma: string | null;
+  num_empleados: number | null;
+  created_at: string;
 }
 
 export default function ClientesPage() {
@@ -36,11 +39,14 @@ export default function ClientesPage() {
     if (!searchTerm) {
       setFilteredClientes(clientes);
     } else {
-      const filtered = clientes.filter(cliente => 
-        cliente.nombre_normalizado?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        cliente.nif?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        cliente.actividad?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        cliente.ciudad?.toLowerCase().includes(searchTerm.toLowerCase())
+      const q = searchTerm.toLowerCase();
+      const filtered = clientes.filter(cliente =>
+        cliente.nombre_empresa?.toLowerCase().includes(q) ||
+        cliente.nombre_normalizado?.toLowerCase().includes(q) ||
+        cliente.nif?.toLowerCase().includes(q) ||
+        cliente.actividad?.toLowerCase().includes(q) ||
+        cliente.ciudad?.toLowerCase().includes(q) ||
+        cliente.comunidad_autonoma?.toLowerCase().includes(q)
       );
       setFilteredClientes(filtered);
     }
@@ -161,13 +167,13 @@ export default function ClientesPage() {
           {/* Table Header */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '2fr 1fr 2fr 1fr 1.5fr',
+            gridTemplateColumns: '2.5fr 1fr 1.5fr 1fr 1.5fr',
             gap: '16px',
-            padding: '16px 24px',
+            padding: '14px 24px',
             backgroundColor: 'var(--bg)',
             borderBottom: '1px solid var(--border)',
-            fontSize: '13px',
-            fontWeight: '600',
+            fontSize: '12px',
+            fontWeight: '700',
             color: 'var(--ink2)',
             textTransform: 'uppercase',
             letterSpacing: '0.5px'
@@ -176,64 +182,56 @@ export default function ClientesPage() {
             <div>NIF</div>
             <div>Actividad</div>
             <div>Tamaño</div>
-            <div>Ciudad</div>
+            <div>Ubicación</div>
           </div>
 
           {/* Table Body */}
           {filteredClientes.map((cliente: Cliente) => (
-            <Link 
+            <Link
               key={cliente.nif}
               href={`/clientes/${cliente.nif}`}
               style={{ textDecoration: 'none' }}
             >
               <div className="table-row" style={{
                 display: 'grid',
-                gridTemplateColumns: '2fr 1fr 2fr 1fr 1.5fr',
+                gridTemplateColumns: '2.5fr 1fr 1.5fr 1fr 1.5fr',
                 gap: '16px',
-                padding: '20px 24px',
+                padding: '18px 24px',
                 borderBottom: '1px solid var(--border)',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                alignItems: 'center',
               }}>
-                <div style={{
-                  fontSize: '15px',
-                  fontWeight: '600',
-                  color: 'var(--navy)'
-                }}>
-                  {cliente.nombre_empresa || cliente.nombre_normalizado || cliente.nif}
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--navy)' }}>
+                    {cliente.nombre_empresa || cliente.nombre_normalizado || cliente.nif}
+                  </div>
+                  {cliente.email_normalizado && (
+                    <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>
+                      {cliente.email_normalizado}
+                    </div>
+                  )}
                 </div>
-                <div style={{
-                  fontSize: '14px',
-                  color: 'var(--ink2)',
-                  fontFamily: 'monospace'
-                }}>
+                <div style={{ fontSize: '13px', color: 'var(--ink2)', fontFamily: 'monospace' }}>
                   {cliente.nif}
                 </div>
-                <div style={{
-                  fontSize: '14px',
-                  color: 'var(--ink2)'
-                }}>
+                <div style={{ fontSize: '13px', color: 'var(--ink2)' }}>
                   {cliente.actividad || '—'}
                 </div>
                 <div>
-                  {cliente.tamano_empresa && (
+                  {cliente.tamano_empresa ? (
                     <span style={{
-                      display: 'inline-block',
-                      padding: '4px 10px',
-                      borderRadius: '6px',
-                      fontSize: '13px',
-                      fontWeight: '500',
-                      backgroundColor: 'var(--blue-bg)',
-                      color: 'var(--blue)'
+                      display: 'inline-block', padding: '3px 9px', borderRadius: '6px',
+                      fontSize: '12px', fontWeight: '500',
+                      backgroundColor: 'var(--blue-bg)', color: 'var(--blue)'
                     }}>
                       {cliente.tamano_empresa}
                     </span>
-                  )}
+                  ) : <span style={{ color: 'var(--muted)', fontSize: '13px' }}>—</span>}
                 </div>
-                <div style={{
-                  fontSize: '14px',
-                  color: 'var(--ink2)'
-                }}>
-                  {cliente.ciudad || '—'}
+                <div style={{ fontSize: '13px', color: 'var(--ink2)' }}>
+                  {cliente.ciudad
+                    ? `${cliente.ciudad}${cliente.comunidad_autonoma ? ` · ${cliente.comunidad_autonoma}` : ''}`
+                    : cliente.comunidad_autonoma || '—'}
                 </div>
               </div>
             </Link>

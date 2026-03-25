@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
 
 export default function NuevoClientePage() {
   const router = useRouter();
@@ -12,7 +11,7 @@ export default function NuevoClientePage() {
 
   const [formData, setFormData] = useState({
     nif: '',
-    nombre_normalizado: '',
+    nombre_empresa: '',
     email_normalizado: '',
     telefono: '',
     tamano_empresa: '',
@@ -20,8 +19,9 @@ export default function NuevoClientePage() {
     domicilio_fiscal: '',
     codigo_postal: '',
     ciudad: '',
+    comunidad_autonoma: '',
     origen: '',
-    acepta_terminos: false
+    acepta_terminos: false,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,44 +29,28 @@ export default function NuevoClientePage() {
     setLoading(true);
     setError(null);
 
-    if (!formData.nif) {
+    if (!formData.nif.trim()) {
       setError('El NIF es obligatorio');
       setLoading(false);
       return;
     }
 
     if (!formData.acepta_terminos) {
-      setError('Debe aceptar los términos y condiciones');
+      setError('Debe confirmar que el cliente acepta los términos');
       setLoading(false);
       return;
     }
 
     try {
-      const supabase = createClient();
-      
-      const { error: insertError } = await supabase
-        .from('cliente')
-        .insert([{
-          nif: formData.nif.toUpperCase(),
-          nombre_normalizado: formData.nombre_normalizado || null,
-          email_normalizado: formData.email_normalizado || null,
-          telefono: formData.telefono || null,
-          tamano_empresa: formData.tamano_empresa || null,
-          actividad: formData.actividad || null,
-          domicilio_fiscal: formData.domicilio_fiscal || null,
-          codigo_postal: formData.codigo_postal || null,
-          ciudad: formData.ciudad || null,
-          origen: formData.origen || null,
-          acepta_terminos: formData.acepta_terminos
-        }]);
-
-      if (insertError) {
-        throw insertError;
-      }
-
-      router.push(`/clientes/${formData.nif.toUpperCase()}`);
+      const res = await fetch('/api/clientes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Error al crear el cliente');
+      router.push(`/clientes/${formData.nif.toUpperCase().trim()}`);
     } catch (err: unknown) {
-      console.error('Error creando cliente:', err);
       setError(err instanceof Error ? err.message : 'Error creando el cliente');
       setLoading(false);
     }
@@ -183,8 +167,8 @@ export default function NuevoClientePage() {
               </label>
               <input
                 type="text"
-                name="nombre_normalizado"
-                value={formData.nombre_normalizado}
+                name="nombre_empresa"
+                value={formData.nombre_empresa}
                 onChange={handleChange}
                 placeholder="Nombre completo o razón social"
                 style={{
@@ -431,36 +415,59 @@ export default function NuevoClientePage() {
               </div>
             </div>
 
-            {/* Origen */}
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: 'var(--ink)',
-                marginBottom: '8px'
-              }}>
-                Origen
-              </label>
-              <input
-                type="text"
-                name="origen"
-                value={formData.origen}
-                onChange={handleChange}
-                placeholder="¿Cómo llegó este cliente? Ej: web, referido, evento"
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border)',
-                  fontSize: '15px',
-                  color: 'var(--ink)',
-                  backgroundColor: 'var(--surface)',
-                  outline: 'none'
-                }}
-                onFocus={(e) => e.target.style.borderColor = 'var(--teal)'}
-                onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
-              />
+            {/* CCAA y Origen */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div>
+                <label style={{
+                  display: 'block', fontSize: '14px', fontWeight: '600',
+                  color: 'var(--ink)', marginBottom: '8px'
+                }}>
+                  Comunidad Autónoma
+                </label>
+                <select
+                  name="comunidad_autonoma"
+                  value={formData.comunidad_autonoma}
+                  onChange={handleChange}
+                  style={{
+                    width: '100%', padding: '12px 16px', borderRadius: '8px',
+                    border: '1px solid var(--border)', fontSize: '15px',
+                    color: 'var(--ink)', backgroundColor: 'var(--surface)',
+                    outline: 'none', cursor: 'pointer'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = 'var(--teal)'}
+                  onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
+                >
+                  <option value="">Seleccionar...</option>
+                  {['Andalucía','Aragón','Asturias','Baleares','Canarias','Cantabria',
+                    'Castilla-La Mancha','Castilla y León','Cataluña','Extremadura',
+                    'Galicia','La Rioja','Madrid','Murcia','Navarra','País Vasco','Valencia',
+                    'Ceuta','Melilla'].map(cc => (
+                    <option key={cc} value={cc}>{cc}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{
+                  display: 'block', fontSize: '14px', fontWeight: '600',
+                  color: 'var(--ink)', marginBottom: '8px'
+                }}>
+                  Origen del lead
+                </label>
+                <input
+                  type="text"
+                  name="origen"
+                  value={formData.origen}
+                  onChange={handleChange}
+                  placeholder="web, referido, feria, gestoría..."
+                  style={{
+                    width: '100%', padding: '12px 16px', borderRadius: '8px',
+                    border: '1px solid var(--border)', fontSize: '15px',
+                    color: 'var(--ink)', backgroundColor: 'var(--surface)', outline: 'none'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = 'var(--teal)'}
+                  onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
+                />
+              </div>
             </div>
 
             {/* Checkbox Términos */}

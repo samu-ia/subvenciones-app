@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { notFound } from 'next/navigation';
+import { createServiceClient } from '@/lib/supabase/service';
+import { notFound, redirect } from 'next/navigation';
 
 interface Cliente {
   nif: string;
+  nombre_empresa: string | null;
   nombre_normalizado: string | null;
   email_normalizado: string | null;
   tamano_empresa: string | null;
@@ -11,6 +13,7 @@ interface Cliente {
   domicilio_fiscal: string | null;
   codigo_postal: string | null;
   ciudad: string | null;
+  comunidad_autonoma: string | null;
   telefono: string | null;
   origen: string | null;
   created_at: string;
@@ -37,10 +40,17 @@ interface Einforma {
 
 interface Expediente {
   id: string;
-  numero_bdns: number | null;
+  titulo: string | null;
   estado: string;
   created_at: string;
-  updated_at: string;
+}
+
+interface Solicitud {
+  id: string;
+  estado: string;
+  created_at: string;
+  expediente_id: string | null;
+  subvencion: { titulo: string; importe_maximo: number | null } | null;
 }
 
 interface Reunion {
@@ -52,20 +62,22 @@ interface Reunion {
   created_at: string;
 }
 
-const estadoBadgeStyles: Record<string, { bg: string; color: string }> = {
-  lead_caliente: { bg: 'var(--amber-bg)', color: 'var(--amber)' },
-  en_proceso: { bg: 'var(--blue-bg)', color: 'var(--blue)' },
-  presentado: { bg: 'var(--blue-bg)', color: 'var(--blue)' },
-  resuelto: { bg: 'var(--green-bg)', color: 'var(--green)' },
-  descartado: { bg: 'var(--red-bg)', color: 'var(--red)' }
+const expedienteBadge: Record<string, { bg: string; color: string; label: string }> = {
+  en_tramitacion: { bg: 'var(--blue-bg)', color: 'var(--blue)', label: 'En tramitación' },
+  concedido:      { bg: 'var(--green-bg)', color: 'var(--green)', label: 'Concedido' },
+  denegado:       { bg: 'var(--red-bg)', color: 'var(--red)', label: 'Denegado' },
+  cerrado:        { bg: 'var(--bg)', color: 'var(--muted)', label: 'Cerrado' },
 };
 
-const estadoLabels: Record<string, string> = {
-  lead_caliente: 'Lead Caliente',
-  en_proceso: 'En Proceso',
-  presentado: 'Presentado',
-  resuelto: 'Resuelto',
-  descartado: 'Descartado'
+const solicitudBadge: Record<string, { bg: string; color: string; label: string }> = {
+  pendiente_encaje:   { bg: '#fffbeb', color: '#92400e', label: 'Pendiente encaje' },
+  encaje_confirmado:  { bg: '#eff6ff', color: '#1d4ed8', label: 'Encaje OK' },
+  contrato_pendiente: { bg: '#f5f3ff', color: '#6d28d9', label: 'Contrato pendiente' },
+  contrato_firmado:   { bg: '#ecfdf5', color: '#065f46', label: 'Contrato firmado' },
+  pago_pendiente:     { bg: '#fff7ed', color: '#9a3412', label: 'Pago pendiente' },
+  activo:             { bg: '#ecfdf5', color: '#065f46', label: 'Activo' },
+  rechazado:          { bg: '#fef2f2', color: '#991b1b', label: 'Rechazado' },
+  cancelado:          { bg: '#f9fafb', color: '#374151', label: 'Cancelado' },
 };
 
 export default async function ClienteDetailPage({
@@ -74,39 +86,34 @@ export default async function ClienteDetailPage({
   params: Promise<{ nif: string }>
 }) {
   const { nif } = await params;
-  const supabase = await createClient();
 
-  // Obtener datos del cliente
-  const { data: cliente, error: clienteError } = await supabase
+  // Verificar que es admin
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.email?.endsWith('@ayudapyme.es')) redirect('/login');
+
+  // Usar service client para evitar RLS
+  const sb = createServiceClient();
+
+  const { data: cliente, error: clienteError } = await sb
     .from('cliente')
     .select('*')
     .eq('nif', nif)
-    .single();
+    .maybeSingle();
 
-  if (clienteError || !cliente) {
-    notFound();
-  }
+  if (clienteError || !cliente) notFound();
 
-  // Obtener datos de einforma
-  const { data: einforma } = await supabase
-    .from('einforma')
-    .select('*')
-    .eq('nif', nif)
-    .single();
-
-  // Obtener expedientes del cliente
-  const { data: expedientes } = await supabase
-    .from('expediente')
-    .select('id, numero_bdns, estado, created_at, updated_at')
-    .eq('nif', nif)
-    .order('created_at', { ascending: false });
-
-  // Obtener reuniones del cliente
-  const { data: reuniones } = await supabase
-    .from('reuniones')
-    .select('id, titulo, tipo, estado, fecha_programada, created_at')
-    .eq('cliente_nif', nif)
-    .order('fecha_programada', { ascending: false });
+  const [
+    { data: einforma },
+    { data: expedientes },
+    { data: reuniones },
+    { data: solicitudes },
+  ] = await Promise.all([
+    sb.from('einforma').select('*').eq('nif', nif).maybeSingle(),
+    sb.from('expediente').select('id, titulo, estado, created_at').eq('nif', nif).order('created_at', { ascending: false }),
+    sb.from('reuniones').select('id, titulo, tipo, estado, fecha_programada, created_at').eq('cliente_nif', nif).order('fecha_programada', { ascending: false }),
+    sb.from('solicitudes').select('id, estado, created_at, expediente_id, subvencion:subvenciones(titulo, importe_maximo)').eq('nif', nif).order('created_at', { ascending: false }),
+  ]);
 
   const formatCurrency = (value: number | null) => {
     if (!value) return '—';
@@ -146,13 +153,13 @@ export default async function ClienteDetailPage({
         >
           ← Volver a clientes
         </Link>
-        <h1 style={{ 
-          fontSize: '32px', 
-          fontWeight: '700', 
+        <h1 style={{
+          fontSize: '32px',
+          fontWeight: '700',
           color: 'var(--ink)',
           marginBottom: '4px'
         }}>
-          {cliente.nombre_normalizado || cliente.nif}
+          {cliente.nombre_empresa || cliente.nombre_normalizado || cliente.nif}
         </h1>
         <p style={{ color: 'var(--ink2)', fontSize: '15px', fontFamily: 'monospace' }}>
           {cliente.nif}
@@ -193,10 +200,10 @@ export default async function ClienteDetailPage({
             {cliente.domicilio_fiscal && (
               <InfoRow label="Domicilio Fiscal" value={cliente.domicilio_fiscal} />
             )}
-            {(cliente.codigo_postal || cliente.ciudad) && (
-              <InfoRow 
-                label="Ubicación" 
-                value={`${cliente.codigo_postal || ''} ${cliente.ciudad || ''}`.trim()} 
+            {(cliente.ciudad || cliente.comunidad_autonoma) && (
+              <InfoRow
+                label="Ubicación"
+                value={[cliente.codigo_postal, cliente.ciudad, cliente.comunidad_autonoma].filter(Boolean).join(' · ')}
               />
             )}
             {cliente.origen && (
@@ -400,6 +407,54 @@ export default async function ClienteDetailPage({
         )}
       </div>
 
+      {/* Solicitudes */}
+      {solicitudes && solicitudes.length > 0 && (
+        <div style={{
+          backgroundColor: 'var(--surface)', borderRadius: '12px', padding: '24px',
+          boxShadow: 'var(--s1)', border: '1px solid var(--border)', marginBottom: '24px'
+        }}>
+          <h2 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--ink)', marginBottom: '20px' }}>
+            Solicitudes ({solicitudes.length})
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          {(solicitudes as any[]).map((sol) => {
+              const badge = solicitudBadge[sol.estado] ?? { bg: '#f3f4f6', color: '#374151', label: sol.estado };
+              const sub = Array.isArray(sol.subvencion) ? sol.subvencion[0] : sol.subvencion;
+              return (
+                <div key={sol.id} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '14px 16px', border: '1px solid var(--border)', borderRadius: '8px',
+                }}>
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--ink)' }}>
+                      {sub?.titulo ?? `Solicitud ${sol.id.slice(0, 8)}`}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>
+                      {formatDate(sol.created_at)}
+                      {sub?.importe_maximo ? ` · hasta ${formatCurrency(sub.importe_maximo)}` : ''}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <span style={{
+                      padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600',
+                      backgroundColor: badge.bg, color: badge.color,
+                    }}>{badge.label}</span>
+                    {sol.expediente_id && (
+                      <Link href={`/expedientes/${sol.expediente_id}`} style={{
+                        fontSize: '12px', color: 'var(--teal)', textDecoration: 'none', fontWeight: '600'
+                      }}>
+                        Ver exp. →
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Expedientes */}
       <div style={{
         backgroundColor: 'var(--surface)',
@@ -418,53 +473,41 @@ export default async function ClienteDetailPage({
         </h2>
 
         {!expedientes || expedientes.length === 0 ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '40px',
-            color: 'var(--muted)'
-          }}>
+          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--muted)' }}>
             <p>No hay expedientes para este cliente</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {expedientes.map((exp: Expediente) => {
-              const style = estadoBadgeStyles[exp.estado] || { bg: 'var(--bg)', color: 'var(--ink2)' };
+              const badge = expedienteBadge[exp.estado] ?? { bg: 'var(--bg)', color: 'var(--ink2)', label: exp.estado };
               return (
                 <Link
                   key={exp.id}
                   href={`/expedientes/${exp.id}`}
                   style={{ textDecoration: 'none' }}
                 >
-                  <div 
+                  <div
                     className="table-row"
                     style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '16px',
-                      border: '1px solid var(--border)',
-                      borderRadius: '8px',
-                      cursor: 'pointer'
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '16px', border: '1px solid var(--border)',
+                      borderRadius: '8px', cursor: 'pointer'
                     }}
                   >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div>
                       <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--ink)' }}>
-                        {exp.numero_bdns ? `BDNS ${exp.numero_bdns}` : `Expediente ${exp.id.slice(0, 8)}`}
+                        {exp.titulo || `Expediente ${exp.id.slice(0, 8)}`}
                       </div>
                       <div style={{ fontSize: '13px', color: 'var(--muted)' }}>
                         Creado el {formatDate(exp.created_at)}
                       </div>
                     </div>
                     <span style={{
-                      display: 'inline-block',
-                      padding: '6px 12px',
-                      borderRadius: '6px',
-                      fontSize: '13px',
-                      fontWeight: '600',
-                      backgroundColor: style.bg,
-                      color: style.color
+                      padding: '6px 12px', borderRadius: '6px',
+                      fontSize: '13px', fontWeight: '600',
+                      backgroundColor: badge.bg, color: badge.color
                     }}>
-                      {estadoLabels[exp.estado] || exp.estado}
+                      {badge.label}
                     </span>
                   </div>
                 </Link>
