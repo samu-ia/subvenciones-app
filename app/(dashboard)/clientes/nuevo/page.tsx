@@ -37,7 +37,6 @@ export default function NuevoClientePage() {
     ciudad: '',
     comunidad_autonoma: '',
     origen: '',
-    acepta_terminos: false,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -90,12 +89,6 @@ export default function NuevoClientePage() {
       setLoading(false);
       return;
     }
-    if (!formData.acepta_terminos) {
-      setError('Debe confirmar que el cliente acepta los términos');
-      setLoading(false);
-      return;
-    }
-
     try {
       const res = await fetch('/api/clientes', {
         method: 'POST',
@@ -304,15 +297,6 @@ export default function NuevoClientePage() {
             <input type="text" name="origen" value={formData.origen}
               onChange={handleChange} placeholder="web, referido, feria, gestoría..." style={inputStyle} />
           </div>
-
-          {/* ── Términos ────────────────────────────────────────── */}
-          <label style={{ display: 'flex', gap: '10px', alignItems: 'center', cursor: 'pointer', padding: '12px 14px', background: formData.acepta_terminos ? '#f0fdf4' : '#f8fafc', borderRadius: '9px', border: `1px solid ${formData.acepta_terminos ? '#22c55e' : 'var(--border)'}` }}>
-            <input type="checkbox" name="acepta_terminos" checked={formData.acepta_terminos} onChange={handleChange}
-              style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--teal)', flexShrink: 0 }} />
-            <span style={{ fontSize: '13px', color: 'var(--ink)', lineHeight: 1.5 }}>
-              El cliente acepta los <strong>términos y condiciones</strong> de AyudaPyme *
-            </span>
-          </label>
 
           {/* ── Botones ─────────────────────────────────────────── */}
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '8px', borderTop: '1px solid var(--border)' }}>

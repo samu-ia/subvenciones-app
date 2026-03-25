@@ -151,8 +151,22 @@ export async function POST(request: NextRequest) {
   const auth = await getClienteNif();
   if (!auth) return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
 
-  const body = await request.json().catch(() => null);
-  if (!body?.contenido?.trim()) {
+  const contentType = request.headers.get('content-type') ?? '';
+  let contenido = '';
+  let adjuntoNombre: string | null = null;
+
+  if (contentType.includes('multipart/form-data')) {
+    const fd = await request.formData().catch(() => null);
+    contenido = (fd?.get('contenido') as string | null)?.trim() ?? '';
+    const adjunto = fd?.get('adjunto') as File | null;
+    if (adjunto) adjuntoNombre = adjunto.name;
+    if (!contenido && adjuntoNombre) contenido = `[Archivo adjunto: ${adjuntoNombre}]`;
+  } else {
+    const body = await request.json().catch(() => null);
+    contenido = body?.contenido?.trim() ?? '';
+  }
+
+  if (!contenido) {
     return NextResponse.json({ error: 'contenido requerido' }, { status: 400 });
   }
 
@@ -162,8 +176,9 @@ export async function POST(request: NextRequest) {
   await sb.from('mensajes_gestor').insert({
     nif: auth.nif,
     remitente: 'cliente',
-    contenido: body.contenido.trim(),
+    contenido,
     leido: false,
+    ...(adjuntoNombre ? { metadata: { adjunto_nombre: adjuntoNombre } } : {}),
   });
 
   // Cargar historial para contexto IA
@@ -187,7 +202,7 @@ export async function POST(request: NextRequest) {
     const historialOrdenado = [...(historial ?? [])].reverse();
     const respuesta = await generarRespuestaIA(
       auth.nif,
-      body.contenido.trim(),
+      contenido,
       historialOrdenado,
       { provider: iaProvider.provider, api_key: iaProvider.api_key, base_url: iaProvider.base_url }
     );

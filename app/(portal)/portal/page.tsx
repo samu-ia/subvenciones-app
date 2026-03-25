@@ -8,7 +8,7 @@ import {
   CheckCircle, AlertTriangle, Clock, Zap, Star,
   CreditCard, Landmark, ArrowRight, ArrowLeft,
   Shield, X, Check, Loader2, User, Building2, Save,
-  MessageCircle, Send, Bot,
+  MessageCircle, Send, Bot, Paperclip, X,
 } from 'lucide-react';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -1069,7 +1069,9 @@ function VistaMiGestor({ nif }: { nif: string }) {
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [archivo, setArchivo] = useState<File | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function cargar() {
     try {
@@ -1096,21 +1098,37 @@ function VistaMiGestor({ nif }: { nif: string }) {
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
-    if (!texto.trim() || enviando) return;
+    if ((!texto.trim() && !archivo) || enviando) return;
     const contenido = texto.trim();
     setTexto('');
+    setArchivo(null);
     setEnviando(true);
 
     // Optimistic update
-    const tempMsg: MensajeGestor = { id: 'temp', remitente: 'cliente', contenido, leido: true, created_at: new Date().toISOString() };
+    const tempMsg: MensajeGestor = {
+      id: 'temp',
+      remitente: 'cliente',
+      contenido: contenido || (archivo ? `[Archivo: ${archivo?.name}]` : ''),
+      leido: true,
+      created_at: new Date().toISOString(),
+    };
     setMensajes(prev => [...prev, tempMsg]);
 
     try {
-      const res = await fetch('/api/portal/gestor', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contenido }),
-      });
+      let fetchOpts: RequestInit;
+      if (archivo) {
+        const fd = new FormData();
+        if (contenido) fd.append('contenido', contenido);
+        fd.append('adjunto', archivo);
+        fetchOpts = { method: 'POST', body: fd };
+      } else {
+        fetchOpts = {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contenido }),
+        };
+      }
+      const res = await fetch('/api/portal/gestor', fetchOpts);
       if (res.ok) {
         const data = await res.json();
         setMensajes(data.mensajes ?? []);
@@ -1175,23 +1193,43 @@ function VistaMiGestor({ nif }: { nif: string }) {
       </div>
 
       {/* Input */}
-      <form onSubmit={enviar} style={{ padding: '14px 16px', background: '#fff', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0 }}>
-        <input
-          value={texto}
-          onChange={e => setTexto(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), enviar(e as unknown as React.FormEvent))}
-          placeholder="Escribe tu mensaje..."
-          disabled={enviando}
-          style={{ flex: 1, padding: '10px 14px', borderRadius: 24, border: `1.5px solid ${C.border}`, fontSize: '0.88rem', outline: 'none', fontFamily: 'inherit', background: enviando ? '#f8fafc' : '#fff', color: C.ink }}
-        />
-        <button
-          type="submit"
-          disabled={!texto.trim() || enviando}
-          style={{ width: 42, height: 42, borderRadius: '50%', background: (!texto.trim() || enviando) ? C.border : C.teal, border: 'none', cursor: (!texto.trim() || enviando) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-        >
-          {enviando ? <Loader2 size={16} color="#fff" style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={16} color="#fff" />}
-        </button>
-      </form>
+      <div style={{ padding: '10px 14px', background: '#fff', borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
+        {archivo && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, padding: '5px 10px', background: '#eff6ff', borderRadius: 8, border: '1px solid #bfdbfe' }}>
+            <Paperclip size={12} color="#3b82f6" />
+            <span style={{ fontSize: '0.78rem', color: '#1d4ed8', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{archivo.name}</span>
+            <button onClick={() => setArchivo(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', padding: 2 }}>
+              <X size={12} />
+            </button>
+          </div>
+        )}
+        <form onSubmit={enviar} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={e => setArchivo(e.target.files?.[0] ?? null)} accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip" />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            title="Adjuntar archivo"
+            style={{ width: 38, height: 38, borderRadius: 10, border: `1px solid ${C.border}`, background: archivo ? '#eff6ff' : '#fff', color: archivo ? '#3b82f6' : C.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+          >
+            <Paperclip size={16} />
+          </button>
+          <input
+            value={texto}
+            onChange={e => setTexto(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), enviar(e as unknown as React.FormEvent))}
+            placeholder="Escribe tu mensaje..."
+            disabled={enviando}
+            style={{ flex: 1, padding: '10px 14px', borderRadius: 24, border: `1.5px solid ${C.border}`, fontSize: '0.88rem', outline: 'none', fontFamily: 'inherit', background: enviando ? '#f8fafc' : '#fff', color: C.ink }}
+          />
+          <button
+            type="submit"
+            disabled={(!texto.trim() && !archivo) || enviando}
+            style={{ width: 42, height: 42, borderRadius: '50%', background: ((!texto.trim() && !archivo) || enviando) ? C.border : C.teal, border: 'none', cursor: ((!texto.trim() && !archivo) || enviando) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+          >
+            {enviando ? <Loader2 size={16} color="#fff" style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={16} color="#fff" />}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

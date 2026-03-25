@@ -46,7 +46,10 @@ export async function POST(request: NextRequest) {
       ciudad: body.ciudad?.trim() || null,
       comunidad_autonoma: body.comunidad_autonoma?.trim() || null,
       origen: body.origen?.trim() || null,
-      acepta_terminos: body.acepta_terminos ?? false,
+      cnae_codigo: body.cnae_codigo?.trim() || null,
+      cnae_descripcion: body.cnae_descripcion?.trim() || null,
+      num_empleados: body.num_empleados ? Number(body.num_empleados) : null,
+      facturacion_anual: body.facturacion_anual ? Number(body.facturacion_anual) : null,
     })
     .select('nif')
     .single();
