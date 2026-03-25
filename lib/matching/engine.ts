@@ -250,6 +250,7 @@ export function calcularMatch(
 
   // ── DIMENSIÓN SECTOR CNAE (0-20) ──────────────────────────────────────────
   let sector = 0;
+  let sectorMismatch = false; // true cuando hay sectores definidos pero el cliente no encaja
   const clienteCnae = (cliente.cnae_codigo ?? '').slice(0, 4);
   const clienteCnae2 = clienteCnae.slice(0, 2); // división CNAE
 
@@ -263,12 +264,17 @@ export function calcularMatch(
       // Buscar match exacto (4 dígitos) o parcial (2 dígitos)
       const exactMatch = permitidos.some(s => s.cnae_codigo?.slice(0, 4) === clienteCnae && clienteCnae);
       const divMatch = permitidos.some(s => s.cnae_codigo?.slice(0, 2) === clienteCnae2 && clienteCnae2);
-      const keyword = permitidos.some(s =>
-        s.nombre_sector && cliente.cnae_descripcion &&
-        s.nombre_sector.toLowerCase().split(' ').some(w =>
-          w.length > 4 && cliente.cnae_descripcion!.toLowerCase().includes(w)
-        )
-      );
+      // Keyword bidireccional: palabras del sector en la descripción del cliente Y viceversa
+      const clienteDesc = (cliente.cnae_descripcion ?? '').toLowerCase();
+      const keyword = permitidos.some(s => {
+        if (!s.nombre_sector) return false;
+        const sectorLower = s.nombre_sector.toLowerCase();
+        // Palabras del sector aparecen en descripción del cliente
+        const sectorEnCliente = sectorLower.split(/\s+/).some(w => w.length > 4 && clienteDesc.includes(w));
+        // Palabras del cliente aparecen en nombre del sector
+        const clienteEnSector = clienteDesc.split(/\s+/).some(w => w.length > 4 && sectorLower.includes(w));
+        return sectorEnCliente || clienteEnSector;
+      });
 
       if (exactMatch) {
         sector = 20;
@@ -277,8 +283,10 @@ export function calcularMatch(
         sector = 14;
         motivos.push('Tu sector está dentro del ámbito de la convocatoria');
       } else {
-        sector = 4;
-        alertas.push(`La convocatoria está orientada a sectores específicos distintos al tuyo`);
+        // Sectores definidos pero el cliente no encaja — penalización fuerte
+        sector = 0;
+        sectorMismatch = true;
+        alertas.push(`La convocatoria está orientada a sectores distintos al tuyo (${clienteDesc || `CNAE ${clienteCnae}`})`);
       }
     }
   }
@@ -336,7 +344,15 @@ export function calcularMatch(
 
   // ── SCORE FINAL ────────────────────────────────────────────────────────────
   const detalle = { geografia: geo, tipo_empresa: tipo, sector, estado, importe };
-  const score_raw = geo + tipo + sector + estado + importe;
+  let score_raw = geo + tipo + sector + estado + importe;
+
+  // Si hay sector definido pero el cliente no encaja, la subvención no es relevante.
+  // Capamos el total a 39 (por debajo de "Buen encaje" = 40) para que nunca aparezca
+  // como recomendable una convocatoria de agricultura a una empresa de software.
+  if (sectorMismatch) {
+    score_raw = Math.min(score_raw, 39);
+  }
+
   const score = Math.min(1, score_raw / 100);
 
   return {

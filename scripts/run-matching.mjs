@@ -170,6 +170,7 @@ function calcularMatch(cliente, subvencion) {
 
   // Sector CNAE (0-20)
   let sector = 0;
+  let sectorMismatch = false;
   const clienteCnae2 = clienteCnae.slice(0, 2);
   if (!subvencion.sectores?.length) {
     sector = 12;
@@ -180,15 +181,17 @@ function calcularMatch(cliente, subvencion) {
     } else {
       const exactMatch = permitidos.some(s => s.cnae_codigo?.slice(0, 4) === clienteCnae && clienteCnae);
       const divMatch = permitidos.some(s => s.cnae_codigo?.slice(0, 2) === clienteCnae2 && clienteCnae2);
-      const keyword = permitidos.some(s =>
-        s.nombre_sector && cliente.cnae_descripcion &&
-        s.nombre_sector.toLowerCase().split(' ').some(w =>
-          w.length > 4 && cliente.cnae_descripcion.toLowerCase().includes(w)
-        )
-      );
+      const clienteDesc = (cliente.cnae_descripcion ?? '').toLowerCase();
+      const keyword = permitidos.some(s => {
+        if (!s.nombre_sector) return false;
+        const sectorLower = s.nombre_sector.toLowerCase();
+        const sectorEnCliente = sectorLower.split(/\s+/).some(w => w.length > 4 && clienteDesc.includes(w));
+        const clienteEnSector = clienteDesc.split(/\s+/).some(w => w.length > 4 && sectorLower.includes(w));
+        return sectorEnCliente || clienteEnSector;
+      });
       if (exactMatch) { sector = 20; motivos.push(`CNAE ${clienteCnae} encaja`); }
       else if (divMatch || keyword) { sector = 14; motivos.push('Sector dentro del ámbito'); }
-      else { sector = 4; alertas.push('Sectores específicos distintos al tuyo'); }
+      else { sector = 0; sectorMismatch = true; alertas.push('Sectores específicos distintos al tuyo'); }
     }
   }
 
@@ -222,7 +225,8 @@ function calcularMatch(cliente, subvencion) {
   }
 
   const detalle = { geografia: geo, tipo_empresa: tipo, sector, estado, importe };
-  const score_raw = geo + tipo + sector + estado + importe;
+  let score_raw = geo + tipo + sector + estado + importe;
+  if (sectorMismatch) score_raw = Math.min(score_raw, 39);
   const score = Math.min(1, score_raw / 100);
   return { score: Math.round(score * 100) / 100, score_raw, hard_exclude: false, detalle, motivos, alertas };
 }
@@ -302,7 +306,7 @@ async function main() {
       matchesCliente.push({
         nif: cliente.nif,
         subvencion_id: subv.id,
-        score: Math.round(result.score * 100),
+        score: result.score,          // decimal 0-1 (portal lo multiplica × 100 para mostrar %)
         detalle_scoring: result.detalle,
         motivos: result.motivos,
         estado: 'nuevo',
