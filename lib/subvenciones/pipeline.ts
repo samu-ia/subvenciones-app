@@ -20,6 +20,7 @@ import { crearFuente } from './bdns-client';
 import { descargarYRegistrarPdf, extraerYGuardarTexto } from './pdf-service';
 import { extraerConIa, extraerResumenRapido } from './ai-extractor';
 import { normalizarYGuardar, marcarPipelineError } from './normalizer';
+import { extraerPdfConGemini, urlExtractoPdf } from './pdf-gemini';
 import type {
   BdnsConvocatoria,
   PipelineOptions,
@@ -167,97 +168,91 @@ async function procesarConvocatoria(
       });
     }
 
-    // ── PASO 2: PDF ───────────────────────────────────────────────────────────
-    let textoParaIa: string | null = null;
-    const urlPdf = conv.urlPdf ?? null;
-
-    if (urlPdf) {
-      // Buscar pdf existente
-      const { data: pdfExistente } = await supabase
-        .from('subvenciones_pdf')
-        .select('id, storage_path, estado')
-        .eq('raw_id', rawId)
-        .maybeSingle();
-
-      const { ok: pdfOk, pdfId, skip: pdfSkip } = await descargarYRegistrarPdf(supabase, {
-        rawId,
-        bdnsId,
-        urlPdf,
-        pdfId: pdfExistente?.id,
-      });
-
-      // Actualizar estado pipeline
-      await supabase.from('subvenciones')
-        .update({ pipeline_estado: 'pdf_descargado' })
-        .eq('bdns_id', bdnsId);
-
-      if (pdfOk) {
-        // Buscar storage_path actualizado
-        const { data: pdfRec } = await supabase
-          .from('subvenciones_pdf')
-          .select('storage_path, id')
-          .eq('id', pdfId)
-          .single();
-
-        if (pdfRec?.storage_path) {
-          // Buscar texto existente
-          const { data: textoExistente } = await supabase
-            .from('subvenciones_texto')
-            .select('id, texto_limpio, estado')
-            .eq('pdf_id', pdfId)
-            .maybeSingle();
-
-          const { ok: textoOk, texto } = await extraerYGuardarTexto(supabase, {
-            pdfId,
-            rawId,
-            bdnsId,
-            storagePath: pdfRec.storage_path,
-            textoId: textoExistente?.id,
-          });
-
-          if (textoOk && texto) {
-            textoParaIa = texto;
-            await supabase.from('subvenciones')
-              .update({ pipeline_estado: 'texto_extraido' })
-              .eq('bdns_id', bdnsId);
-          }
-        }
-      } else if (!pdfSkip) {
-        console.warn(`[Pipeline] PDF no disponible para ${bdnsId}: ${urlPdf}`);
-      }
-    }
-
-    // ── PASO 3: IA (opcional) ────────────────────────────────────────────────
+    // ── PASO 2 + 3: PDF → IA (Gemini nativo si provider=google, fallback pdfjs) ──
     let iaResult;
     let iaModelo = 'sin-ia';
 
+    // Siempre construir URL del PDF desde el bdnsId (la API BDNS no la devuelve fiable)
+    const urlPdf = urlExtractoPdf(bdnsId);
+
     if (iaConfig) {
-      iaModelo = iaConfig.model ?? 'gpt-4o-mini';
-      if (textoParaIa && textoParaIa.trim().length > 100) {
-        const { resultado, modelo, tokensUsados: _ } = await extraerConIa(
-          textoParaIa,
-          { titulo: conv.descripcion ?? conv.titulo ?? '', organismo: conv.nivel3 ?? conv.organo ?? '' },
-          iaConfig
-        );
-        iaResult = resultado;
+      if (iaConfig.provider === 'google') {
+        // ── Camino Gemini: PDF bytes → Gemini nativo (funciona con escaneados) ──
+        console.log(`[Pipeline] Gemini PDF nativo para ${bdnsId}`);
+        const { ok, resultado, error, modelo } = await extraerPdfConGemini(bdnsId, iaConfig.apiKey, urlPdf);
         iaModelo = modelo;
+
+        if (ok && resultado) {
+          iaResult = resultado;
+          // Actualizar título y organismo si Gemini los extrajo del PDF (más fiables)
+          const updateFields: Record<string, string> = { pipeline_estado: 'ia_procesado' };
+          if (resultado.titulo) updateFields.titulo = resultado.titulo;
+          if (resultado.organismo) updateFields.organismo = resultado.organismo;
+          await supabase.from('subvenciones').update(updateFields).eq('bdns_id', bdnsId);
+        } else {
+          console.warn(`[Pipeline] Gemini PDF falló para ${bdnsId}: ${error}. Usando fallback resumen rápido.`);
+          iaResult = await extraerResumenRapido({
+            titulo: conv.descripcion ?? conv.titulo ?? `Convocatoria ${bdnsId}`,
+            organismo: conv.nivel3 ?? conv.organo ?? '',
+            importeMaximo: conv.importeMaximo,
+            fechaFin: conv.fechaFinSolicitud,
+          }, iaConfig);
+          await supabase.from('subvenciones').update({ pipeline_estado: 'ia_procesado' }).eq('bdns_id', bdnsId);
+        }
       } else {
-        iaResult = await extraerResumenRapido({
-          titulo: conv.descripcion ?? conv.titulo ?? '',
-          organismo: conv.nivel3 ?? conv.organo ?? '',
-          descripcion: conv.descripcionObjetivo ?? conv.descripcion,
-          beneficiarios: conv.descripcionBeneficiarios,
-          importeMaximo: conv.importeMaximo,
-          fechaFin: conv.fechaFinSolicitud,
-        }, iaConfig);
+        // ── Camino texto: pdfjs → extrae texto → LLM ──────────────────────────
+        let textoParaIa: string | null = null;
+
+        const { data: pdfExistente } = await supabase
+          .from('subvenciones_pdf')
+          .select('id, storage_path, estado')
+          .eq('raw_id', rawId)
+          .maybeSingle();
+
+        const { ok: pdfOk, pdfId, skip: pdfSkip } = await descargarYRegistrarPdf(supabase, {
+          rawId, bdnsId, urlPdf, pdfId: pdfExistente?.id,
+        });
+
+        if (pdfOk) {
+          await supabase.from('subvenciones').update({ pipeline_estado: 'pdf_descargado' }).eq('bdns_id', bdnsId);
+          const { data: pdfRec } = await supabase.from('subvenciones_pdf').select('storage_path').eq('id', pdfId).single();
+          if (pdfRec?.storage_path) {
+            const { data: textoExistente } = await supabase.from('subvenciones_texto').select('id, texto_limpio, estado').eq('pdf_id', pdfId).maybeSingle();
+            const { ok: textoOk, texto } = await extraerYGuardarTexto(supabase, {
+              pdfId, rawId, bdnsId, storagePath: pdfRec.storage_path, textoId: textoExistente?.id,
+            });
+            if (textoOk && texto) {
+              textoParaIa = texto;
+              await supabase.from('subvenciones').update({ pipeline_estado: 'texto_extraido' }).eq('bdns_id', bdnsId);
+            }
+          }
+        } else if (!pdfSkip) {
+          console.warn(`[Pipeline] PDF no disponible para ${bdnsId}`);
+        }
+
+        iaModelo = iaConfig.model ?? 'gpt-4o-mini';
+        if (textoParaIa && textoParaIa.trim().length > 100) {
+          const { resultado, modelo } = await extraerConIa(
+            textoParaIa,
+            { titulo: conv.descripcion ?? conv.titulo ?? '', organismo: conv.nivel3 ?? conv.organo ?? '' },
+            iaConfig
+          );
+          iaResult = resultado;
+          iaModelo = modelo;
+        } else {
+          iaResult = await extraerResumenRapido({
+            titulo: conv.descripcion ?? conv.titulo ?? `Convocatoria ${bdnsId}`,
+            organismo: conv.nivel3 ?? conv.organo ?? '',
+            importeMaximo: conv.importeMaximo,
+            fechaFin: conv.fechaFinSolicitud,
+          }, iaConfig);
+        }
+        await supabase.from('subvenciones').update({ pipeline_estado: 'ia_procesado' }).eq('bdns_id', bdnsId);
       }
     } else {
-      // Sin IA: solo datos de BDNS como placeholder.
-      // La BD queda en estado 'raw' hasta que se configure IA y se reprocese.
-      // Los campos de PDF se dejan null para no confundir datos BDNS con datos reales.
-      const tienePdf = !!(textoParaIa && textoParaIa.trim().length > 50);
+      // Sin IA: solo datos básicos de BDNS como placeholder.
       iaResult = {
-        objeto: tienePdf ? null : (conv.descripcionObjetivo ?? null),
+        objeto: conv.descripcionObjetivo ?? null,
         beneficiarios: null,
         requisitos: null,
         gastos_subvencionables: null,
@@ -283,10 +278,6 @@ async function procesarConvocatoria(
         confidence_score: 0,
       };
     }
-
-    await supabase.from('subvenciones')
-      .update({ pipeline_estado: 'ia_procesado' })
-      .eq('bdns_id', bdnsId);
 
     // ── PASO 4: Normalizar ────────────────────────────────────────────────────
     const { ok, subvencionId, esNueva, haCambiado, error } = await normalizarYGuardar(supabase, {
