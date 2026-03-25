@@ -29,14 +29,15 @@ const GALICIA_FOCUS = !forceAll && env.GALICIA_FOCUS !== 'false';
 
 const CA_ALIAS = {
   'Madrid':          ['madrid', 'comunidad de madrid', 'com. de madrid'],
-  'Cataluña':        ['cataluña', 'catalunya', 'catalonia'],
+  'Cataluña':        ['cataluña', 'cataluna', 'catalunya', 'catalonia'],
   'Andalucía':       ['andalucía', 'andalucia'],
   'Valencia':        ['valencia', 'comunitat valenciana', 'comunidad valenciana'],
   'Galicia':         ['galicia'],
   'Castilla y León': ['castilla y leon', 'castilla y león'],
+  'Castilla-La Mancha': ['castilla-la mancha', 'castilla la mancha'],
   'País Vasco':      ['país vasco', 'pais vasco', 'euskadi'],
   'Canarias':        ['canarias'],
-  'Murcia':          ['murcia', 'región de murcia'],
+  'Murcia':          ['murcia', 'región de murcia', 'region de murcia'],
   'Aragón':          ['aragón', 'aragon'],
   'Extremadura':     ['extremadura'],
   'Asturias':        ['asturias'],
@@ -143,6 +144,8 @@ function calcularMatch(cliente, subvencion) {
       geo = 20;
     } else if (subvProv && clienteProv) {
       return hard(`Local para ${subvProv}.`);
+    } else if (!subvProv && subvCA && clienteCA && subvCA !== clienteCA) {
+      return hard(`Convocatoria local para ${subvCA}, tu empresa está en ${clienteCA}.`);
     } else {
       geo = 8;
     }
@@ -171,6 +174,7 @@ function calcularMatch(cliente, subvencion) {
   // Sector CNAE (0-20)
   let sector = 0;
   let sectorMismatch = false;
+  let confirmedCnaeMismatch = false;
   const clienteCnae2 = clienteCnae.slice(0, 2);
   if (!subvencion.sectores?.length) {
     sector = 12;
@@ -181,17 +185,28 @@ function calcularMatch(cliente, subvencion) {
     } else {
       const exactMatch = permitidos.some(s => s.cnae_codigo?.slice(0, 4) === clienteCnae && clienteCnae);
       const divMatch = permitidos.some(s => s.cnae_codigo?.slice(0, 2) === clienteCnae2 && clienteCnae2);
+      const permitidosConCnae = permitidos.filter(s => s.cnae_codigo);
       const clienteDesc = (cliente.cnae_descripcion ?? '').toLowerCase();
-      const keyword = permitidos.some(s => {
+      const keyword = permitidosConCnae.length === 0 && permitidos.some(s => {
         if (!s.nombre_sector) return false;
         const sectorLower = s.nombre_sector.toLowerCase();
-        const sectorEnCliente = sectorLower.split(/\s+/).some(w => w.length > 4 && clienteDesc.includes(w));
-        const clienteEnSector = clienteDesc.split(/\s+/).some(w => w.length > 4 && sectorLower.includes(w));
+        const STOP = new Set(['actividades', 'actividad', 'empresa', 'empresas', 'servicio', 'servicios', 'sector', 'sectores']);
+        const sectorEnCliente = sectorLower.split(/\s+/).some(w => w.length > 5 && !STOP.has(w) && clienteDesc.includes(w));
+        const clienteEnSector = clienteDesc.split(/\s+/).some(w => w.length > 5 && !STOP.has(w) && sectorLower.includes(w));
         return sectorEnCliente || clienteEnSector;
       });
       if (exactMatch) { sector = 20; motivos.push(`CNAE ${clienteCnae} encaja`); }
-      else if (divMatch || keyword) { sector = 14; motivos.push('Sector dentro del ámbito'); }
-      else { sector = 0; sectorMismatch = true; alertas.push('Sectores específicos distintos al tuyo'); }
+      else if (divMatch) { sector = 14; motivos.push('Sector dentro del ámbito'); }
+      else if (keyword) { sector = 14; motivos.push('Sector dentro del ámbito'); }
+      else {
+        sector = 0; sectorMismatch = true;
+        const EXCLUSIVE = ['agricultur', 'ganadería', 'ganaderia', 'silvicultur', 'forestal', 'pesca', 'acuicultur', 'minería', 'mineria', 'alimentación', 'alimentacion', 'agroaliment'];
+        const CNAE_PRIMARIO = ['01', '02', '03', '05', '06', '07', '08', '09', '10', '11', '12'];
+        const esExclusivo = permitidos.some(s => EXCLUSIVE.some(ex => (s.nombre_sector ?? '').toLowerCase().includes(ex)));
+        const clienteEsPrimario = clienteCnae2 && CNAE_PRIMARIO.includes(clienteCnae2);
+        if (permitidosConCnae.length > 0 || (esExclusivo && !clienteEsPrimario)) confirmedCnaeMismatch = true;
+        alertas.push('Sectores específicos distintos al tuyo');
+      }
     }
   }
 
@@ -226,7 +241,8 @@ function calcularMatch(cliente, subvencion) {
 
   const detalle = { geografia: geo, tipo_empresa: tipo, sector, estado, importe };
   let score_raw = geo + tipo + sector + estado + importe;
-  if (sectorMismatch) score_raw = Math.min(score_raw, 39);
+  if (confirmedCnaeMismatch) score_raw = Math.min(score_raw, 25);
+  else if (sectorMismatch) score_raw = Math.min(score_raw, 39);
   const score = Math.min(1, score_raw / 100);
   return { score: Math.round(score * 100) / 100, score_raw, hard_exclude: false, detalle, motivos, alertas };
 }
@@ -290,71 +306,106 @@ async function main() {
     tipos_empresa: (tipos ?? []).filter(t => t.subvencion_id === s.id),
   }));
 
-  // Calcular matches
-  let nuevos = 0, actualizados = 0, excluidos = 0;
-  const MIN_SCORE = 0.45; // 45 pts mínimo para guardar
+  // ─── Modo --all: pizarra limpia ────────────────────────────────────────────
+  // Cargamos estados manuales y borramos todas las filas para re-calcular desde cero.
+  // Así eliminamos scores enteros obsoletos (78 en vez de 0.78) y matches incorrectos.
+  const estadoMap = {}; // 'nif|subvencion_id' → estado
+  if (forceAll) {
+    const clienteNifs = clientes.map(c => c.nif);
+    // Guardar estados manuales para no perderlos
+    const { data: existentes } = await sb
+      .from('cliente_subvencion_match')
+      .select('nif, subvencion_id, estado')
+      .in('nif', clienteNifs)
+      .in('estado', ['interesado', 'descartado', 'visto']);
+    for (const e of existentes ?? []) {
+      estadoMap[`${e.nif}|${e.subvencion_id}`] = e.estado;
+    }
+    // Borrar todas las filas de estos clientes
+    const { error: delErr } = await sb
+      .from('cliente_subvencion_match')
+      .delete()
+      .in('nif', clienteNifs);
+    if (delErr) {
+      console.error('Error borrando filas existentes:', delErr.message);
+      process.exit(1);
+    }
+    console.log(`Modo --all: eliminadas filas previas. Preservados ${(existentes ?? []).length} estados manuales (interesado/descartado/visto).`);
+  }
+
+  // ─── Calcular matches ──────────────────────────────────────────────────────
+  let guardados = 0, excluidos = 0, bajos = 0;
+  const MIN_SCORE = 0.35; // 35% mínimo — captura matches geográficos aunque sector sea incierto
 
   for (const cliente of clientes) {
-    const matchesCliente = [];
+    const toSave = [];
 
     for (const subv of subvProfiles) {
       const result = calcularMatch(cliente, subv);
-      if (result.hard_exclude || result.score < MIN_SCORE) {
+
+      if (result.hard_exclude) {
+        // Guardar hard_excludes explícitamente para no dejar filas huérfanas antiguas
+        toSave.push({
+          nif: cliente.nif,
+          subvencion_id: subv.id,
+          score: 0,
+          detalle_scoring: result.detalle,
+          motivos: [],
+          estado: 'nuevo',
+          notificado_admin: false,
+          notificado_cliente: false,
+          es_hard_exclude: true,
+          calculado_at: new Date().toISOString(),
+        });
         excluidos++;
-        continue;
+      } else if (result.score >= MIN_SCORE) {
+        const key = `${cliente.nif}|${subv.id}`;
+        const estadoExistente = estadoMap[key];
+        const estado = (estadoExistente && ['interesado', 'descartado', 'visto'].includes(estadoExistente))
+          ? estadoExistente
+          : 'nuevo';
+        toSave.push({
+          nif: cliente.nif,
+          subvencion_id: subv.id,
+          score: result.score,
+          detalle_scoring: result.detalle,
+          motivos: result.motivos,
+          estado,
+          notificado_admin: false,
+          notificado_cliente: false,
+          es_hard_exclude: false,
+          calculado_at: new Date().toISOString(),
+        });
+        guardados++;
+      } else {
+        bajos++;
       }
-      matchesCliente.push({
-        nif: cliente.nif,
-        subvencion_id: subv.id,
-        score: result.score,          // decimal 0-1 (portal lo multiplica × 100 para mostrar %)
-        detalle_scoring: result.detalle,
-        motivos: result.motivos,
-        estado: 'nuevo',
-        notificado_admin: false,
-        notificado_cliente: false,
-      });
     }
 
-    if (matchesCliente.length > 0) {
-      // Cargar estados existentes para no sobreescribir interesado/descartado
-      const subvIds = matchesCliente.map(m => m.subvencion_id);
-      const { data: existentes } = await sb
-        .from('cliente_subvencion_match')
-        .select('subvencion_id, estado')
-        .eq('nif', cliente.nif)
-        .in('subvencion_id', subvIds);
-      const estadosExistentes = Object.fromEntries((existentes ?? []).map(e => [e.subvencion_id, e.estado]));
-
-      const loteConEstado = matchesCliente.map(m => {
-        const estadoActual = estadosExistentes[m.subvencion_id];
-        // Preservar estado si ya fue gestionado manualmente
-        const estado = (estadoActual && ['interesado', 'descartado', 'visto'].includes(estadoActual))
-          ? estadoActual
-          : 'nuevo';
-        return { ...m, estado };
-      });
-
+    if (toSave.length > 0) {
       // Upsert en lotes de 50
-      for (let i = 0; i < loteConEstado.length; i += 50) {
-        const lote = loteConEstado.slice(i, i + 50);
+      for (let i = 0; i < toSave.length; i += 50) {
+        const lote = toSave.slice(i, i + 50);
         const { error } = await sb
           .from('cliente_subvencion_match')
           .upsert(lote, { onConflict: 'nif,subvencion_id', ignoreDuplicates: false });
         if (error) {
           console.error(`  Error upsert para ${cliente.nif}:`, error.message);
-        } else {
-          nuevos += lote.length;
         }
       }
-      console.log(`  ${cliente.nombre_empresa || cliente.nif}: ${matchesCliente.length} matches (score >= ${MIN_SCORE * 100})`);
+      const relevantes = toSave.filter(m => !m.es_hard_exclude).length;
+      if (relevantes > 0) {
+        console.log(`  ${cliente.nombre_empresa || cliente.nif}: ${relevantes} matches relevantes`);
+      }
     }
   }
 
   console.log(`\nResumen:`);
   console.log(`  Clientes procesados:  ${clientes.length}`);
   console.log(`  Subvenciones activas: ${subvFiltradas.length}`);
-  console.log(`  Matches guardados:    ${nuevos}`);
-  console.log(`  Excluidos (hard/score): ${excluidos}`);
+  console.log(`  Matches relevantes:   ${guardados}`);
+  console.log(`  Hard excludes:        ${excluidos}`);
+  console.log(`  Score bajo (< ${MIN_SCORE * 100}%): ${bajos}`);
 
   // Top 10 mejores matches
   const { data: top } = await sb

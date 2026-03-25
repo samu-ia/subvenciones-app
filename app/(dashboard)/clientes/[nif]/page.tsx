@@ -119,7 +119,7 @@ export default async function ClienteDetailPage({
     sb.from('solicitudes').select('id, estado, created_at, expediente_id, subvencion:subvenciones(titulo, importe_maximo)').eq('nif', nif).order('created_at', { ascending: false }),
     sb.from('cliente_subvencion_match')
       .select('id, score, motivos, estado, subvencion:subvenciones(id, titulo, organismo, importe_maximo, plazo_fin, estado_convocatoria)')
-      .eq('nif', nif).eq('es_hard_exclude', false).gte('score', 0.4)
+      .eq('nif', nif).eq('es_hard_exclude', false).gte('score', 0.35)
       .order('score', { ascending: false }).limit(10),
   ]);
 

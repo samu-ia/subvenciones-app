@@ -75,14 +75,15 @@ export interface MatchScore {
 
 const CA_ALIAS: Record<string, string[]> = {
   'Madrid':           ['madrid', 'comunidad de madrid', 'com. de madrid'],
-  'Cataluña':         ['cataluña', 'catalunya', 'catalonia'],
+  'Cataluña':         ['cataluña', 'cataluna', 'catalunya', 'catalonia'],
   'Andalucía':        ['andalucía', 'andalucia'],
   'Valencia':         ['valencia', 'comunitat valenciana', 'comunidad valenciana'],
   'Galicia':          ['galicia'],
   'Castilla y León':  ['castilla y leon', 'castilla y león'],
+  'Castilla-La Mancha': ['castilla-la mancha', 'castilla la mancha'],
   'País Vasco':       ['país vasco', 'pais vasco', 'euskadi'],
   'Canarias':         ['canarias'],
-  'Murcia':           ['murcia', 'región de murcia'],
+  'Murcia':           ['murcia', 'región de murcia', 'region de murcia'],
   'Aragón':           ['aragón', 'aragon'],
   'Extremadura':      ['extremadura'],
   'Asturias':         ['asturias'],
@@ -221,6 +222,10 @@ export function calcularMatch(
     } else if (subvProv && clienteProv) {
       return hard(`Convocatoria local para ${subvProv}, tu empresa está en ${clienteProv || 'otra provincia'}.`,
         { geografia: 0, tipo_empresa: 0, sector: 0, estado: 0, importe: 0 });
+    } else if (!subvProv && subvCA && clienteCA && subvCA !== clienteCA) {
+      // Sin provincia pero con localidad/CA distinta → excluir (ej. municipio de otra región)
+      return hard(`Convocatoria local para ${subvCA}, tu empresa está en ${clienteCA}.`,
+        { geografia: 0, tipo_empresa: 0, sector: 0, estado: 0, importe: 0 });
     } else {
       geo = 8; // sin datos suficientes de localización
       alertas.push('Convocatoria local — verifica si aplica a tu municipio');
@@ -251,6 +256,7 @@ export function calcularMatch(
   // ── DIMENSIÓN SECTOR CNAE (0-20) ──────────────────────────────────────────
   let sector = 0;
   let sectorMismatch = false; // true cuando hay sectores definidos pero el cliente no encaja
+  let confirmedCnaeMismatch = false; // mismatch confirmado por CNAE (penalización extra)
   const clienteCnae = (cliente.cnae_codigo ?? '').slice(0, 4);
   const clienteCnae2 = clienteCnae.slice(0, 2); // división CNAE
 
@@ -264,28 +270,40 @@ export function calcularMatch(
       // Buscar match exacto (4 dígitos) o parcial (2 dígitos)
       const exactMatch = permitidos.some(s => s.cnae_codigo?.slice(0, 4) === clienteCnae && clienteCnae);
       const divMatch = permitidos.some(s => s.cnae_codigo?.slice(0, 2) === clienteCnae2 && clienteCnae2);
-      // Keyword bidireccional: palabras del sector en la descripción del cliente Y viceversa
+      // Sectores con CNAE: si existen y no hay match exacto/div, el cliente no encaja
+      const permitidosConCnae = permitidos.filter(s => s.cnae_codigo);
+      // Keyword bidireccional: solo cuando los sectores NO tienen CNAE (evitar falsos positivos con palabras genéricas)
       const clienteDesc = (cliente.cnae_descripcion ?? '').toLowerCase();
-      const keyword = permitidos.some(s => {
+      const keyword = permitidosConCnae.length === 0 && permitidos.some(s => {
         if (!s.nombre_sector) return false;
         const sectorLower = s.nombre_sector.toLowerCase();
-        // Palabras del sector aparecen en descripción del cliente
-        const sectorEnCliente = sectorLower.split(/\s+/).some(w => w.length > 4 && clienteDesc.includes(w));
-        // Palabras del cliente aparecen en nombre del sector
-        const clienteEnSector = clienteDesc.split(/\s+/).some(w => w.length > 4 && sectorLower.includes(w));
+        const STOP = new Set(['actividades', 'actividad', 'empresa', 'empresas', 'servicio', 'servicios', 'sector', 'sectores']);
+        // Palabras específicas del sector en descripción del cliente
+        const sectorEnCliente = sectorLower.split(/\s+/).some(w => w.length > 5 && !STOP.has(w) && clienteDesc.includes(w));
+        // Palabras específicas del cliente en nombre del sector
+        const clienteEnSector = clienteDesc.split(/\s+/).some(w => w.length > 5 && !STOP.has(w) && sectorLower.includes(w));
         return sectorEnCliente || clienteEnSector;
       });
 
       if (exactMatch) {
         sector = 20;
         motivos.push(`Tu sector CNAE ${clienteCnae} encaja directamente con la convocatoria`);
-      } else if (divMatch || keyword) {
+      } else if (divMatch) {
+        sector = 14;
+        motivos.push('Tu sector está dentro del ámbito de la convocatoria');
+      } else if (keyword) {
         sector = 14;
         motivos.push('Tu sector está dentro del ámbito de la convocatoria');
       } else {
         // Sectores definidos pero el cliente no encaja — penalización fuerte
         sector = 0;
         sectorMismatch = true;
+        // Mismatch confirmado por CNAE explícito, O por palabras exclusivas del sector primario
+        const EXCLUSIVE = ['agricultur', 'ganadería', 'ganaderia', 'silvicultur', 'forestal', 'pesca', 'acuicultur', 'minería', 'mineria', 'alimentación', 'alimentacion', 'agroaliment'];
+        const CNAE_PRIMARIO = ['01', '02', '03', '05', '06', '07', '08', '09', '10', '11', '12'];
+        const esExclusivo = permitidos.some(s => EXCLUSIVE.some(ex => (s.nombre_sector ?? '').toLowerCase().includes(ex)));
+        const clienteEsPrimario = clienteCnae2 && CNAE_PRIMARIO.includes(clienteCnae2);
+        if (permitidosConCnae.length > 0 || (esExclusivo && !clienteEsPrimario)) confirmedCnaeMismatch = true;
         alertas.push(`La convocatoria está orientada a sectores distintos al tuyo (${clienteDesc || `CNAE ${clienteCnae}`})`);
       }
     }
@@ -347,10 +365,12 @@ export function calcularMatch(
   let score_raw = geo + tipo + sector + estado + importe;
 
   // Si hay sector definido pero el cliente no encaja, la subvención no es relevante.
-  // Capamos el total a 39 (por debajo de "Buen encaje" = 40) para que nunca aparezca
-  // como recomendable una convocatoria de agricultura a una empresa de software.
-  if (sectorMismatch) {
-    score_raw = Math.min(score_raw, 39);
+  // · confirmedCnaeMismatch (sector tiene CNAE explícito que no encaja): cap a 25 → nunca muestra
+  // · sectorMismatch sin CNAE (etiqueta de sector ambigua): cap a 39 → puede mostrar con aviso
+  if (confirmedCnaeMismatch) {
+    score_raw = Math.min(score_raw, 25); // Por debajo del MIN_SCORE (35%) → no se muestra
+  } else if (sectorMismatch) {
+    score_raw = Math.min(score_raw, 39); // Por debajo de "Buen encaje" (40%) pero puede mostrarse
   }
 
   const score = Math.min(1, score_raw / 100);

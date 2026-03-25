@@ -16,7 +16,7 @@ import type { ClienteMatchProfile, SubvencionMatchProfile } from '@/lib/matching
 
 // Foco geográfico: solo Galicia + nacionales/estatales mientras escalamos
 // Cambiar a false cuando tengamos cobertura nacional completa
-const GALICIA_FOCUS = process.env.GALICIA_FOCUS !== "false";
+const GALICIA_FOCUS = process.env.GALICIA_FOCUS === "true";
 
 
 export const maxDuration = 60;
@@ -123,8 +123,8 @@ export async function POST(request: NextRequest) {
         es_hard_exclude: scoreResult.hard_exclude,
       };
 
-      // Solo guardamos si tiene score > 0 o es hard_exclude (para no regenerar)
-      if (scoreResult.score > 0 || scoreResult.hard_exclude) {
+      // Solo guardamos si score >= 35% o es hard_exclude (descartar mismatches confirmados <35%)
+      if (scoreResult.score >= 0.35 || scoreResult.hard_exclude) {
         const { data: existente } = await sb
           .from('cliente_subvencion_match')
           .select('id, estado')
