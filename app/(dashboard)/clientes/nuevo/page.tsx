@@ -3,9 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Search, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-
-type LookupEstado = 'idle' | 'buscando' | 'encontrado' | 'no_encontrado' | 'error';
 
 const CCAA = [
   'Andalucía','Aragón','Asturias','Baleares','Canarias','Cantabria',
@@ -18,8 +15,6 @@ export default function NuevoClientePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lookupEstado, setLookupEstado] = useState<LookupEstado>('idle');
-  const [lookupFuente, setLookupFuente] = useState<'bd' | 'vies' | null>(null);
 
   const [formData, setFormData] = useState({
     nif: '',
@@ -40,44 +35,9 @@ export default function NuevoClientePage() {
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
-    }));
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
-
-  async function buscarPorNif() {
-    const nif = formData.nif.trim();
-    if (!nif || nif.length < 8) return;
-    setLookupEstado('buscando');
-    setLookupFuente(null);
-    try {
-      const res = await fetch(`/api/clientes/lookup?nif=${encodeURIComponent(nif)}`);
-      const data = await res.json();
-      if (data.found) {
-        setFormData(prev => ({
-          ...prev,
-          nombre_empresa:     data.nombre_empresa    ?? prev.nombre_empresa,
-          ciudad:             data.ciudad            ?? prev.ciudad,
-          codigo_postal:      data.codigo_postal     ?? prev.codigo_postal,
-          comunidad_autonoma: data.comunidad_autonoma ?? prev.comunidad_autonoma,
-          cnae_codigo:        data.cnae_codigo        ?? prev.cnae_codigo,
-          cnae_descripcion:   data.cnae_descripcion   ?? prev.cnae_descripcion,
-          tamano_empresa:     data.tamano_empresa     ?? prev.tamano_empresa,
-          actividad:          data.actividad          ?? prev.actividad,
-          num_empleados:      data.num_empleados      ? String(data.num_empleados)      : prev.num_empleados,
-          facturacion_anual:  data.facturacion_anual  ? String(data.facturacion_anual)  : prev.facturacion_anual,
-        }));
-        setLookupEstado('encontrado');
-        setLookupFuente(data.fuente ?? null);
-      } else {
-        setLookupEstado('no_encontrado');
-      }
-    } catch {
-      setLookupEstado('error');
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,13 +49,14 @@ export default function NuevoClientePage() {
       setLoading(false);
       return;
     }
+
     try {
       const res = await fetch('/api/clientes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          num_empleados:   formData.num_empleados   ? Number(formData.num_empleados)   : undefined,
+          num_empleados:     formData.num_empleados     ? Number(formData.num_empleados)     : undefined,
           facturacion_anual: formData.facturacion_anual ? Number(formData.facturacion_anual) : undefined,
         }),
       });
@@ -129,9 +90,6 @@ export default function NuevoClientePage() {
         <h1 style={{ fontSize: '24px', fontWeight: '700', color: 'var(--ink)', marginTop: '12px', marginBottom: '4px' }}>
           Nuevo Cliente
         </h1>
-        <p style={{ color: 'var(--ink2)', fontSize: '14px' }}>
-          Introduce el NIF y los datos se rellenan automáticamente cuando sea posible.
-        </p>
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -143,67 +101,28 @@ export default function NuevoClientePage() {
             </div>
           )}
 
-          {/* ── NIF con autocomplete ───────────────────────────── */}
+          {/* NIF */}
           <div>
             <label style={labelStyle}>NIF / CIF *</label>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <input
-                type="text"
-                name="nif"
-                required
-                value={formData.nif}
-                onChange={e => {
-                  handleChange(e);
-                  setLookupEstado('idle');
-                }}
-                onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), buscarPorNif())}
-                placeholder="B12345678 — introduce y pulsa Buscar"
-                style={{ ...inputStyle, flex: 1, textTransform: 'uppercase' }}
-              />
-              <button
-                type="button"
-                onClick={buscarPorNif}
-                disabled={lookupEstado === 'buscando' || formData.nif.length < 8}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  padding: '10px 16px', borderRadius: '8px', border: 'none',
-                  background: lookupEstado === 'buscando' ? 'var(--border)' : 'var(--teal)',
-                  color: lookupEstado === 'buscando' ? 'var(--muted)' : '#fff',
-                  fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap',
-                }}
-              >
-                {lookupEstado === 'buscando'
-                  ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Buscando...</>
-                  : <><Search size={14} /> Buscar datos</>
-                }
-              </button>
-            </div>
-
-            {/* Feedback del lookup */}
-            {lookupEstado === 'encontrado' && (
-              <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#059669' }}>
-                <CheckCircle size={14} />
-                Datos completados automáticamente
-                {lookupFuente === 'vies' && <span style={{ color: 'var(--muted)', marginLeft: '4px' }}>· Fuente: Registro UE (VIES)</span>}
-                {lookupFuente === 'bd' && <span style={{ color: 'var(--muted)', marginLeft: '4px' }}>· Ya estaba en la base de datos</span>}
-              </div>
-            )}
-            {lookupEstado === 'no_encontrado' && (
-              <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--muted)' }}>
-                <AlertCircle size={14} />
-                No encontrado en registros públicos — rellena manualmente
-              </div>
-            )}
+            <input
+              type="text"
+              name="nif"
+              required
+              value={formData.nif}
+              onChange={handleChange}
+              placeholder="B12345678"
+              style={{ ...inputStyle, textTransform: 'uppercase' }}
+            />
           </div>
 
-          {/* ── Nombre ─────────────────────────────────────────── */}
+          {/* Nombre */}
           <div>
             <label style={labelStyle}>Nombre / Razón Social</label>
             <input type="text" name="nombre_empresa" value={formData.nombre_empresa}
               onChange={handleChange} placeholder="Nombre completo o razón social" style={inputStyle} />
           </div>
 
-          {/* ── Email y Teléfono ────────────────────────────────── */}
+          {/* Email y Teléfono */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div>
               <label style={labelStyle}>Email</label>
@@ -217,7 +136,7 @@ export default function NuevoClientePage() {
             </div>
           </div>
 
-          {/* ── Actividad y Tamaño ──────────────────────────────── */}
+          {/* Actividad y Tamaño */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div>
               <label style={labelStyle}>Actividad / Sector</label>
@@ -236,7 +155,7 @@ export default function NuevoClientePage() {
             </div>
           </div>
 
-          {/* ── CNAE ────────────────────────────────────────────── */}
+          {/* CNAE */}
           <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: '16px' }}>
             <div>
               <label style={labelStyle}>Código CNAE</label>
@@ -250,7 +169,7 @@ export default function NuevoClientePage() {
             </div>
           </div>
 
-          {/* ── Empleados y Facturación ─────────────────────────── */}
+          {/* Empleados y Facturación */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div>
               <label style={labelStyle}>Empleados</label>
@@ -264,7 +183,7 @@ export default function NuevoClientePage() {
             </div>
           </div>
 
-          {/* ── Dirección ───────────────────────────────────────── */}
+          {/* Dirección */}
           <div>
             <label style={labelStyle}>Domicilio Fiscal</label>
             <input type="text" name="domicilio_fiscal" value={formData.domicilio_fiscal}
@@ -291,14 +210,14 @@ export default function NuevoClientePage() {
             </div>
           </div>
 
-          {/* ── Origen ──────────────────────────────────────────── */}
+          {/* Origen */}
           <div>
             <label style={labelStyle}>Origen del lead</label>
             <input type="text" name="origen" value={formData.origen}
               onChange={handleChange} placeholder="web, referido, feria, gestoría..." style={inputStyle} />
           </div>
 
-          {/* ── Botones ─────────────────────────────────────────── */}
+          {/* Botones */}
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '8px', borderTop: '1px solid var(--border)' }}>
             <Link href="/clientes">
               <button type="button" style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '14px', fontWeight: '600', cursor: 'pointer', background: 'var(--surface)', color: 'var(--ink2)' }}>

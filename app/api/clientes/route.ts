@@ -5,7 +5,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 async function requireAdmin() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email?.endsWith('@ayudapyme.es')) return null;
+  if (!user?.email?.toLowerCase().endsWith('@ayudapyme.es')) return null;
   return user;
 }
 
