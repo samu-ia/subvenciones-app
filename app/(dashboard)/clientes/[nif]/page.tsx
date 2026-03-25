@@ -15,7 +15,10 @@ interface Cliente {
   ciudad: string | null;
   comunidad_autonoma: string | null;
   telefono: string | null;
-  origen: string | null;
+  cnae_codigo: string | null;
+  cnae_descripcion: string | null;
+  num_empleados: number | null;
+  facturacion_anual: number | null;
   created_at: string;
 }
 
@@ -97,7 +100,7 @@ export default async function ClienteDetailPage({
 
   const { data: cliente, error: clienteError } = await sb
     .from('cliente')
-    .select('*')
+    .select('nif, nombre_empresa, nombre_normalizado, email_normalizado, telefono, actividad, tamano_empresa, domicilio_fiscal, codigo_postal, ciudad, comunidad_autonoma, cnae_codigo, cnae_descripcion, num_empleados, facturacion_anual, created_at')
     .eq('nif', nif)
     .maybeSingle();
 
@@ -194,8 +197,17 @@ export default async function ClienteDetailPage({
             {cliente.actividad && (
               <InfoRow label="Actividad" value={cliente.actividad} />
             )}
+            {(cliente.cnae_codigo || cliente.cnae_descripcion) && (
+              <InfoRow label="CNAE" value={[cliente.cnae_codigo, cliente.cnae_descripcion].filter(Boolean).join(' · ')} />
+            )}
             {cliente.tamano_empresa && (
               <InfoRow label="Tamaño" value={cliente.tamano_empresa} />
+            )}
+            {cliente.num_empleados != null && (
+              <InfoRow label="Empleados" value={String(cliente.num_empleados)} />
+            )}
+            {cliente.facturacion_anual != null && (
+              <InfoRow label="Facturación" value={formatCurrency(cliente.facturacion_anual)} />
             )}
             {cliente.domicilio_fiscal && (
               <InfoRow label="Domicilio Fiscal" value={cliente.domicilio_fiscal} />
@@ -205,9 +217,6 @@ export default async function ClienteDetailPage({
                 label="Ubicación"
                 value={[cliente.codigo_postal, cliente.ciudad, cliente.comunidad_autonoma].filter(Boolean).join(' · ')}
               />
-            )}
-            {cliente.origen && (
-              <InfoRow label="Origen" value={cliente.origen} />
             )}
             <InfoRow label="Fecha registro" value={formatDate(cliente.created_at)} />
           </div>

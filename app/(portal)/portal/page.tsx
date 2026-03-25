@@ -1476,14 +1476,16 @@ export default function PortalPage() {
           .order('created_at', { ascending: false });
         setExpedientes(expData ?? []);
 
-        // Contar mensajes no leídos del gestor/IA
-        const { count } = await supabase
-          .from('mensajes_gestor')
-          .select('id', { count: 'exact', head: true })
-          .eq('nif', perfil.nif)
-          .in('remitente', ['gestor', 'ia'])
-          .eq('leido', false);
-        setMensajesNoLeidos(count ?? 0);
+        // Contar mensajes no leídos del gestor/IA (tabla puede no existir aún)
+        try {
+          const { count } = await supabase
+            .from('mensajes_gestor')
+            .select('id', { count: 'exact', head: true })
+            .eq('nif', perfil.nif)
+            .in('remitente', ['gestor', 'ia'])
+            .eq('leido', false);
+          setMensajesNoLeidos(count ?? 0);
+        } catch { /* tabla mensajes_gestor pendiente de migración */ }
       } else {
         // Usuario nuevo sin empresa vinculada → mostrar onboarding
         setSetupPendiente(true);

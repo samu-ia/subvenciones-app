@@ -135,7 +135,8 @@ export async function GET() {
     .order('created_at', { ascending: true })
     .limit(100);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  // Si la tabla no existe aún, devolvemos array vacío (no crash)
+  if (error) return NextResponse.json({ mensajes: [] });
 
   // Marcar como leídos los mensajes del gestor/IA que el cliente no ha visto
   await sb.from('mensajes_gestor')

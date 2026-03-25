@@ -43,7 +43,10 @@ export default function AuthModal({ onClose }: AuthModalProps) {
     setLoading(true); setError('');
     const { data: regData, error: regError } = await supabase.auth.signUp({
       email, password,
-      options: { data: { rol: 'cliente' } },
+      options: {
+        data: { rol: 'cliente' },
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/portal`,
+      },
     });
     if (regError) {
       // Mensaje más claro para errores comunes
@@ -71,7 +74,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
     e.preventDefault();
     setLoading(true); setError('');
     const { error: forgotError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
     });
     if (forgotError) { setError(forgotError.message); setLoading(false); return; }
     setSuccess('Te hemos enviado un email para restablecer tu contraseña.');
