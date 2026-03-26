@@ -33,7 +33,7 @@ export default function LandingHeader({ onAuthClick }: { onAuthClick?: () => voi
           : 'hero-gradient border-white/15'
       }`}
     >
-      <div className="max-w-7xl mx-auto" style={{ paddingLeft: '2rem', paddingRight: '2.5rem' }}>
+      <div className="max-w-7xl mx-auto" style={{ paddingLeft: '1.25rem', paddingRight: '1.25rem' }}>
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">

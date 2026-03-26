@@ -605,7 +605,7 @@ function MatchCard({
     <div style={{
       background: '#fff', borderRadius: 16,
       border: `1px solid ${yaActiva ? '#bbf7d0' : C.border}`,
-      overflow: 'hidden',
+      overflow: 'hidden', width: '100%',
       boxShadow: urgente ? '0 0 0 2px #fef2f2, 0 4px 16px rgba(239,68,68,0.08)' : '0 2px 8px rgba(13,31,60,0.06)',
     }}>
       {/* Strip de color por score */}
@@ -636,16 +636,16 @@ function MatchCard({
                 </span>
               )}
               {isMobile && (
-                <span style={{ marginLeft: 'auto', fontSize: '1.1rem', fontWeight: 900, color: info.color, lineHeight: 1 }}>
+                <span style={{ marginLeft: 'auto', fontSize: '1.1rem', fontWeight: 900, color: info.color, lineHeight: 1, flexShrink: 0, whiteSpace: 'nowrap' }}>
                   {Math.round(match.score * 100)}%
                   <span style={{ fontSize: '0.58rem', color: C.muted, fontWeight: 600, marginLeft: 3 }}>encaje</span>
                 </span>
               )}
             </div>
-            <h3 style={{ fontSize: isMobile ? '0.84rem' : '0.9rem', fontWeight: 700, color: C.navy, lineHeight: 1.4, margin: 0 }}>
+            <h3 style={{ fontSize: isMobile ? '0.84rem' : '0.9rem', fontWeight: 700, color: C.navy, lineHeight: 1.4, margin: 0, wordBreak: 'break-word', overflowWrap: 'break-word' }}>
               {subv.titulo}
             </h3>
-            {subv.organismo && <p style={{ fontSize: '0.75rem', color: C.muted, marginTop: 3 }}>{subv.organismo}</p>}
+            {subv.organismo && <p style={{ fontSize: '0.75rem', color: C.muted, marginTop: 3, wordBreak: 'break-word' }}>{subv.organismo}</p>}
           </div>
           {!isMobile && (
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -663,7 +663,7 @@ function MatchCard({
             <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#1e40af', marginBottom: 5 }}>POR QUÉ ENCAJA</p>
             <ul style={{ margin: 0, paddingLeft: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 3 }}>
               {match.motivos.map((m, i) => (
-                <li key={i} style={{ fontSize: '0.78rem', color: '#1e3a8a', display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                <li key={i} style={{ fontSize: '0.78rem', color: '#1e3a8a', display: 'flex', alignItems: 'flex-start', gap: 6, wordBreak: 'break-word' }}>
                   <Check size={11} color="#3b82f6" style={{ marginTop: 2, flexShrink: 0 }} />
                   {m}
                 </li>
@@ -689,7 +689,7 @@ function MatchCard({
             {subv.resumen_ia && (
               <div style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 14px' }}>
                 <p style={{ fontSize: '0.72rem', fontWeight: 700, color: C.muted, marginBottom: 4 }}>RESUMEN</p>
-                <p style={{ fontSize: '0.8rem', color: C.ink2, lineHeight: 1.6, margin: 0 }}>{subv.resumen_ia}</p>
+                <p style={{ fontSize: '0.8rem', color: C.ink2, lineHeight: 1.6, margin: 0, wordBreak: 'break-word' }}>{subv.resumen_ia}</p>
               </div>
             )}
             {subv.plazo_fin && (
@@ -1552,7 +1552,7 @@ export default function PortalPage() {
   const totalPotencial = matches.reduce((s, m) => s + (m.subvencion.importe_maximo ?? 0), 0);
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
 
       {/* NAV */}
       <nav style={{ background: C.navy, padding: isMobile ? '0 12px' : '0 24px', display: 'flex', alignItems: 'center', height: 56, gap: isMobile ? 8 : 16, position: 'sticky', top: 0, zIndex: 100 }}>
@@ -1668,7 +1668,7 @@ export default function PortalPage() {
         </aside>
 
         {/* MAIN */}
-        <main style={{ flex: 1, padding: isMobile ? '20px 14px' : '28px 32px', overflow: 'auto', minWidth: 0 }}>
+        <main style={{ flex: 1, padding: isMobile ? '20px 14px' : '28px 32px', overflowX: 'hidden', overflowY: 'auto', minWidth: 0 }}>
 
           {/* ── DASHBOARD ── */}
           {vista === 'dashboard' && (
