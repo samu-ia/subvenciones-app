@@ -3,6 +3,10 @@
  *
  * Envío de notificaciones reales a clientes: email (Resend) y WhatsApp (Twilio).
  * Se leen las credenciales de la tabla notif_channels.
+ *
+ * También exporta helpers de email transaccional:
+ *   - buildWelcomeEmailHtml()
+ *   - sendWelcomeEmail()
  */
 
 export interface NotifChannel {
@@ -205,4 +209,97 @@ export async function enviarNotificacion(
   if (waCh) results.whatsapp = await sendWhatsApp(waCh, payload);
 
   return results;
+}
+
+// ─── Email de bienvenida ───────────────────────────────────────────────────────
+
+/**
+ * Construye el HTML del email de bienvenida.
+ * Usa el mismo estilo visual que buildEmailHtml() — dark header #0d1f3c, botón naranja #f97316.
+ */
+export function buildWelcomeEmailHtml(clienteNombre: string, portalUrl: string): string {
+  return `<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f6fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <div style="max-width:560px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
+    <!-- Header -->
+    <div style="background:#0d1f3c;padding:28px 32px">
+      <div style="display:inline-flex;align-items:center;gap:10px">
+        <div style="width:36px;height:36px;background:#f97316;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px">AP</div>
+        <span style="color:#fff;font-weight:700;font-size:17px">AyudaPyme</span>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:32px">
+      <p style="margin:0 0 8px;font-size:14px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Bienvenido/a</p>
+      <h1 style="margin:0 0 20px;font-size:22px;font-weight:800;color:#0d1f3c;line-height:1.3">¡Bienvenido/a a AyudaPyme!</h1>
+
+      <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6">
+        Hola <strong>${clienteNombre}</strong>, ya estamos analizando tu empresa para encontrar las mejores subvenciones disponibles.
+        En breve verás en tu portal las oportunidades que encajan con tu perfil.
+      </p>
+
+      <!-- ¿Qué pasa ahora? -->
+      <div style="background:#f8fafc;border-radius:12px;padding:24px;margin-bottom:24px">
+        <p style="margin:0 0 16px;font-size:13px;font-weight:700;color:#0d1f3c;text-transform:uppercase;letter-spacing:0.05em">¿Qué pasa ahora?</p>
+
+        <!-- Paso 1 -->
+        <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:16px">
+          <div style="flex-shrink:0;width:32px;height:32px;background:#fff7ed;border:1px solid #fed7aa;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px">🔍</div>
+          <div>
+            <p style="margin:0 0 2px;font-size:14px;font-weight:600;color:#0d1f3c">Analizamos tu empresa</p>
+            <p style="margin:0;font-size:13px;color:#64748b">Cruzamos tu perfil con cientos de subvenciones activas a nivel nacional y autonómico.</p>
+          </div>
+        </div>
+
+        <!-- Paso 2 -->
+        <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:16px">
+          <div style="flex-shrink:0;width:32px;height:32px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px">📊</div>
+          <div>
+            <p style="margin:0 0 2px;font-size:14px;font-weight:600;color:#0d1f3c">Te mostramos los mejores encajes</p>
+            <p style="margin:0;font-size:13px;color:#64748b">Cada subvención tiene un porcentaje de encaje personalizado para tu empresa.</p>
+          </div>
+        </div>
+
+        <!-- Paso 3 -->
+        <div style="display:flex;align-items:flex-start;gap:14px">
+          <div style="flex-shrink:0;width:32px;height:32px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px">🚀</div>
+          <div>
+            <p style="margin:0 0 2px;font-size:14px;font-weight:600;color:#0d1f3c">Gestionamos la solicitud contigo</p>
+            <p style="margin:0;font-size:13px;color:#64748b">Nos encargamos de todo el papeleo. Solo cobramos si consigues la subvención.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <a href="${portalUrl}" style="display:block;text-align:center;background:#f97316;color:#fff;text-decoration:none;padding:14px 24px;border-radius:10px;font-size:15px;font-weight:700;margin-bottom:24px">
+        Ver mi portal →
+      </a>
+
+      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center">
+        AyudaPyme · Solo cobramos si consigues la subvención
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+/**
+ * Envía el email de bienvenida al cliente recién registrado.
+ * Usa sendTransactionalEmail de lib/email.ts (resuelve API key automáticamente).
+ */
+export async function sendWelcomeEmail(
+  toEmail: string,
+  clienteNombre: string,
+  portalUrl: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const { sendTransactionalEmail } = await import('@/lib/email');
+  return sendTransactionalEmail({
+    to: toEmail,
+    subject: `¡Bienvenido/a a AyudaPyme, ${clienteNombre}!`,
+    html: buildWelcomeEmailHtml(clienteNombre, portalUrl),
+  });
 }
