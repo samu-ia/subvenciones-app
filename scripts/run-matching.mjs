@@ -23,7 +23,8 @@ const sb = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_
 const args = process.argv.slice(2);
 const forceAll = args.includes('--all');
 const filtroNif = args.find(a => !a.startsWith('--')) || null;
-const GALICIA_FOCUS = !forceAll && env.GALICIA_FOCUS !== 'false';
+// false por defecto = toda España. Solo true si se pasa explícitamente en .env
+const GALICIA_FOCUS = env.GALICIA_FOCUS === 'true';
 
 // ─── Engine (ported from lib/matching/engine.ts) ──────────────────────────────
 

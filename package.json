@@ -9,7 +9,12 @@
     "lint": "eslint",
     "agents": "dotenvx run -f .env.local -- npx tsx scripts/agents/orchestrator.ts",
     "agents:watch": "dotenvx run -f .env.local -- npx tsx scripts/agents/orchestrator.ts --watch",
-    "agents:add": "dotenvx run -f .env.local -- npx tsx scripts/agents/add-task.ts"
+    "agents:add": "dotenvx run -f .env.local -- npx tsx scripts/agents/add-task.ts",
+    "pipeline": "node scripts/pipeline-magistral.mjs",
+    "pipeline:all": "node scripts/pipeline-magistral.mjs --all --workers 15",
+    "pipeline:id": "node scripts/pipeline-magistral.mjs --id",
+    "enrich": "node scripts/enrich-with-gemini.mjs",
+    "matching": "node scripts/run-matching.mjs --all"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.41",

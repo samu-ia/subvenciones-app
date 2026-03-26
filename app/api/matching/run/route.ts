@@ -14,8 +14,8 @@ import { createClient } from '@/lib/supabase/server';
 import { calcularMatch } from '@/lib/matching/engine';
 import type { ClienteMatchProfile, SubvencionMatchProfile } from '@/lib/matching/engine';
 
-// Foco geográfico: solo Galicia + nacionales/estatales mientras escalamos
-// Cambiar a false cuando tengamos cobertura nacional completa
+// Foco geográfico: false = toda España (por defecto)
+// true solo si GALICIA_FOCUS=true está explícitamente en .env
 const GALICIA_FOCUS = process.env.GALICIA_FOCUS === "true";
 
 
