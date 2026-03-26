@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { requireRole } from '@/lib/auth/helpers';
+import { requireRole, requireAdminOrTramitador } from '@/lib/auth/helpers';
 
 const FASES_VALIDAS = [
   'preparacion', 'presentada', 'instruccion', 'resolucion_provisional',
@@ -17,7 +17,7 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authGet = await requireRole('admin');
+  const authGet = await requireAdminOrTramitador();
   if (authGet instanceof NextResponse) return authGet;
 
   const { id } = await params;

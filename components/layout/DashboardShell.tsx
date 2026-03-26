@@ -15,9 +15,11 @@ function isWorkspacePath(pathname: string) {
 
 export default function DashboardShell({
   userEmail,
+  rol,
   children,
 }: {
   userEmail: string;
+  rol?: 'admin' | 'tramitador' | 'cliente';
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -51,14 +53,24 @@ export default function DashboardShell({
             AyudaPyme
           </span>
         </div>
-        <div style={{ fontSize: "0.78rem", color: "var(--muted)" }}>
-          {userEmail}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {rol === 'tramitador' && (
+            <span style={{
+              fontSize: "0.7rem", fontWeight: 600, color: "#7c3aed",
+              background: "#f5f3ff", padding: "2px 8px", borderRadius: 20,
+            }}>
+              Tramitador
+            </span>
+          )}
+          <div style={{ fontSize: "0.78rem", color: "var(--muted)" }}>
+            {userEmail}
+          </div>
         </div>
       </nav>
 
       {/* BODY */}
       <div style={{ display: "flex", minHeight: "calc(100vh - 60px)" }}>
-        <Sidebar />
+        <Sidebar rol={rol} />
         <main style={{ flex: 1, padding: "32px 36px 60px", overflowY: "auto" }}>
           {children}
         </main>

@@ -69,3 +69,34 @@ export async function requireRole(rol: 'admin' | 'cliente') {
 
   return { user, perfil };
 }
+
+/**
+ * Helper para rutas accesibles por admin Y tramitador.
+ * El tramitador puede leer/actuar en expedientes, alertas, etc.
+ * pero no puede hacer acciones destructivas (se controla en cada ruta).
+ *
+ * Uso en API routes:
+ *   const result = await requireAdminOrTramitador();
+ *   if (result instanceof NextResponse) return result;
+ *   const { user, perfil } = result;
+ */
+export async function requireAdminOrTramitador() {
+  const supabase = await createServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+  }
+
+  const sb = createServiceClient();
+  const { data: perfil } = await sb
+    .from('perfiles')
+    .select('id, rol, nif')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (!perfil || (perfil.rol !== 'admin' && perfil.rol !== 'tramitador')) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+  }
+
+  return { user, perfil };
+}

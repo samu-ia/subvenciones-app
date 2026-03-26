@@ -12,5 +12,17 @@ export default async function DashboardLayout({
 
   if (!user) redirect("/login");
 
-  return <DashboardShell userEmail={user.email ?? ""}>{children}</DashboardShell>;
+  // Leer rol del usuario
+  const { data: perfil } = await supabase
+    .from('perfiles')
+    .select('rol')
+    .eq('id', user.id)
+    .single();
+
+  const rol = (perfil?.rol ?? 'cliente') as 'admin' | 'tramitador' | 'cliente';
+
+  // Solo admin y tramitador acceden al dashboard
+  if (rol === 'cliente') redirect('/portal');
+
+  return <DashboardShell userEmail={user.email ?? ""} rol={rol}>{children}</DashboardShell>;
 }

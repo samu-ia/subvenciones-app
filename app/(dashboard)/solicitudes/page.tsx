@@ -115,10 +115,12 @@ function ModalDetalle({
   sol,
   onClose,
   onRefresh,
+  readonly,
 }: {
   sol: Solicitud;
   onClose: () => void;
   onRefresh: () => void;
+  readonly?: boolean;
 }) {
   const [accion, setAccion] = useState('');
   const [motivo, setMotivo] = useState('');
@@ -269,40 +271,136 @@ function ModalDetalle({
             onChange={e => setNotas(e.target.value)}
             rows={3}
             placeholder="Notas visibles solo para el equipo..."
+            readOnly={readonly}
             style={{
               width: '100%', padding: '8px 12px', borderRadius: 8,
               border: '1px solid #e2e8f0', fontSize: '0.82rem',
               fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box',
+              background: readonly ? '#f8fafc' : '#fff',
+              color: readonly ? '#64748b' : 'inherit',
             }}
           />
         </div>
 
         {/* Acciones */}
         <div style={{ borderTop: '1px solid #e8ecf4', paddingTop: 20 }}>
-          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: 12 }}>Acciones</div>
+          {readonly ? (
+            <div style={{
+              padding: '10px 14px', borderRadius: 8,
+              background: '#f5f3ff', border: '1px solid #ddd6fe',
+              color: '#5b21b6', fontSize: '0.8rem', fontWeight: 600,
+            }}>
+              Solo lectura — el tramitador no puede modificar solicitudes
+            </div>
+          ) : (
+            <>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: 12 }}>Acciones</div>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-            {canActivar && !sol.expediente_id && (
-              <button
-                onClick={() => ejecutar('activar_expediente')}
-                disabled={loading}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
-                  background: '#0d9488', color: '#fff', border: 'none',
-                  fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit',
-                }}
-              >
-                {loading ? <Loader2 size={14} className="spin" /> : <Zap size={14} />}
-                Activar expediente
-              </button>
-            )}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                {canActivar && !sol.expediente_id && (
+                  <button
+                    onClick={() => ejecutar('activar_expediente')}
+                    disabled={loading}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
+                      background: '#0d9488', color: '#fff', border: 'none',
+                      fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit',
+                    }}
+                  >
+                    {loading ? <Loader2 size={14} className="spin" /> : <Zap size={14} />}
+                    Activar expediente
+                  </button>
+                )}
 
-            {sol.expediente_id && (
+                {sol.expediente_id && (
+                  <a
+                    href={`/expedientes/${sol.expediente_id}`}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '8px 16px', borderRadius: 8,
+                      background: '#eff6ff', color: '#1d4ed8',
+                      fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none',
+                    }}
+                  >
+                    <ArrowUpRight size={14} />
+                    Ver expediente
+                  </a>
+                )}
+
+                {/* Cambio de estado manual */}
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <select
+                    value={accion}
+                    onChange={e => setAccion(e.target.value)}
+                    style={{
+                      padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0',
+                      fontSize: '0.8rem', fontFamily: 'inherit', background: '#f8fafc',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <option value="">Cambiar estado…</option>
+                    {Object.entries(ESTADO_CONFIG).map(([k, v]) => (
+                      <option key={k} value={k}>{v.label}</option>
+                    ))}
+                  </select>
+                  {accion && (
+                    <button
+                      onClick={() => ejecutar('cambiar_estado')}
+                      disabled={loading}
+                      style={{
+                        padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
+                        background: '#1d4ed8', color: '#fff', border: 'none',
+                        fontSize: '0.8rem', fontWeight: 600, fontFamily: 'inherit',
+                      }}
+                    >
+                      Aplicar
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {canRechazar && (
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input
+                    value={motivo}
+                    onChange={e => setMotivo(e.target.value)}
+                    placeholder="Motivo del rechazo..."
+                    style={{
+                      flex: 1, padding: '7px 12px', borderRadius: 8,
+                      border: '1px solid #fecaca', fontSize: '0.8rem',
+                      fontFamily: 'inherit',
+                    }}
+                  />
+                  <button
+                    onClick={() => ejecutar('rechazar')}
+                    disabled={loading || !motivo.trim()}
+                    style={{
+                      padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
+                      background: motivo.trim() ? '#dc2626' : '#fca5a5', color: '#fff',
+                      border: 'none', fontSize: '0.8rem', fontWeight: 600, fontFamily: 'inherit',
+                    }}
+                  >
+                    Rechazar
+                  </button>
+                </div>
+              )}
+
+              {msg && (
+                <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8, background: '#fef2f2', color: '#991b1b', fontSize: '0.8rem' }}>
+                  {msg}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Ver expediente siempre visible en modo readonly si existe */}
+          {readonly && sol.expediente_id && (
+            <div style={{ marginTop: 12 }}>
               <a
                 href={`/expedientes/${sol.expediente_id}`}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
                   padding: '8px 16px', borderRadius: 8,
                   background: '#eff6ff', color: '#1d4ed8',
                   fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none',
@@ -311,69 +409,6 @@ function ModalDetalle({
                 <ArrowUpRight size={14} />
                 Ver expediente
               </a>
-            )}
-
-            {/* Cambio de estado manual */}
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <select
-                value={accion}
-                onChange={e => setAccion(e.target.value)}
-                style={{
-                  padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0',
-                  fontSize: '0.8rem', fontFamily: 'inherit', background: '#f8fafc',
-                  cursor: 'pointer',
-                }}
-              >
-                <option value="">Cambiar estado…</option>
-                {Object.entries(ESTADO_CONFIG).map(([k, v]) => (
-                  <option key={k} value={k}>{v.label}</option>
-                ))}
-              </select>
-              {accion && (
-                <button
-                  onClick={() => ejecutar('cambiar_estado')}
-                  disabled={loading}
-                  style={{
-                    padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
-                    background: '#1d4ed8', color: '#fff', border: 'none',
-                    fontSize: '0.8rem', fontWeight: 600, fontFamily: 'inherit',
-                  }}
-                >
-                  Aplicar
-                </button>
-              )}
-            </div>
-          </div>
-
-          {canRechazar && (
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <input
-                value={motivo}
-                onChange={e => setMotivo(e.target.value)}
-                placeholder="Motivo del rechazo..."
-                style={{
-                  flex: 1, padding: '7px 12px', borderRadius: 8,
-                  border: '1px solid #fecaca', fontSize: '0.8rem',
-                  fontFamily: 'inherit',
-                }}
-              />
-              <button
-                onClick={() => ejecutar('rechazar')}
-                disabled={loading || !motivo.trim()}
-                style={{
-                  padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
-                  background: motivo.trim() ? '#dc2626' : '#fca5a5', color: '#fff',
-                  border: 'none', fontSize: '0.8rem', fontWeight: 600, fontFamily: 'inherit',
-                }}
-              >
-                Rechazar
-              </button>
-            </div>
-          )}
-
-          {msg && (
-            <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8, background: '#fef2f2', color: '#991b1b', fontSize: '0.8rem' }}>
-              {msg}
             </div>
           )}
         </div>
@@ -392,6 +427,14 @@ export default function SolicitudesPage() {
   const [filtroTexto, setFiltroTexto] = useState('');
   const [selected, setSelected] = useState<Solicitud | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [rolActual, setRolActual] = useState<string>('');
+
+  useEffect(() => {
+    const sb = createClient();
+    sb.from('perfiles').select('rol').then(({ data }) => {
+      setRolActual(data?.[0]?.rol ?? '');
+    });
+  }, []);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -679,6 +722,7 @@ export default function SolicitudesPage() {
           sol={selected}
           onClose={() => setSelected(null)}
           onRefresh={() => { cargar(); setSelected(null); }}
+          readonly={rolActual === 'tramitador'}
         />
       )}
 

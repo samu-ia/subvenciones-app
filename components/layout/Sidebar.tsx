@@ -7,12 +7,13 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   Building2, Calendar, FolderOpen, LogOut, Database, Settings,
-  ClipboardList, Store, Bell, MessageCircle, LayoutDashboard, AlertTriangle, Sparkles,
+  ClipboardList, Store, Bell, MessageCircle, LayoutDashboard, AlertTriangle, Sparkles, Inbox,
 } from "lucide-react";
 
-type NavItem = { href: string; label: string; icon: React.ComponentType<{ size?: number }>; badge?: boolean };
+type NavItem = { href: string; label: string; icon: React.ComponentType<{ size?: number }>; badge?: boolean; bandejaBadge?: boolean };
 
 const nav: NavItem[] = [
+  { href: "/bandeja", label: "Bandeja", icon: Inbox, bandejaBadge: true },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/alertas", label: "Alertas", icon: AlertTriangle, badge: true },
   { href: "/novedades", label: "Novedades", icon: Bell },
@@ -30,16 +31,36 @@ const navBottom = [
   { href: "/ajustes", label: "Ajustes", icon: Settings },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ rol }: { rol?: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
   const [alertasCount, setAlertasCount] = useState(0);
+  const [bandejaCount, setBandejaCount] = useState(0);
 
   useEffect(() => {
+    // Cargar count de alertas para badge de /alertas
     fetch('/api/alertas')
       .then(r => r.json())
-      .then(d => setAlertasCount(d.total || 0))
+      .then(d => {
+        setAlertasCount(d.total || 0);
+        // Calcular bandeja: alertas críticas + altas sin resolver
+        const alertas: Array<{ prioridad: string; resuelta: boolean }> = d.alertas ?? [];
+        const alertasCriticasAltas = alertas.filter(
+          a => !a.resuelta && (a.prioridad === 'critica' || a.prioridad === 'alta')
+        ).length;
+
+        // Solicitudes pendientes sin expediente
+        Promise.resolve(
+          supabase
+            .from('solicitudes')
+            .select('id', { count: 'exact', head: true })
+            .in('estado', ['pendiente_encaje', 'encaje_confirmado', 'contrato_firmado', 'pago_pendiente'])
+            .is('expediente_id', null)
+        ).then(({ count }) => {
+          setBandejaCount(alertasCriticasAltas + (count ?? 0));
+        }).catch(() => setBandejaCount(alertasCriticasAltas));
+      })
       .catch(() => {});
   }, []);
 
@@ -67,9 +88,12 @@ export default function Sidebar() {
             textTransform: "uppercase", letterSpacing: "0.1em",
             color: "var(--muted)", padding: "0 8px", marginBottom: 6,
           }}>Menú</div>
-          {nav.map(({ href, label, icon: Icon, badge }) => {
+          {nav.map(({ href, label, icon: Icon, badge, bandejaBadge }) => {
             const active = pathname === href || pathname.startsWith(href + "/");
             const showBadge = badge && alertasCount > 0;
+            const showBandejaBadge = bandejaBadge && bandejaCount > 0;
+            const badgeValue = showBandejaBadge ? bandejaCount : alertasCount;
+            const isAnyBadge = showBadge || showBandejaBadge;
             return (
               <Link key={href} href={href} style={{ textDecoration: "none" }}>
                 <div style={{
@@ -86,14 +110,14 @@ export default function Sidebar() {
                     <Icon size={16} />
                     {label}
                   </div>
-                  {showBadge && (
+                  {isAnyBadge && (
                     <span style={{
-                      background: alertasCount >= 5 ? "#ef4444" : "#f97316",
+                      background: badgeValue >= 5 ? "#ef4444" : "#f97316",
                       color: "#fff", fontSize: "0.65rem", fontWeight: 700,
                       padding: "1px 6px", borderRadius: "100px", minWidth: "18px",
                       textAlign: "center",
                     }}>
-                      {alertasCount > 99 ? "99+" : alertasCount}
+                      {badgeValue > 99 ? "99+" : badgeValue}
                     </span>
                   )}
                 </div>
@@ -104,7 +128,7 @@ export default function Sidebar() {
       </div>
 
       <div style={{ padding: "0 14px 10px" }}>
-        {navBottom.map(({ href, label, icon: Icon }) => {
+        {navBottom.filter(item => !(rol === 'tramitador' && item.href === '/ajustes')).map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
           return (
             <Link key={href} href={href} style={{ textDecoration: "none" }}>

@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { requireRole } from '@/lib/auth/helpers';
+import { requireRole, requireAdminOrTramitador } from '@/lib/auth/helpers';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -47,7 +47,7 @@ function prioridadPorDias(dias: number | null, critica: number, alta: number, me
 // ─── GET ──────────────────────────────────────────────────────────────────────
 
 export async function GET() {
-  const authGet = await requireRole('admin');
+  const authGet = await requireAdminOrTramitador();
   if (authGet instanceof NextResponse) return authGet;
 
   const sb = createServiceClient();
