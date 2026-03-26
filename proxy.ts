@@ -33,9 +33,21 @@ export default async function proxy(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Rutas privadas sin sesión: volver a landing
+  // Rutas conocidas protegidas
+  const PROTECTED = [
+    '/dashboard', '/clientes', '/reuniones', '/expedientes', '/solicitudes',
+    '/subvenciones', '/subvenciones-bd', '/proveedores', '/ajustes',
+    '/matches', '/novedades', '/alertas', '/chats', '/portal',
+  ];
+  const isKnownProtected = PROTECTED.some(p => pathname === p || pathname.startsWith(p + '/'));
+
+  // Sin sesión: si es ruta protegida → redirect a landing, si es desconocida → dejar pasar para 404
   if (!user) {
-    return NextResponse.redirect(new URL('/', request.url));
+    if (isKnownProtected) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+    // Ruta desconocida: dejar que Next.js muestre not-found.tsx
+    return supabaseResponse;
   }
 
   // Dashboard admin: solo @ayudapyme.es

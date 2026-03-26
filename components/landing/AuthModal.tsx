@@ -34,7 +34,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
     const { data: perfil } = await supabase
       .from('perfiles').select('rol').eq('id', authData.user.id).maybeSingle();
     const rol = perfil?.rol ?? authData.user.user_metadata?.rol ?? 'cliente';
-    router.push(rol === 'admin' ? '/clientes' : '/portal');
+    router.push(rol === 'admin' ? '/dashboard' : '/portal');
     router.refresh();
   }
 

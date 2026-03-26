@@ -11,7 +11,7 @@ import { AGENT_PROMPTS, AGENT_TOOLS } from './prompts';
 import type { AgentType, GraphState, AgentMessage, AgentResult, LeadDecision } from './types';
 
 const ROOT = process.cwd();
-const MAX_TURNS = 80;
+const MAX_TURNS = 40;
 const MODEL = 'claude-opus-4-6';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -35,6 +35,7 @@ async function runAgentSDK(
 ): Promise<string> {
   let output = '';
 
+  let turnCount = 0;
   for await (const message of query({
     prompt,
     options: {
@@ -47,14 +48,18 @@ async function runAgentSDK(
       model: MODEL,
     },
   })) {
+    turnCount++;
+    if (turnCount % 5 === 0) process.stdout.write(`  [${agentType}] turno ${turnCount}...\n`);
+
     if ('result' in message) {
       output = message.result ?? '';
+      process.stdout.write(`  [${agentType}] ✓ completado en ${turnCount} turnos\n`);
     } else if (message.type === 'assistant') {
       const textBlock = (message as { content?: Array<{ type: string; text?: string }> }).content?.find(
         (b) => b.type === 'text',
       );
       if (textBlock?.text) {
-        process.stdout.write(`  [${agentType}] ${textBlock.text.slice(0, 100)}\n`);
+        process.stdout.write(`  [${agentType}] ${textBlock.text.slice(0, 120)}\n`);
       }
     }
   }
@@ -99,8 +104,8 @@ export async function createWorktree(taskId: string): Promise<string> {
   const branchName = `agent/lg/${taskId.slice(0, 8)}`;
   const worktreePath = `${ROOT}/.agent-worktrees/lg-${taskId.slice(0, 8)}`;
 
-  const { execSync } = await import('child_process');
-  execSync(`mkdir -p "${ROOT}/.agent-worktrees"`, { stdio: 'ignore' });
+  const { mkdirSync } = await import('fs');
+  mkdirSync(`${ROOT}/.agent-worktrees`, { recursive: true });
 
   try {
     await execAsync(`git -C "${ROOT}" worktree add "${worktreePath}" -b "${branchName}"`);

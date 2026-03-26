@@ -360,8 +360,9 @@ async function testAuth(page) {
   const adminLogin = await loginAs(page, 'admin@ayudapyme.es', 'Admin123456!', 'admin');
   if (adminLogin) {
     await shot(page, 'auth-03-admin-logueado');
-    const isOnDashboard = page.url().includes('/dashboard') || page.url().includes('/novedades');
-    if (isOnDashboard) addPass('auth', 'Admin redirigido al dashboard correctamente');
+    const isOnDashboard = page.url().includes('/dashboard');
+    if (isOnDashboard) addPass('auth', 'Admin redirigido a /dashboard correctamente (BUG-2 fix verificado)');
+    else if (page.url().includes('/clientes')) addBug('auth', 'Admin sigue siendo redirigido a /clientes en vez de /dashboard (BUG-2 NO fixeado)', 'medium');
     else addWarning('auth', `Admin redirigido a: ${page.url()}`);
   }
 }
@@ -734,7 +735,7 @@ async function testPublicPages(page) {
   ];
 
   for (const route of publicRoutes) {
-    await page.goto(BASE + route.path, { waitUntil: 'networkidle2', timeout: 15000 });
+    await page.goto(BASE + route.path, { waitUntil: 'networkidle2', timeout: 30000 });
     await wait(1000);
     await shot(page, `public-${route.name}`);
     await checkForErrors(page, `public-${route.name}`);
@@ -749,9 +750,11 @@ async function testPublicPages(page) {
   await page.goto(BASE + '/ruta-que-no-existe', { waitUntil: 'networkidle2', timeout: 15000 });
   await wait(1000);
   await shot(page, 'public-404');
+  const finalUrl404 = page.url();
   const has404 = await page.evaluate(() => /404|no encontrada|not found/i.test(document.body.innerText));
-  if (has404) addPass('public-404', 'Página 404 mostrada correctamente');
-  else addWarning('public-404', 'No se muestra página 404 para rutas inexistentes');
+  if (has404) addPass('public-404', 'Página 404 mostrada correctamente (BUG-1 fix verificado)');
+  else if (finalUrl404 === BASE + '/' || finalUrl404 === BASE) addBug('public-404', 'Ruta inexistente redirige a landing en vez de mostrar 404 (BUG-1 NO fixeado)', 'medium');
+  else addWarning('public-404', `404 no detectado. URL final: ${finalUrl404}`);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

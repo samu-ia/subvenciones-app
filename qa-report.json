@@ -14,12 +14,17 @@
       "section": "admin-proveedores",
       "desc": "Texto de error visible: Desde 1.500 €/año",
       "severity": "high"
+    },
+    {
+      "section": "fatal",
+      "desc": "Navigation timeout of 15000 ms exceeded",
+      "severity": "critical"
     }
   ],
   "warnings": [
     {
       "section": "auth",
-      "desc": "Admin redirigido a: http://localhost:3333/clientes"
+      "desc": "No se detectó mensaje de error con credenciales incorrectas"
     },
     {
       "section": "admin-dashboard",
@@ -56,17 +61,9 @@
     {
       "section": "portal",
       "desc": "Sección \"Mi gestor\" no encontrada"
-    },
-    {
-      "section": "public-404",
-      "desc": "No se muestra página 404 para rutas inexistentes"
     }
   ],
   "networkErrors": [
-    {
-      "url": "https://whvmobuyydpxdpuffiuw.supabase.co/auth/v1/token?grant_type=password",
-      "status": 400
-    },
     {
       "url": "https://whvmobuyydpxdpuffiuw.supabase.co/rest/v1/cliente_subvencion_match?select=id%2Cnif%2Cscore%2Cmotivos%2Cestado%2Cn",
       "status": 400
@@ -77,7 +74,9 @@
     }
   ],
   "consoleErrors": [
-    "Failed to load resource: the server responded with a status of 400 ()",
+    "TypeError: Failed to fetch",
+    "TypeError: Failed to fetch",
+    "TypeError: Failed to fetch",
     "Failed to load resource: the server responded with a status of 400 ()",
     "Failed to load resource: the server responded with a status of 400 ()"
   ],
@@ -119,10 +118,7 @@
     "034-portal-04-subvencion-accion.png",
     "035-portal-05-chat.png",
     "036-portal-06-mobile.png",
-    "037-public-contacto.png",
-    "038-public-privacidad.png",
-    "039-public-terminos.png",
-    "040-public-404.png"
+    "037-error-fatal.png"
   ],
   "passed": [
     {
@@ -151,7 +147,7 @@
     },
     {
       "section": "auth",
-      "desc": "Error de login mostrado correctamente"
+      "desc": "Admin redirigido a /dashboard correctamente (BUG-2 fix verificado)"
     },
     {
       "section": "admin-novedades",
@@ -196,50 +192,6 @@
     {
       "section": "portal",
       "desc": "Campo de chat con gestor disponible"
-    },
-    {
-      "section": "public-contacto",
-      "desc": "Página carga con contenido (1239 chars)"
-    },
-    {
-      "section": "public-privacidad",
-      "desc": "Página carga con contenido (2686 chars)"
-    },
-    {
-      "section": "public-terminos",
-      "desc": "Página carga con contenido (3423 chars)"
-    },
-    {
-      "section": "security",
-      "desc": "/dashboard redirige a login (protegida)"
-    },
-    {
-      "section": "security",
-      "desc": "/clientes redirige a login (protegida)"
-    },
-    {
-      "section": "security",
-      "desc": "/expedientes redirige a login (protegida)"
-    },
-    {
-      "section": "security",
-      "desc": "/matches redirige a login (protegida)"
-    },
-    {
-      "section": "security",
-      "desc": "/solicitudes redirige a login (protegida)"
-    },
-    {
-      "section": "security",
-      "desc": "/chats redirige a login (protegida)"
-    },
-    {
-      "section": "security",
-      "desc": "/ajustes redirige a login (protegida)"
-    },
-    {
-      "section": "security",
-      "desc": "/portal redirige a login (protegida)"
     }
   ]
 }
