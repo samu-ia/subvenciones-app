@@ -1,15 +1,15 @@
 import { CheckCircle, LogIn, ArrowRight, Shield, Zap, TrendingUp } from 'lucide-react';
 
 const trust = [
-  { icon: Shield,     text: 'Sin riesgo ni coste inicial' },
-  { icon: CheckCircle,text: 'Solo pagas si conseguimos la subvención' },
-  { icon: Zap,        text: 'Gestionamos todo por ti' },
+  { icon: Shield,     text: '0€ hasta que cobres la subvención' },
+  { icon: CheckCircle,text: 'Gestionamos todo el papeleo por ti' },
+  { icon: Zap,        text: 'Resultado en semanas, no en meses' },
 ];
 
 const stats = [
-  { value: '+1.000', label: 'subvenciones monitorizadas' },
-  { value: '24/7',   label: 'detección automática' },
-  { value: '0€',     label: 'coste si no hay éxito' },
+  { value: '120.000€', label: 'media conseguida por empresa' },
+  { value: '87%',      label: 'tasa de éxito en solicitudes' },
+  { value: '0€',       label: 'si no conseguimos nada, no pagáis' },
 ];
 
 export default function Hero({ onAuthClick }: { onAuthClick?: () => void }) {
@@ -40,7 +40,7 @@ export default function Hero({ onAuthClick }: { onAuthClick?: () => void }) {
           >
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ade80', display: 'inline-block', boxShadow: '0 0 10px #4ade80' }} />
             <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.82rem', fontWeight: 600 }}>
-              Detección automática de subvenciones para tu empresa
+              Análisis gratuito — sin compromiso — resultado en 24h
             </span>
           </div>
 
@@ -57,9 +57,9 @@ export default function Hero({ onAuthClick }: { onAuthClick?: () => void }) {
               animationDelay: '0.05s',
             }}
           >
-            Las subvenciones que<br />
-            <span style={{ color: '#5eead4' }}>encajan con tu empresa</span>,<br />
-            sin que tengas que buscarlas
+            Tu empresa puede conseguir<br />
+            <span style={{ color: '#5eead4' }}>hasta 120.000€ este año</span><br />
+            en subvenciones que ya existen
           </h1>
 
           {/* Subtítulo */}
@@ -74,8 +74,8 @@ export default function Hero({ onAuthClick }: { onAuthClick?: () => void }) {
               animationDelay: '0.12s',
             }}
           >
-            Analizamos tu empresa, detectamos las ayudas a las que calificas
-            y gestionamos todo el proceso. <strong style={{ color: 'rgba(255,255,255,0.92)' }}>Tú no haces nada hasta cobrar.</strong>
+            Introducimos el NIF de tu empresa y en menos de 24h sabes exactamente
+            cuánto dinero puedes conseguir y de dónde. <strong style={{ color: 'rgba(255,255,255,0.92)' }}>Nosotros hacemos todo. Tú solo firmas si quieres seguir.</strong>
           </p>
 
           {/* Trust pills */}
@@ -130,7 +130,7 @@ export default function Hero({ onAuthClick }: { onAuthClick?: () => void }) {
                 (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 24px rgba(13,148,136,0.45)';
               }}
             >
-              Ver mis subvenciones gratis
+              Descubrir qué le corresponde a mi empresa
               <ArrowRight size={18} />
             </button>
 
