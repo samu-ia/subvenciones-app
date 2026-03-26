@@ -47,6 +47,7 @@ interface MatchItem {
     resumen_ia?: string;
     para_quien?: string;
     importe_maximo?: number;
+    presupuesto_total?: number;
     porcentaje_financiacion?: number;
     plazo_fin?: string;
     plazo_inicio?: string;
@@ -687,10 +688,14 @@ function MatchCard({
         )}
 
         {/* Importe */}
-        {subv.importe_maximo && (
+        {(subv.importe_maximo || subv.presupuesto_total) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <span style={{ fontSize: '0.72rem', color: C.muted }}>Importe máximo:</span>
-            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: C.teal }}>{fmtE(subv.importe_maximo)}</span>
+            <span style={{ fontSize: '0.72rem', color: C.muted }}>
+              {subv.importe_maximo ? 'Hasta:' : 'Presupuesto del programa:'}
+            </span>
+            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: C.teal }}>
+              {fmtE(subv.importe_maximo ?? subv.presupuesto_total)}
+            </span>
             {subv.porcentaje_financiacion && (
               <span style={{ fontSize: '0.72rem', color: C.muted }}>({subv.porcentaje_financiacion}% cofinanciación)</span>
             )}
@@ -1471,7 +1476,7 @@ export default function PortalPage() {
             id, score, motivos, estado, es_hard_exclude, detalle_scoring,
             subvenciones!inner(
               id, bdns_id, titulo, organismo, objeto, resumen_ia, para_quien,
-              importe_maximo, porcentaje_financiacion, plazo_fin, plazo_inicio,
+              importe_maximo, presupuesto_total, porcentaje_financiacion, plazo_fin, plazo_inicio,
               estado_convocatoria, ambito_geografico, url_oficial
             )
           `)
@@ -1507,6 +1512,7 @@ export default function PortalPage() {
               resumen_ia: subv.resumen_ia as string,
               para_quien: subv.para_quien as string,
               importe_maximo: subv.importe_maximo as number,
+              presupuesto_total: subv.presupuesto_total as number,
               porcentaje_financiacion: subv.porcentaje_financiacion as number,
               plazo_fin: subv.plazo_fin as string,
               plazo_inicio: subv.plazo_inicio as string,
@@ -1621,7 +1627,7 @@ export default function PortalPage() {
   const nombre = cliente?.nombre_empresa ?? cliente?.nombre_normalizado ?? 'tu empresa';
   const matchesActivos = matches.filter(m => m.subvencion.estado_convocatoria === 'abierta');
   const matchesFuego = matches.filter(m => m.score >= 0.65);
-  const totalPotencial = matches.reduce((s, m) => s + (m.subvencion.importe_maximo ?? 0), 0);
+  const totalPotencial = matches.reduce((s, m) => s + (m.subvencion.importe_maximo ?? m.subvencion.presupuesto_total ?? 0), 0);
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
@@ -1757,7 +1763,7 @@ export default function PortalPage() {
                 {[
                   { label: 'Subvenciones abiertas', value: String(matchesActivos.length), sub: 'En plazo ahora mismo', color: C.green, bg: '#f0fdf4' },
                   { label: 'Muy recomendables', value: String(matchesFuego.length), sub: 'Encaje alto con tu empresa', color: C.fire, bg: '#fff7ed' },
-                  { label: 'Importe potencial', value: totalPotencial > 0 ? fmtE(totalPotencial) ?? 'A calcular' : 'A calcular', sub: totalPotencial > 0 ? 'Suma de importes máximos' : 'Pendiente de datos', color: C.teal, bg: '#f0fdfa' },
+                  { label: 'Importe potencial', value: totalPotencial > 0 ? fmtE(totalPotencial) ?? 'A calcular' : 'A calcular', sub: totalPotencial > 0 ? 'Suma de presupuestos disponibles' : 'Pendiente de datos', color: C.teal, bg: '#f0fdfa' },
                 ].map(card => (
                   <div key={card.label} style={{ background: card.bg, borderRadius: 14, padding: '16px 18px', border: `1px solid ${card.bg}` }}>
                     <div style={{ fontSize: '1.6rem', fontWeight: 900, color: card.color }}>{card.value}</div>
