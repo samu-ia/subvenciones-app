@@ -16,7 +16,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
-type AgentType = 'lead' | 'product' | 'programmer' | 'database' | 'security' | 'matching';
+type AgentType = 'lead' | 'product' | 'programmer' | 'database' | 'security' | 'matching' | 'qa';
 
 const AGENT_DESCRIPTIONS: Record<AgentType, string> = {
   lead:        'Orquesta, divide tareas, prioriza, escala solo lo importante',
@@ -25,6 +25,7 @@ const AGENT_DESCRIPTIONS: Record<AgentType, string> = {
   database:    'Schema, migraciones, índices, RLS',
   security:    'Revisa vulnerabilidades, permisos, calidad de código',
   matching:    'Motor de matching, parseo BDNS, scoring de subvenciones',
+  qa:          'Prueba la app con Puppeteer como usuario real, detecta bugs visuales',
 };
 
 async function addTask(

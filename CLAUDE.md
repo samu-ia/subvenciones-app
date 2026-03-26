@@ -153,6 +153,7 @@ npx dotenvx run -f .env.local -- npx tsx scripts/agents/add-task.ts --agent <tip
 - `database` — schema, migraciones, RLS
 - `security` — auditorías de seguridad
 - `matching` — motor de matching y pipeline BDNS
+- `qa` — prueba la app con Puppeteer como usuario real, ve capturas de pantalla (multimodal), detecta bugs visuales y crea tareas para el programmer
 
 ---
 

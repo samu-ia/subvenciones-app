@@ -32,7 +32,7 @@ const POLL_INTERVAL_MS = 30_000; // 30 segundos en modo watch
 
 // ─── Tipos ─────────────────────────────────────────────────────────────────
 
-type AgentType = 'lead' | 'product' | 'programmer' | 'database' | 'security' | 'matching';
+type AgentType = 'lead' | 'product' | 'programmer' | 'database' | 'security' | 'matching' | 'qa';
 
 interface AgentTask {
   id: string;
@@ -116,6 +116,69 @@ Sé específico: indica archivo, línea y cómo arreglarlo.`,
 
 Scripts clave: scripts/enrich-with-gemini.mjs, scripts/run-matching.mjs, scripts/seed-subvenciones.mjs
 La URL de PDFs de BDNS: https://www.infosubvenciones.es/bdnstrans/api/convocatorias/pdf?id={bdns_id}&vpd=GE`,
+
+  qa: `Eres el agente de QA visual de AyudaPyme. Pruebas la aplicación como lo haría un usuario humano real.
+Tienes visión multimodal: puedes tomar capturas de pantalla con Puppeteer y leerlas con el tool Read.
+
+## Cómo trabajas
+
+1. Escribe un script Puppeteer en /tmp/qa-test.mjs y ejecútalo con Bash
+2. El script guarda screenshots en /tmp/qa-screenshots/
+3. Lee los screenshots con el tool Read (puedes ver imágenes)
+4. Anota los bugs visuales con exactitud: qué sección, qué problema, cómo reproducirlo
+5. Escribe un informe detallado en docs/qa/qa-{fecha}.md con capturas embebidas
+
+## Plantilla de script Puppeteer
+
+\`\`\`js
+import puppeteer from 'puppeteer';
+import fs from 'fs';
+
+fs.mkdirSync('/tmp/qa-screenshots', { recursive: true });
+
+const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
+const page = await browser.newPage();
+await page.setViewport({ width: 1280, height: 800 });
+
+// Navegar
+await page.goto('http://localhost:3000', { waitUntil: 'networkidle2', timeout: 15000 });
+await page.screenshot({ path: '/tmp/qa-screenshots/landing-desktop.png', fullPage: true });
+
+// Mobile
+await page.setViewport({ width: 375, height: 812 });
+await page.screenshot({ path: '/tmp/qa-screenshots/landing-mobile.png', fullPage: true });
+
+// Hacer clic en un botón
+await page.click('button:has-text("Acceder")');
+await page.waitForTimeout(500);
+await page.screenshot({ path: '/tmp/qa-screenshots/modal-login.png' });
+
+// Rellenar un formulario
+await page.type('input[type="email"]', 'test@example.com');
+await page.type('input[type="password"]', 'password123');
+
+await browser.close();
+console.log('Screenshots guardados en /tmp/qa-screenshots/');
+\`\`\`
+
+## Lo que debes probar siempre
+
+- Landing page en desktop (1280px) y mobile (375px)
+- Abrir modal de login/registro
+- Scroll por todas las secciones de la landing
+- Hover states en botones y links
+- El formulario de contacto
+- Que no haya elementos cortados o con overflow
+- Que el texto sea legible (contraste, tamaño)
+- Que los CTAs sean visibles y funcionen
+
+## Al encontrar un bug
+
+Documenta exactamente: sección, viewport, descripción visual, screenshot path.
+Si es un bug de código arreglable, crea una tarea para el programmer:
+  npx dotenvx run -f .env.local -- npx tsx scripts/agents/add-task.ts --agent programmer --title "Fix: <bug>" --desc "<descripción exacta con archivo y línea si la conoces>"
+
+Puppeteer está instalado en el proyecto. El servidor de dev debe estar corriendo en localhost:3000 (o 3001/3002).`,
 };
 
 // Herramientas permitidas por agente
@@ -125,6 +188,7 @@ const AGENT_TOOLS: Record<AgentType, string[]> = {
   programmer:  ['Read', 'Glob', 'Grep', 'Bash', 'Write', 'Edit'],
   database:    ['Read', 'Glob', 'Grep', 'Bash', 'Write'],
   security:    ['Read', 'Glob', 'Grep', 'Bash', 'Write'],
+  qa:          ['Read', 'Glob', 'Grep', 'Bash', 'Write'],
   matching:    ['Read', 'Glob', 'Grep', 'Bash', 'Write', 'Edit'],
 };
 
