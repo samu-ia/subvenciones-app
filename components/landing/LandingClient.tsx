@@ -13,6 +13,7 @@ import FAQ from '@/components/landing/FAQ';
 import ContactSection from '@/components/landing/ContactSection';
 import LandingFooter from '@/components/landing/LandingFooter';
 import AuthModal from '@/components/landing/AuthModal';
+import BenefitsTicker from '@/components/landing/BenefitsTicker';
 
 export default function LandingClient() {
   const [authOpen, setAuthOpen] = useState(false);
@@ -54,6 +55,7 @@ export default function LandingClient() {
       <LandingHeader onAuthClick={() => setAuthOpen(true)} />
       <main>
         <Hero onAuthClick={() => setAuthOpen(true)} />
+        <BenefitsTicker />
         <AboutUs />
         <HowItWorks />
         <Testimonials />
