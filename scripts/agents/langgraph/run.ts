@@ -135,9 +135,9 @@ async function runGraph(taskId: string, title: string, description: string, maxI
 
     // Marcar como done
     const summary = finalState
-      ? `Completado en ${finalState.iteration} iteraciones. ` +
-        `Archivos: ${finalState.context.files_modified.join(', ') || 'ninguno'}. ` +
-        `Errores encontrados: ${finalState.context.errors_found.length}`
+      ? `Completado en ${finalState.iteration ?? 0} iteraciones. ` +
+        `Archivos: ${finalState.context?.files_modified?.join(', ') || 'ninguno'}. ` +
+        `Errores encontrados: ${finalState.context?.errors_found?.length ?? 0}`
       : 'Completado';
 
     await sb.from('agent_tasks').update({
