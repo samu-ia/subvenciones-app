@@ -13,7 +13,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { consultarEmpresa } from '@/lib/einforma/client';
 import { runMatchingForClient } from '@/lib/matching/run-for-client';
-import { sendWelcomeEmail } from '@/lib/notifications';
+import { sendWelcomeEmail, sendMatchNotificationEmail } from '@/lib/notifications';
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -127,15 +127,35 @@ export async function POST(request: NextRequest) {
       await runMatchingForClient(nif);
 
       // 5. Enviar email de bienvenida
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ayudapyme.es';
+      const clienteNombre = body.nombre_empresa?.trim() || nif;
       try {
-        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ayudapyme.es';
         await sendWelcomeEmail(
           user.email!,
-          body.nombre_empresa?.trim() || nif,
+          clienteNombre,
           `${siteUrl}/portal`,
         );
       } catch (err) {
         console.error('[setup] Error enviando bienvenida:', (err as Error).message);
+      }
+
+      // 6. Enviar email de notificación de matches encontrados
+      try {
+        const matchResult = await sendMatchNotificationEmail(
+          user.email!,
+          clienteNombre,
+          nif,
+          `${siteUrl}/portal`,
+        );
+        if (matchResult.ok) {
+          console.log(`[setup] Email de matches enviado a ${user.email} (${matchResult.totalMatches} matches)`);
+        } else if (matchResult.totalMatches === 0) {
+          console.log('[setup] Sin matches para notificar, email omitido');
+        } else {
+          console.warn('[setup] Error enviando email de matches:', matchResult.error);
+        }
+      } catch (err) {
+        console.error('[setup] Error enviando notificación de matches:', (err as Error).message);
       }
 
     } catch (err) {
