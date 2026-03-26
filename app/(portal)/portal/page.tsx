@@ -271,7 +271,7 @@ function ModalSolicitud({
                 </span>
               </div>
               <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: C.navy, lineHeight: 1.4, margin: 0 }}>
-                {subv.titulo}
+                {(() => { const d = subv.objeto || subv.resumen_ia || subv.titulo; return d.length > 120 ? d.slice(0, 117) + '…' : d; })()}
               </h3>
               {subv.organismo && (
                 <p style={{ fontSize: '0.76rem', color: C.muted, marginTop: 4 }}>{subv.organismo}</p>
@@ -708,7 +708,10 @@ function MatchCard({
               )}
             </div>
             <h3 style={{ fontSize: isMobile ? '0.84rem' : '0.9rem', fontWeight: 700, color: C.navy, lineHeight: 1.4, margin: 0, wordBreak: 'break-word', overflowWrap: 'break-word' }}>
-              {subv.titulo}
+              {(() => {
+                const display = subv.objeto || subv.resumen_ia || subv.titulo;
+                return display.length > 120 ? display.slice(0, 117) + '…' : display;
+              })()}
             </h3>
             {subv.organismo && <p style={{ fontSize: '0.75rem', color: C.muted, marginTop: 3, wordBreak: 'break-word' }}>{subv.organismo}</p>}
           </div>
@@ -1995,7 +1998,7 @@ export default function PortalPage() {
                                 </span>
                               </div>
                               <h3 style={{ fontSize: isMobile ? '0.84rem' : '0.9rem', fontWeight: 700, color: C.navy, lineHeight: 1.4, margin: 0, wordBreak: 'break-word' }}>
-                                {m.subvencion.titulo}
+                                {(() => { const d = m.subvencion.objeto || m.subvencion.resumen_ia || m.subvencion.titulo; return d.length > 120 ? d.slice(0, 117) + '…' : d; })()}
                               </h3>
                               {m.subvencion.organismo && <p style={{ fontSize: '0.75rem', color: C.muted, marginTop: 3, wordBreak: 'break-word' }}>{m.subvencion.organismo}</p>}
                             </div>
