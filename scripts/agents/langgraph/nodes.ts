@@ -12,7 +12,7 @@ import type { AgentType, GraphState, AgentMessage, AgentResult, LeadDecision } f
 
 const ROOT = process.cwd();
 const MAX_TURNS = 40;
-const MODEL = 'claude-opus-4-6';
+const MODEL = 'claude-sonnet-4-6';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -46,6 +46,7 @@ async function runAgentSDK(
       allowDangerouslySkipPermissions: true,
       maxTurns: MAX_TURNS,
       model: MODEL,
+      pathToClaudeCodeExecutable: process.env.CLAUDE_CODE_PATH ?? 'claude',
     },
   })) {
     turnCount++;
