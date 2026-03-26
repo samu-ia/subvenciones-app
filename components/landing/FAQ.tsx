@@ -1,11 +1,8 @@
 'use client';
 
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
+import { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
+import { useMediaQuery } from '@/lib/hooks/use-media-query';
 
 const faqs = [
   {
@@ -35,36 +32,92 @@ const faqs = [
 ];
 
 export default function FAQ() {
-  return (
-    <section id="faq" className="section-padding bg-muted">
-      <div className="container-custom">
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
-        <div className="text-center max-w-xl mx-auto" style={{ marginBottom: '2rem' }}>
-          <h2 className="text-2xl md:text-3xl font-heading font-bold text-foreground" style={{ marginBottom: '0.5rem' }}>
-            Dudas?
-          </h2>
-          <p className="text-muted-foreground text-base">
-            Las respuestas rapidas.
+  return (
+    <section 
+      id="faq" 
+      style={{ 
+        padding: isMobile ? '64px 24px' : '100px 48px', 
+        background: '#f5f3ef',
+      }}
+    >
+      <div style={{ maxWidth: 700, margin: '0 auto' }}>
+
+        {/* Header */}
+        <div style={{ marginBottom: isMobile ? 40 : 56 }}>
+          <p 
+            style={{ 
+              fontSize: '0.8rem', 
+              fontWeight: 600, 
+              color: '#0d7377', 
+              textTransform: 'uppercase', 
+              letterSpacing: '0.15em',
+              marginBottom: 12,
+            }}
+          >
+            FAQ
           </p>
+          <h2
+            style={{ 
+              fontSize: isMobile ? '1.75rem' : '2.25rem', 
+              fontWeight: 800, 
+              color: '#1a1a1a',
+              lineHeight: 1.1,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Preguntas frecuentes
+          </h2>
         </div>
 
-        <div className="max-w-3xl mx-auto">
-          <Accordion type="single" collapsible className="space-y-4">
-            {faqs.map((faq, i) => (
-              <AccordionItem
-                key={i}
-                value={`item-${i}`}
-                className="bg-card rounded-xl px-7 border-none card-elevated"
+        {/* Accordion */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {faqs.map((faq, i) => (
+            <div 
+              key={i}
+              style={{ 
+                borderBottom: '1px solid #e0ddd8',
+              }}
+            >
+              <button
+                onClick={() => setOpenIndex(openIndex === i ? null : i)}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '20px 0',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontFamily: 'inherit',
+                }}
               >
-                <AccordionTrigger className="text-left font-heading font-semibold text-foreground hover:text-primary hover:no-underline py-6 text-base">
+                <span style={{ fontSize: '1rem', fontWeight: 600, color: '#1a1a1a' }}>
                   {faq.question}
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground pb-7 leading-relaxed text-sm">
-                  {faq.answer}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
+                </span>
+                <ChevronDown 
+                  size={20} 
+                  color="#6b6b6b"
+                  style={{ 
+                    transform: openIndex === i ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.2s',
+                    flexShrink: 0,
+                  }}
+                />
+              </button>
+              {openIndex === i && (
+                <div style={{ paddingBottom: 20 }}>
+                  <p style={{ fontSize: '0.95rem', color: '#6b6b6b', lineHeight: 1.6 }}>
+                    {faq.answer}
+                  </p>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
 
       </div>

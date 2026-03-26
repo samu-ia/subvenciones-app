@@ -1,211 +1,196 @@
-import { CheckCircle, LogIn, ArrowRight, Shield, Zap, MessageCircle } from 'lucide-react';
+'use client';
 
-const trust = [
-  { icon: Shield,     text: '0 euros si no cobras' },
-  { icon: CheckCircle,text: 'Nosotros hacemos todo' },
-  { icon: Zap,        text: 'Respuesta en 24h' },
-];
-
-const stats = [
-  { value: '120.000', label: 'euros de media' },
-  { value: '87%',     label: 'tasa de exito' },
-  { value: '0',       label: 'coste inicial' },
-];
+import { ArrowRight, MessageCircle } from 'lucide-react';
+import Image from 'next/image';
 
 export default function Hero({ onAuthClick }: { onAuthClick?: () => void }) {
   return (
     <section
       id="inicio"
-      className="relative min-h-screen flex items-center hero-gradient overflow-hidden"
-      style={{ overflowX: 'hidden' }}
+      className="relative min-h-[90vh] flex items-center"
+      style={{ 
+        background: '#f5f3ef',
+        overflow: 'hidden',
+      }}
     >
-      {/* Background decoration */}
-      <div className="absolute inset-0 opacity-10 pointer-events-none">
-        <div className="absolute top-20 left-10 w-96 h-96 bg-white rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-10 w-[32rem] h-[32rem] bg-white rounded-full blur-3xl" />
-      </div>
+      <div className="w-full max-w-7xl mx-auto px-6 lg:px-12 py-20 lg:py-0">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+          
+          {/* Left: Content */}
+          <div className="order-2 lg:order-1">
+            {/* Eyebrow */}
+            <p 
+              className="text-sm font-medium tracking-wide uppercase mb-6"
+              style={{ color: '#0d7377', letterSpacing: '0.15em' }}
+            >
+              Subvenciones para tu empresa
+            </p>
 
-      <div className="container-custom relative z-10 pt-28 pb-20" style={{ paddingTop: '7rem', paddingBottom: '5rem' }}>
-        <div className="max-w-4xl mx-auto text-center">
+            {/* Headline */}
+            <h1
+              style={{
+                fontSize: 'clamp(2.5rem, 5vw, 3.75rem)',
+                fontWeight: 800,
+                color: '#1a1a1a',
+                lineHeight: 1.05,
+                letterSpacing: '-0.03em',
+                marginBottom: 24,
+              }}
+            >
+              Dinero publico<br />
+              que ya es tuyo.
+            </h1>
 
-          {/* Live badge */}
-          <div
-            className="inline-flex items-center gap-2 mb-6 animate-slide-up"
-            style={{
-              background: 'rgba(255,255,255,0.1)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              borderRadius: 100,
-              padding: '5px 14px',
-            }}
-          >
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', display: 'inline-block', boxShadow: '0 0 8px #4ade80' }} />
-            <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.75rem', fontWeight: 600 }}>
-              Gratis - Sin compromiso - 24h
-            </span>
-          </div>
+            {/* Subtitle */}
+            <p
+              style={{
+                fontSize: '1.125rem',
+                color: '#4a4a4a',
+                lineHeight: 1.7,
+                maxWidth: 440,
+                marginBottom: 40,
+              }}
+            >
+              Buscamos las subvenciones que encajan con tu negocio, 
+              preparamos el expediente y lo presentamos. 
+              <strong style={{ color: '#1a1a1a' }}> Solo cobramos si tu cobras.</strong>
+            </p>
 
-          {/* Headline */}
-          <h1
-            className="animate-slide-up"
-            style={{
-              fontSize: 'clamp(2.2rem, 5.5vw, 3.5rem)',
-              fontWeight: 900,
-              color: '#fff',
-              lineHeight: 1.1,
-              letterSpacing: '-0.03em',
-              marginBottom: 20,
-              animationDelay: '0.05s',
-            }}
-          >
-            Hay subvenciones para tu empresa.<br />
-            <span style={{ color: '#5eead4' }}>Te las conseguimos gratis.</span>
-          </h1>
+            {/* Stats inline */}
+            <div 
+              className="flex gap-8 mb-10 pb-10"
+              style={{ borderBottom: '1px solid #e0ddd8' }}
+            >
+              <div>
+                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.03em' }}>
+                  120k
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#6b6b6b', marginTop: 2 }}>
+                  euros de media
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#1a1a1a', letterSpacing: '-0.03em' }}>
+                  87%
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#6b6b6b', marginTop: 2 }}>
+                  tasa de exito
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#0d7377', letterSpacing: '-0.03em' }}>
+                  0
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#6b6b6b', marginTop: 2 }}>
+                  coste inicial
+                </div>
+              </div>
+            </div>
 
-          {/* Subtitulo */}
-          <p
-            className="animate-slide-up"
-            style={{
-              fontSize: '1.1rem',
-              color: 'rgba(255,255,255,0.75)',
-              lineHeight: 1.6,
-              maxWidth: 480,
-              margin: '0 auto 32px',
-              animationDelay: '0.12s',
-            }}
-          >
-            Analizamos tu empresa en 24h y te decimos cuanto dinero puedes conseguir. Solo cobramos si tu cobras.
-          </p>
-
-          {/* Trust pills */}
-          <div
-            className="flex flex-wrap justify-center gap-3 mb-12 animate-slide-up"
-            style={{ animationDelay: '0.18s' }}
-          >
-            {trust.map((t) => (
-              <div
-                key={t.text}
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <button
+                onClick={onAuthClick}
                 style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 7,
-                  background: 'rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(255,255,255,0.18)',
-                  borderRadius: 100, padding: '7px 14px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 10,
+                  background: '#1a1a1a',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 50,
+                  padding: '16px 32px',
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  transition: 'transform 0.2s, background 0.2s',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = '#333';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = '#1a1a1a';
+                  e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
-                <t.icon size={14} color="#5eead4" />
-                <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.88)', fontWeight: 600 }}>
-                  {t.text}
-                </span>
-              </div>
-            ))}
+                Ver mis subvenciones
+                <ArrowRight size={18} />
+              </button>
+
+              <a
+                href="https://wa.me/34601646362?text=Hola%2C%20quiero%20saber%20qu%C3%A9%20subvenciones%20puedo%20conseguir"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  background: 'transparent',
+                  color: '#1a1a1a',
+                  border: '2px solid #1a1a1a',
+                  borderRadius: 50,
+                  padding: '14px 28px',
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  textDecoration: 'none',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = '#1a1a1a';
+                  e.currentTarget.style.color = '#fff';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = '#1a1a1a';
+                }}
+              >
+                <MessageCircle size={18} />
+                Hablar por WhatsApp
+              </a>
+            </div>
           </div>
 
-          {/* CTAs */}
-          <div
-            className="flex flex-col sm:flex-row items-center justify-center gap-3 animate-slide-up"
-            style={{ animationDelay: '0.25s' }}
-          >
-            {/* Primary CTA */}
-            <button
-              onClick={onAuthClick}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                background: '#0d9488',
-                color: '#fff',
-                border: 'none', borderRadius: 12,
-                padding: '14px 28px',
-                fontSize: '1rem', fontWeight: 700,
-                cursor: 'pointer', fontFamily: 'inherit',
-                boxShadow: '0 4px 20px rgba(13,148,136,0.4)',
-                transition: 'transform 0.15s, box-shadow 0.15s',
-              }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)';
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
+          {/* Right: Image */}
+          <div className="order-1 lg:order-2 relative">
+            <div 
+              className="relative aspect-[4/5] lg:aspect-[3/4] rounded-3xl overflow-hidden"
+              style={{ 
+                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)',
               }}
             >
-              Ver mis subvenciones
-              <ArrowRight size={16} />
-            </button>
-
-            {/* WhatsApp CTA */}
-            <a
-              href="https://wa.me/34601646362?text=Hola%2C%20quiero%20saber%20qu%C3%A9%20subvenciones%20puedo%20conseguir"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                background: '#25D366',
-                color: '#fff',
-                border: 'none', borderRadius: 12,
-                padding: '14px 24px',
-                fontSize: '0.95rem', fontWeight: 600,
-                cursor: 'pointer', fontFamily: 'inherit',
-                textDecoration: 'none',
-                transition: 'transform 0.15s',
-              }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-2px)';
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(0)';
-              }}
-            >
-              <MessageCircle size={18} />
-              WhatsApp
-            </a>
-
-            {/* Secondary */}
-            <button
-              onClick={onAuthClick}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                background: 'transparent',
-                border: '1.5px solid rgba(255,255,255,0.25)',
-                color: 'rgba(255,255,255,0.85)',
-                borderRadius: 12, padding: '14px 20px',
-                fontFamily: 'inherit', fontWeight: 600, fontSize: '0.9rem',
-                cursor: 'pointer', transition: 'all 0.2s',
-              }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.1)';
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-              }}
-            >
-              <LogIn size={15} />
-              Entrar
-            </button>
-          </div>
-
-          <p
-            className="animate-slide-up"
-            style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', marginTop: 14, animationDelay: '0.3s' }}
-          >
-            Sin coste inicial - Sin compromiso - Respuesta en 24h
-          </p>
-
-          {/* Stats */}
-          <div
-            className="flex flex-wrap justify-center gap-8 mt-14 pt-10 animate-slide-up"
-            style={{
-              borderTop: '1px solid rgba(255,255,255,0.08)',
-              animationDelay: '0.35s',
-            }}
-          >
-            {stats.map((s, i) => (
-              <div key={i} style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                  {s.value}
+              <Image
+                src="/images/hero-pyme.jpg"
+                alt="Empresario PYME"
+                fill
+                className="object-cover"
+                priority
+              />
+              {/* Overlay badge */}
+              <div 
+                className="absolute bottom-6 left-6 right-6"
+                style={{
+                  background: 'rgba(255,255,255,0.95)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: 16,
+                  padding: '16px 20px',
+                }}
+              >
+                <div style={{ fontSize: '0.75rem', color: '#6b6b6b', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Lo que incluye
                 </div>
-                <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 4, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                  {s.label}
+                <div style={{ fontSize: '0.9rem', color: '#1a1a1a', fontWeight: 500, lineHeight: 1.5 }}>
+                  Busqueda + Expediente + Presentacion + Seguimiento
                 </div>
               </div>
-            ))}
+            </div>
           </div>
+
         </div>
       </div>
     </section>

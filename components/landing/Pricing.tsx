@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, ArrowRight, ShieldCheck, Zap, Clock } from 'lucide-react';
+import { Check, ArrowRight } from 'lucide-react';
 import { useMediaQuery } from '@/lib/hooks/use-media-query';
 
 const included = [
@@ -8,179 +8,183 @@ const included = [
   'Busqueda de subvenciones',
   'Preparacion del expediente',
   'Presentacion de solicitud',
-  'Seguimiento completo',
-];
-
-const guarantees = [
-  { icon: ShieldCheck, text: 'Sin coste inicial', detail: 'No pagas nada hasta que cobras.' },
-  { icon: Zap,         text: 'Sin cuotas', detail: 'Nada de pagos mensuales.' },
-  { icon: Clock,       text: 'Sin permanencia', detail: 'Te vas cuando quieras.' },
+  'Seguimiento hasta cobro',
 ];
 
 export default function Pricing({ onAuthClick }: { onAuthClick?: () => void }) {
   const isMobile = useMediaQuery('(max-width: 768px)');
 
   return (
-    <section id="pricing" style={{ padding: isMobile ? '48px 16px' : '80px 24px', background: '#fff' }}>
+    <section 
+      id="precios" 
+      style={{ 
+        padding: isMobile ? '64px 24px' : '100px 48px', 
+        background: '#fff',
+      }}
+    >
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
 
         {/* Header */}
-        <div className="text-center" style={{ marginBottom: 40 }}>
-          <h2
-            className="font-heading font-bold text-foreground"
-            style={{ fontSize: 'clamp(1.6rem, 3vw, 2rem)', marginBottom: 8, lineHeight: 1.2 }}
+        <div style={{ textAlign: 'center', marginBottom: isMobile ? 40 : 56 }}>
+          <p 
+            style={{ 
+              fontSize: '0.8rem', 
+              fontWeight: 600, 
+              color: '#0d7377', 
+              textTransform: 'uppercase', 
+              letterSpacing: '0.15em',
+              marginBottom: 12,
+            }}
           >
-            Solo pagas si cobras
-          </h2>
-          <p className="text-muted-foreground" style={{ fontSize: '1rem', lineHeight: 1.6, maxWidth: 400, margin: '0 auto' }}>
-            Sin subvencion = sin coste. Asi de simple.
+            Precios
           </p>
+          <h2
+            style={{ 
+              fontSize: isMobile ? '1.75rem' : '2.5rem', 
+              fontWeight: 800, 
+              color: '#1a1a1a',
+              lineHeight: 1.1,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Solo pagas si cobras.
+          </h2>
         </div>
 
-        {/* Main pricing card */}
+        {/* Main card */}
         <div
           style={{
-            background: 'linear-gradient(135deg, hsl(210 100% 5%) 0%, hsl(215 60% 12%) 50%, hsl(210 45% 18%) 100%)',
-            borderRadius: '1.25rem',
-            padding: isMobile ? '1.5rem' : '3rem',
-            marginBottom: 40,
-            position: 'relative',
-            overflow: 'hidden',
+            background: '#1a1a1a',
+            borderRadius: 24,
+            padding: isMobile ? 32 : 48,
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+            gap: isMobile ? 40 : 64,
+            alignItems: 'center',
           }}
         >
-          {/* Decorative glow */}
-          <div
-            style={{
-              position: 'absolute',
-              top: -60,
-              right: -60,
-              width: 200,
-              height: 200,
-              borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(13,148,136,0.15) 0%, transparent 70%)',
-              pointerEvents: 'none',
-            }}
-          />
-
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '2rem' : '3rem', alignItems: 'center' }}>
-            {/* Left: pricing info */}
-            <div>
-              <div
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 8,
-                  background: 'rgba(13,148,136,0.18)',
-                  border: '1px solid rgba(13,148,136,0.35)',
-                  borderRadius: 100,
-                  padding: '5px 14px',
-                  marginBottom: 24,
-                }}
-              >
-                <span style={{ fontSize: '0.75rem', color: '#5eead4', fontWeight: 700 }}>
-                  SUCCESS FEE
-                </span>
+          {/* Left: Price */}
+          <div>
+            <div 
+              style={{ 
+                display: 'inline-block',
+                background: '#0d7377',
+                color: '#fff',
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                padding: '6px 12px',
+                borderRadius: 50,
+                marginBottom: 24,
+              }}
+            >
+              Success fee
+            </div>
+            
+            <div style={{ marginBottom: 24 }}>
+              <span style={{ fontSize: '4rem', fontWeight: 800, color: '#fff', lineHeight: 1 }}>
+                0
+              </span>
+              <span style={{ fontSize: '1.5rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)', marginLeft: 4 }}>
+                euros
+              </span>
+              <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.6)', marginTop: 8 }}>
+                coste inicial
               </div>
-
-              <div style={{ marginBottom: 8 }}>
-                <span
-                  style={{
-                    fontSize: '3.5rem',
-                    fontWeight: 900,
-                    color: '#fff',
-                    lineHeight: 1,
-                    letterSpacing: '-0.04em',
-                  }}
-                >
-                  0€
-                </span>
-                <span style={{ fontSize: '1.1rem', color: 'rgba(255,255,255,0.5)', marginLeft: 8 }}>
-                  coste inicial
-                </span>
-              </div>
-
-              <p style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.7, marginBottom: 28 }}>
-                Analizamos tu empresa gratis. Solo cobramos un porcentaje si conseguimos que te concedan la subvención.
-              </p>
-
-              <button
-                onClick={onAuthClick}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 10,
-                  background: '#0d9488', color: '#fff',
-                  border: 'none', borderRadius: 14,
-                  padding: '15px 32px', fontSize: '0.98rem', fontWeight: 800,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                  boxShadow: '0 4px 24px rgba(13,148,136,0.4)',
-                  transition: 'transform 0.15s, box-shadow 0.15s',
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)';
-                  (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 32px rgba(13,148,136,0.5)';
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
-                  (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 24px rgba(13,148,136,0.4)';
-                }}
-              >
-                Empezar gratis
-                <ArrowRight size={18} />
-              </button>
             </div>
 
-            {/* Right: what's included */}
-            <div>
-              <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#5eead4', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 20 }}>
-                Qué incluye
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {included.map((item) => (
-                  <div key={item} className="flex items-start gap-3">
-                    <div style={{
-                      width: 22, height: 22, borderRadius: '50%',
-                      background: 'rgba(13,148,136,0.2)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      flexShrink: 0, marginTop: 1,
-                    }}>
-                      <Check size={13} color="#5eead4" strokeWidth={2.5} />
-                    </div>
-                    <span style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
-                      {item}
-                    </span>
+            <p style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.7, marginBottom: 32 }}>
+              Analizamos tu empresa gratis. Solo cobramos un porcentaje si conseguimos que te aprueben la subvencion.
+            </p>
+
+            <button
+              onClick={onAuthClick}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 10,
+                background: '#fff',
+                color: '#1a1a1a',
+                border: 'none',
+                borderRadius: 50,
+                padding: '16px 32px',
+                fontSize: '1rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'transform 0.2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              Empezar gratis
+              <ArrowRight size={18} />
+            </button>
+          </div>
+
+          {/* Right: Included */}
+          <div>
+            <div 
+              style={{ 
+                fontSize: '0.75rem', 
+                fontWeight: 600, 
+                color: '#0d7377', 
+                textTransform: 'uppercase', 
+                letterSpacing: '0.1em',
+                marginBottom: 20,
+              }}
+            >
+              Que incluye
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {included.map((item) => (
+                <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div 
+                    style={{ 
+                      width: 24, 
+                      height: 24, 
+                      borderRadius: '50%', 
+                      background: 'rgba(13, 115, 119, 0.2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Check size={14} color="#0d7377" strokeWidth={2.5} />
                   </div>
-                ))}
-              </div>
+                  <span style={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.85)' }}>
+                    {item}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
         {/* Guarantees */}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '1.25rem' }}>
-          {guarantees.map((g) => (
-            <div
-              key={g.text}
-              style={{
-                background: 'hsl(210 20% 97%)',
-                border: '1px solid hsl(210 20% 90%)',
-                borderRadius: '0.875rem',
-                padding: '1.5rem',
-                textAlign: 'center',
-              }}
-            >
-              <div style={{
-                width: 44, height: 44, borderRadius: 10,
-                background: 'hsl(215 70% 35% / 0.08)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto 12px',
-              }}>
-                <g.icon size={20} color="hsl(215, 70%, 35%)" />
-              </div>
-              <h4 className="font-heading font-semibold text-foreground" style={{ fontSize: '0.92rem', marginBottom: 6 }}>
-                {g.text}
-              </h4>
-              <p className="text-muted-foreground" style={{ fontSize: '0.82rem', lineHeight: 1.6 }}>
-                {g.detail}
-              </p>
-            </div>
-          ))}
+        <div 
+          style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            gap: isMobile ? 24 : 48, 
+            marginTop: 40,
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#1a1a1a' }}>Sin coste inicial</div>
+            <div style={{ fontSize: '0.8rem', color: '#6b6b6b' }}>No pagas nada hasta cobrar</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#1a1a1a' }}>Sin cuotas</div>
+            <div style={{ fontSize: '0.8rem', color: '#6b6b6b' }}>Nada de pagos mensuales</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#1a1a1a' }}>Sin permanencia</div>
+            <div style={{ fontSize: '0.8rem', color: '#6b6b6b' }}>Te vas cuando quieras</div>
+          </div>
         </div>
 
       </div>

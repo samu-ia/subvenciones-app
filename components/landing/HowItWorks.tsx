@@ -1,32 +1,22 @@
 'use client';
 
-import { Search, FileCheck, BadgeEuro, ArrowRight } from 'lucide-react';
 import { useMediaQuery } from '@/lib/hooks/use-media-query';
 
 const steps = [
   {
     number: '1',
-    icon: Search,
-    title: 'Te analizamos',
-    description: 'Dinos tu sector y ubicacion. Cruzamos tu perfil con todas las convocatorias activas.',
-    accent: 'hsl(215 70% 35%)',
-    accentBg: 'hsl(215 70% 35% / 0.1)',
+    title: 'Analizamos',
+    description: 'Nos dices tu sector y ubicacion. Cruzamos tu perfil con todas las convocatorias.',
   },
   {
     number: '2',
-    icon: FileCheck,
-    title: 'Lo gestionamos',
-    description: 'Preparamos el expediente completo y lo presentamos. Tu no tocas ningun papel.',
-    accent: 'hsl(175 60% 35%)',
-    accentBg: 'hsl(175 60% 35% / 0.12)',
+    title: 'Gestionamos',
+    description: 'Preparamos el expediente completo y lo presentamos. Tu no tocas nada.',
   },
   {
     number: '3',
-    icon: BadgeEuro,
-    title: 'Tu cobras',
-    description: 'Recibes el dinero. Solo entonces nos pagas. Si no hay subvencion, no pagas nada.',
-    accent: 'hsl(142 60% 38%)',
-    accentBg: 'hsl(142 60% 38% / 0.12)',
+    title: 'Cobras',
+    description: 'Recibes el dinero. Solo entonces nos pagas. Sin subvencion = sin coste.',
   },
 ];
 
@@ -34,119 +24,85 @@ export default function HowItWorks() {
   const isMobile = useMediaQuery('(max-width: 768px)');
 
   return (
-    <section id="como-funciona" style={{ padding: isMobile ? '48px 16px' : '80px 24px', background: '#fff' }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+    <section 
+      id="como-funciona" 
+      style={{ 
+        padding: isMobile ? '64px 24px' : '100px 48px', 
+        background: '#fff',
+      }}
+    >
+      <div style={{ maxWidth: 1000, margin: '0 auto' }}>
 
         {/* Header */}
-        <div className="text-center" style={{ marginBottom: 48 }}>
-          <h2
-            className="font-heading font-bold text-foreground"
-            style={{ fontSize: 'clamp(1.6rem, 3vw, 2rem)', marginBottom: 8, lineHeight: 1.2 }}
+        <div style={{ marginBottom: isMobile ? 48 : 64 }}>
+          <p 
+            style={{ 
+              fontSize: '0.8rem', 
+              fontWeight: 600, 
+              color: '#0d7377', 
+              textTransform: 'uppercase', 
+              letterSpacing: '0.15em',
+              marginBottom: 12,
+            }}
           >
-            3 pasos. Tu no haces nada.
-          </h2>
-          <p className="text-muted-foreground" style={{ fontSize: '1rem', lineHeight: 1.6, maxWidth: 400, margin: '0 auto' }}>
-            Nosotros nos encargamos de todo.
+            Como funciona
           </p>
+          <h2
+            style={{ 
+              fontSize: isMobile ? '1.75rem' : '2.5rem', 
+              fontWeight: 800, 
+              color: '#1a1a1a',
+              lineHeight: 1.1,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            3 pasos.<br />
+            Tu no haces nada.
+          </h2>
         </div>
 
         {/* Steps */}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 40 : 0, position: 'relative' }}>
-
-          {/* Connector line (desktop) */}
-          <div
-            className="hidden lg:block absolute"
-            style={{
-              top: 52,
-              left: 'calc(16.66% + 22px)',
-              right: 'calc(16.66% + 22px)',
-              height: 2,
-              background: 'linear-gradient(90deg, hsl(215 70% 35% / 0.3), hsl(175 60% 35% / 0.3), hsl(142 60% 38% / 0.3))',
-              zIndex: 0,
-            }}
-          />
-
-          {steps.map((step, i) => (
-            <div
-              key={step.number}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                textAlign: 'center',
-                padding: '0 24px',
-                position: 'relative',
-                zIndex: 1,
-              }}
-            >
-              {/* Step icon circle */}
-              <div
-                style={{
-                  width: 88,
-                  height: 88,
-                  borderRadius: '50%',
-                  background: step.accentBg,
-                  border: `2.5px solid ${step.accent}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: 24,
-                  position: 'relative',
-                  boxShadow: `0 4px 20px ${step.accent}22`,
+        <div 
+          style={{ 
+            display: 'grid', 
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', 
+            gap: isMobile ? 40 : 48,
+          }}
+        >
+          {steps.map((step) => (
+            <div key={step.number}>
+              {/* Number */}
+              <div 
+                style={{ 
+                  fontSize: '4rem', 
+                  fontWeight: 800, 
+                  color: '#e0ddd8',
+                  lineHeight: 1,
+                  marginBottom: 16,
                 }}
               >
-                <step.icon size={32} color={step.accent} strokeWidth={1.8} />
-                {/* Step number badge */}
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: -4,
-                    right: -4,
-                    width: 28,
-                    height: 28,
-                    borderRadius: '50%',
-                    background: step.accent,
-                    color: '#fff',
-                    fontSize: '0.72rem',
-                    fontWeight: 800,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                  }}
-                >
-                  {step.number}
-                </span>
+                {step.number}
               </div>
-
-              {/* Arrow between steps (desktop) */}
-              {i < steps.length - 1 && (
-                <div
-                  className="hidden lg:flex absolute items-center justify-center"
-                  style={{
-                    top: 34,
-                    right: -12,
-                    width: 24,
-                    height: 24,
-                    borderRadius: '50%',
-                    background: '#fff',
-                    border: '1.5px solid hsl(210 20% 88%)',
-                    zIndex: 2,
-                  }}
-                >
-                  <ArrowRight size={12} color="hsl(215 25% 50%)" />
-                </div>
-              )}
-
+              
+              {/* Title */}
               <h3
-                className="font-heading font-bold text-foreground"
-                style={{ fontSize: '1.1rem', marginBottom: 8 }}
+                style={{ 
+                  fontSize: '1.25rem', 
+                  fontWeight: 700, 
+                  color: '#1a1a1a',
+                  marginBottom: 8,
+                }}
               >
                 {step.title}
               </h3>
+              
+              {/* Description */}
               <p
-                className="text-muted-foreground"
-                style={{ fontSize: '0.9rem', lineHeight: 1.65, maxWidth: 280, margin: '0 auto' }}
+                style={{ 
+                  fontSize: '0.95rem', 
+                  color: '#6b6b6b',
+                  lineHeight: 1.6,
+                }}
               >
                 {step.description}
               </p>

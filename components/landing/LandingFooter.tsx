@@ -4,54 +4,79 @@ export default function LandingFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="bg-foreground text-background py-16" style={{ background: '#0d1f3c', color: '#ffffff' }}>
-      <div className="container-custom">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-12">
+    <footer 
+      style={{ 
+        background: '#1a1a1a', 
+        color: '#fff',
+        padding: '64px 24px 32px',
+      }}
+    >
+      <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+        
+        <div 
+          style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+            gap: 48,
+            marginBottom: 48,
+          }}
+        >
           {/* Brand */}
           <div>
-            <div className="flex items-center gap-3 mb-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo-light.png" alt="AyudaPyme logo" className="w-10 h-10 object-contain" />
-              <span className="font-heading font-bold text-lg">AyudaPyme</span>
+            <div style={{ fontWeight: 800, fontSize: '1.25rem', marginBottom: 16 }}>
+              AyudaPyme
             </div>
-            <p className="text-background/70 text-sm leading-relaxed">
-              Tu agencia de subvenciones. Más dinero, menos preocupaciones. Simplificamos el papeleo para que tú te
-              centres en lo importante.
+            <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>
+              Tu agencia de subvenciones. Mas dinero, menos preocupaciones.
             </p>
           </div>
 
           {/* Legal */}
           <div>
-            <h4 className="font-heading font-semibold mb-4">Legal</h4>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/terminos" className="text-background/70 hover:text-background transition-colors text-sm">
-                  Términos y condiciones
-                </Link>
-              </li>
-              <li>
-                <Link href="/privacidad" className="text-background/70 hover:text-background transition-colors text-sm">
-                  Política de privacidad
-                </Link>
-              </li>
-            </ul>
+            <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: 16, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Legal
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <Link 
+                href="/terminos" 
+                style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}
+              >
+                Terminos y condiciones
+              </Link>
+              <Link 
+                href="/privacidad" 
+                style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}
+              >
+                Politica de privacidad
+              </Link>
+            </div>
           </div>
 
           {/* Contact */}
           <div>
-            <h4 className="font-heading font-semibold mb-4">Contacto</h4>
-            <ul className="space-y-2 text-sm text-background/70">
-              <li>admin@ayudapyme.es</li>
-              <li>+34 601 64 63 62</li>
-              <li>+34 611 08 59 21</li>
-              <li>San Luis, Coruña</li>
-            </ul>
+            <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: 16, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Contacto
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)' }}>
+              <span>admin@ayudapyme.es</span>
+              <span>601 64 63 62</span>
+              <span>A Coruna</span>
+            </div>
           </div>
         </div>
 
-        <div className="pt-8 border-t border-background/20 flex flex-col md:flex-row justify-between items-center gap-4" style={{ borderColor: 'rgba(255,255,255,0.2)' }}>
-          <p className="text-background/60 text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>© {year} AyudaPyme. Todos los derechos reservados.</p>
+        {/* Bottom */}
+        <div 
+          style={{ 
+            borderTop: '1px solid rgba(255,255,255,0.1)', 
+            paddingTop: 24,
+          }}
+        >
+          <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)' }}>
+            {year} AyudaPyme. Todos los derechos reservados.
+          </p>
         </div>
+
       </div>
     </footer>
   );

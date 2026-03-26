@@ -5,10 +5,9 @@ import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 
 const navLinks = [
-  { href: '#inicio', label: 'Inicio' },
-  { href: '#quienes-somos', label: 'Quiénes somos' },
-  { href: '#como-funciona', label: 'Cómo funciona' },
-  { href: '#faq', label: 'Preguntas frecuentes' },
+  { href: '#como-funciona', label: 'Como funciona' },
+  { href: '#quienes-somos', label: 'Nosotros' },
+  { href: '#precios', label: 'Precios' },
   { href: '#contacto', label: 'Contacto' },
 ];
 
@@ -22,48 +21,67 @@ export default function LandingHeader({ onAuthClick }: { onAuthClick?: () => voi
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const linkClass = isScrolled
-    ? 'font-semibold transition-colors text-foreground hover:text-primary'
-    : 'font-semibold transition-colors text-white/90 hover:text-white';
-
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b ${
-        isScrolled
-          ? 'bg-card/95 backdrop-blur-md shadow-md border-border/30'
-          : 'hero-gradient border-white/15'
-      }`}
-      style={isScrolled ? { background: 'rgba(255,255,255,0.97)' } : undefined}
+      className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+      style={{ 
+        background: isScrolled ? 'rgba(255,255,255,0.95)' : 'transparent',
+        backdropFilter: isScrolled ? 'blur(10px)' : 'none',
+        borderBottom: isScrolled ? '1px solid #e0ddd8' : '1px solid transparent',
+      }}
     >
-      <div className="max-w-7xl mx-auto" style={{ paddingLeft: '1.25rem', paddingRight: '1.25rem' }}>
-        <div className="flex items-center justify-between h-16 md:h-20">
+      <div className="max-w-7xl mx-auto px-6 lg:px-12">
+        <div className="flex items-center justify-between h-16 lg:h-20">
+          
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={isScrolled ? '/logo-dark.png' : '/logo-light.png'}
-              alt="AyudaPyme logo"
-              className="w-10 h-10 object-contain transition-all duration-300"
-            />
-            {!isScrolled && (
-              <span className="font-heading font-bold text-xl text-white">AyudaPyme</span>
-            )}
+            <span 
+              style={{ 
+                fontWeight: 800, 
+                fontSize: '1.25rem', 
+                color: '#1a1a1a',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              AyudaPyme
+            </span>
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-5">
+          <nav className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => (
-              <a key={link.href} href={link.href} className={linkClass}>
+              <a 
+                key={link.href} 
+                href={link.href} 
+                style={{
+                  fontSize: '0.9rem',
+                  fontWeight: 500,
+                  color: '#4a4a4a',
+                  textDecoration: 'none',
+                  transition: 'color 0.2s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = '#1a1a1a'}
+                onMouseLeave={e => e.currentTarget.style.color = '#4a4a4a'}
+              >
                 {link.label}
               </a>
             ))}
             <button
               onClick={onAuthClick}
-              className={`font-semibold px-4 py-2 rounded-full border transition-all text-sm cursor-pointer ${
-                isScrolled
-                  ? 'border-primary text-primary hover:bg-primary hover:text-primary-foreground'
-                  : 'border-white/60 text-white hover:bg-white/15'
-              }`}
+              style={{
+                background: '#1a1a1a',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 50,
+                padding: '10px 24px',
+                fontSize: '0.9rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'background 0.2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = '#333'}
+              onMouseLeave={e => e.currentTarget.style.background = '#1a1a1a'}
             >
               Acceder
             </button>
@@ -71,9 +89,10 @@ export default function LandingHeader({ onAuthClick }: { onAuthClick?: () => voi
 
           {/* Mobile toggle */}
           <button
-            className={`md:hidden p-2 ${isScrolled ? 'text-foreground' : 'text-white'}`}
+            className="md:hidden p-2"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label="Toggle menu"
+            style={{ color: '#1a1a1a', background: 'none', border: 'none', cursor: 'pointer' }}
           >
             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -81,27 +100,43 @@ export default function LandingHeader({ onAuthClick }: { onAuthClick?: () => voi
 
         {/* Mobile menu */}
         {isMobileMenuOpen && (
-          <nav className={`md:hidden py-4 border-t animate-fade-in ${isScrolled ? 'border-border' : 'border-white/15'}`}>
+          <nav 
+            className="md:hidden py-4"
+            style={{ borderTop: '1px solid #e0ddd8' }}
+          >
             <div className="flex flex-col gap-4">
               {navLinks.map((link) => (
                 <a
                   key={link.href}
                   href={link.href}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`font-semibold py-2 transition-colors ${
-                    isScrolled ? 'text-foreground hover:text-primary' : 'text-white hover:text-white/80'
-                  }`}
+                  style={{
+                    fontSize: '1rem',
+                    fontWeight: 500,
+                    color: '#1a1a1a',
+                    textDecoration: 'none',
+                    padding: '8px 0',
+                  }}
                 >
                   {link.label}
                 </a>
               ))}
               <button
                 onClick={() => { setIsMobileMenuOpen(false); onAuthClick?.(); }}
-                className={`font-semibold py-2 transition-colors text-left cursor-pointer bg-transparent border-none ${
-                  isScrolled ? 'text-primary' : 'text-white'
-                }`}
+                style={{
+                  background: '#1a1a1a',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 50,
+                  padding: '12px 24px',
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  marginTop: 8,
+                }}
               >
-                Acceder →
+                Acceder
               </button>
             </div>
           </nav>

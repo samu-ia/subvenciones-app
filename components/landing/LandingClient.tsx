@@ -7,7 +7,6 @@ import LandingHeader from '@/components/landing/LandingHeader';
 import Hero from '@/components/landing/Hero';
 import AboutUs from '@/components/landing/AboutUs';
 import HowItWorks from '@/components/landing/HowItWorks';
-import Testimonials from '@/components/landing/Testimonials';
 import Pricing from '@/components/landing/Pricing';
 import FAQ from '@/components/landing/FAQ';
 import ContactSection from '@/components/landing/ContactSection';
@@ -56,9 +55,8 @@ export default function LandingClient() {
       <main>
         <Hero onAuthClick={() => setAuthOpen(true)} />
         <BenefitsTicker />
-        <AboutUs />
         <HowItWorks />
-        <Testimonials />
+        <AboutUs />
         <Pricing onAuthClick={() => setAuthOpen(true)} />
         <FAQ />
         <ContactSection />
