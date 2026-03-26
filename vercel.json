@@ -1,6 +1,7 @@
 {
   "crons": [
     { "path": "/api/subvenciones/ingest", "schedule": "0 3 * * *" },
-    { "path": "/api/subvenciones/refresh-estados", "schedule": "0 6 * * *" }
+    { "path": "/api/subvenciones/refresh-estados", "schedule": "0 6 * * *" },
+    { "path": "/api/subvenciones/process-jobs", "schedule": "0 7 * * *" }
   ]
 }
