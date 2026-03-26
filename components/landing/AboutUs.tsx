@@ -36,7 +36,7 @@ export default function AboutUs() {
       <div className="container-custom">
 
         {/* Header */}
-        <div className="text-center max-w-2xl mx-auto mb-16">
+        <div className="text-center max-w-2xl mx-auto mb-20">
           <span className="inline-block text-accent font-semibold text-sm uppercase tracking-wider mb-4">
             Quiénes somos
           </span>
@@ -50,7 +50,7 @@ export default function AboutUs() {
         </div>
 
         {/* Feature cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
           {features.map((f) => (
             <div key={f.title} className="bg-card p-7 rounded-xl card-elevated group">
               <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary group-hover:scale-110 transition-all duration-300">
@@ -63,8 +63,8 @@ export default function AboutUs() {
         </div>
 
         {/* Mission + stats */}
-        <div className="bg-secondary rounded-2xl p-8 md:p-12">
-          <div className="grid md:grid-cols-2 gap-10 items-center">
+        <div className="bg-secondary rounded-2xl p-10 md:p-14">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
               <h3 className="text-2xl md:text-3xl font-heading font-bold text-foreground mb-5">
                 Por qué existimos
@@ -80,7 +80,7 @@ export default function AboutUs() {
                 y solo cobramos si se concede.
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-5">
               {stats.map((s) => (
                 <div key={s.label} className="bg-card p-6 rounded-xl text-center">
                   <div className="text-2xl md:text-3xl font-heading font-bold text-primary mb-2 leading-tight">

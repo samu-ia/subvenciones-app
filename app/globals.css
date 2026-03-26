@@ -288,20 +288,23 @@ body {
 }
 .landing .btn-hero:hover { box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25); transform: scale(1.05); }
 
-.landing .section-padding { padding-top: 4rem; padding-bottom: 4rem; }
+.landing .section-padding { padding-top: 5rem; padding-bottom: 5rem; }
 @media (min-width: 768px) {
-  .landing .section-padding { padding-top: 6rem; padding-bottom: 6rem; }
+  .landing .section-padding { padding-top: 7rem; padding-bottom: 7rem; }
+}
+@media (min-width: 1024px) {
+  .landing .section-padding { padding-top: 8rem; padding-bottom: 8rem; }
 }
 
 .landing .container-custom {
   max-width: 72rem;
   margin-left: auto;
   margin-right: auto;
-  padding-left: 1rem;
-  padding-right: 1rem;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
 }
-@media (min-width: 640px) { .landing .container-custom { padding-left: 1.5rem; padding-right: 1.5rem; } }
-@media (min-width: 1024px) { .landing .container-custom { padding-left: 2rem; padding-right: 2rem; } }
+@media (min-width: 640px) { .landing .container-custom { padding-left: 2rem; padding-right: 2rem; } }
+@media (min-width: 1024px) { .landing .container-custom { padding-left: 2.5rem; padding-right: 2.5rem; } }
 
 /* -- Animaciones -------------------------------------------------------- */
 .landing .animate-fade-in { animation: landingFadeIn 0.5s ease-out forwards; }

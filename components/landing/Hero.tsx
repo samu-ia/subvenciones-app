@@ -24,7 +24,7 @@ export default function Hero({ onAuthClick }: { onAuthClick?: () => void }) {
         <div className="absolute bottom-20 right-10 w-[32rem] h-[32rem] bg-white rounded-full blur-3xl" />
       </div>
 
-      <div className="container-custom relative z-10 pt-28 pb-20">
+      <div className="container-custom relative z-10 pt-32 pb-28">
         <div className="max-w-4xl mx-auto text-center">
 
           {/* Live badge */}

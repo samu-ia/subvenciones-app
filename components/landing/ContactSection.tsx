@@ -3,7 +3,7 @@ export default function ContactSection() {
     <section id="contacto" className="section-padding bg-background">
       <div className="container-custom">
 
-        <div className="text-center mb-12">
+        <div className="text-center mb-16">
           <span className="inline-block text-accent font-semibold text-sm uppercase tracking-wider mb-4">
             Contacto
           </span>
@@ -15,7 +15,7 @@ export default function ContactSection() {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 max-w-3xl mx-auto">
+        <div className="grid gap-6 md:grid-cols-2 max-w-2xl mx-auto">
 
           <div className="rounded-2xl bg-[#f5f7fa] border border-[#e3e8ef] shadow-sm p-8 text-[#1a202c]">
             <h3 className="text-xl font-bold mb-1 flex items-center gap-2">
