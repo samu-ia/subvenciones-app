@@ -37,9 +37,12 @@ const env = Object.fromEntries(
 const sb = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 
 const args = process.argv.slice(2);
-const DIAS       = parseInt(args[args.indexOf('--dias') + 1] || '7');
-const WORKERS    = parseInt(args[args.indexOf('--workers') + 1] || '10');
-const BDNS_ID    = args[args.indexOf('--id') + 1] || null;
+const _dias_idx    = args.indexOf('--dias');
+const _workers_idx = args.indexOf('--workers');
+const _id_idx      = args.indexOf('--id');
+const DIAS       = _dias_idx    !== -1 ? parseInt(args[_dias_idx + 1])    : 7;
+const WORKERS    = _workers_idx !== -1 ? parseInt(args[_workers_idx + 1]) : 10;
+const BDNS_ID    = _id_idx      !== -1 ? args[_id_idx + 1]                : null;
 const FORZAR     = args.includes('--forzar');
 const MODO_ALL   = args.includes('--all');
 
