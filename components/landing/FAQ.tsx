@@ -11,41 +11,42 @@ const faqs = [
   {
     question: '¿Cuánto tiempo tarda el proceso?',
     answer:
-      'Una vez recibida toda la documentación necesaria, nuestro equipo procesa las solicitudes en un plazo máximo de 24-48 horas laborables. Para trámites más complejos, te informaremos del plazo estimado de forma personalizada.',
+      'Depende de la convocatoria, pero en general el análisis inicial lo hacemos en 24-48 horas. La tramitación completa del expediente varía según el organismo — puede ir de unas semanas a varios meses. Te informaremos del plazo concreto antes de empezar.',
   },
   {
     question: '¿Qué documentación necesito aportar?',
     answer:
-      'La documentación varía según el trámite. Como mínimo necesitaremos tu identificación (NIF/CIF/NIE) y los datos de tu actividad. Para trámites específicos, te indicaremos exactamente qué documentos son necesarios una vez inicies el proceso.',
+      'Para el análisis inicial solo necesitamos el NIF/CIF y datos básicos de tu actividad (sector, tamaño, ubicación). Si decidimos tramitar una subvención concreta, te indicaremos exactamente qué documentos se necesitan para ese expediente.',
   },
   {
-    question: '¿Cómo se realiza el pago?',
+    question: '¿Cómo funciona el pago?',
     answer:
-      'Trabajamos con domiciliación bancaria SEPA, lo que garantiza la máxima seguridad en tus transacciones. Solo necesitas proporcionarnos tu IBAN y autorizar el cargo. Recibirás un desglose detallado de los servicios antes de cualquier cobro.',
+      'El servicio es 100% a éxito. No pagas nada hasta que la subvención se concede y cobras el dinero. Cuando identificamos una subvención concreta para tu empresa y decides tramitarla, firmamos un contrato de encargo donde se especifica el porcentaje de honorarios acordado. Si no hay subvención, no hay factura.',
   },
   {
     question: '¿Puedo hacer seguimiento de mi trámite?',
     answer:
-      'Por supuesto. Una vez iniciado el proceso, recibirás actualizaciones por email en cada etapa. Además, puedes contactarnos en cualquier momento para consultar el estado de tu gestión.',
+      'Sí. Tienes acceso a tu panel donde puedes ver el estado de cada expediente en tiempo real. Además te avisamos por email en cada hito importante del proceso.',
   },
   {
-    question: '¿Qué tipo de empresas pueden utilizar vuestros servicios?',
+    question: '¿Qué tipo de empresas pueden solicitar vuestros servicios?',
     answer:
-      'Atendemos a todo tipo de empresas: autónomos, microempresas, pymes y grandes empresas. Nuestros servicios se adaptan a las necesidades específicas de cada tipo de negocio.',
+      'Trabajamos con autónomos, microempresas, pymes y empresas medianas. El perfil de subvenciones disponibles varía según tu sector, comunidad autónoma y tamaño — por eso hacemos el análisis personalizado primero.',
   },
   {
-    question: '¿Ofrecéis asesoramiento fiscal?',
-    answer: 'No, nosotros nos centramos en darte la mejor experiencia para la localización y gestión de subvenciones.',
+    question: '¿Ofrecéis asesoramiento fiscal o contable?',
+    answer:
+      'No. Nos especializamos exclusivamente en detectar y gestionar subvenciones. Para asesoramiento fiscal o contable te recomendamos acudir a un gestor o asesor especializado.',
   },
   {
     question: '¿Qué garantías ofrecéis?',
     answer:
-      'Garantizamos la confidencialidad de tus datos, el cumplimiento de todas las normativas vigentes y la máxima profesionalidad en cada gestión. Si no quedas satisfecho con nuestro servicio, te devolvemos el importe.',
+      'Garantizamos la confidencialidad total de tus datos, el cumplimiento de todas las normativas vigentes y máxima profesionalidad en cada expediente. Pero la garantía más importante es el propio modelo: si no conseguimos la subvención, no cobramos. Nuestros intereses están alineados con los tuyos.',
   },
   {
-    question: '¿Es una suscripción? ¿Tiene algún coste oculto?',
+    question: '¿Es una suscripción? ¿Hay algún coste oculto?',
     answer:
-      'No, es un servicio 100% a éxito. Solo pagas si conseguimos la subvención para ti. No hay costes iniciales ni cuotas mensuales. Solo se cobra si firmaste el contrato para tramitar una subvención en particular y se concede la misma.',
+      'No. No hay suscripción, ni cuota mensual, ni coste de análisis inicial. Solo firmamos contrato cuando hay una subvención concreta que tramitar, y solo facturamos si se concede. Sin letra pequeña.',
   },
 ];
 
@@ -53,17 +54,21 @@ export default function FAQ() {
   return (
     <section id="faq" className="section-padding bg-muted">
       <div className="container-custom">
+
         <div className="text-center max-w-2xl mx-auto mb-12">
-          <span className="inline-block text-accent font-semibold text-sm uppercase tracking-wider mb-4">FAQ</span>
-          <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-6">Preguntas frecuentes</h2>
-          <p className="text-muted-foreground text-lg">
-            Resolvemos las dudas más comunes sobre nuestros servicios. Si no encuentras lo que buscas, no dudes en
-            contactarnos.
+          <span className="inline-block text-accent font-semibold text-sm uppercase tracking-wider mb-4">
+            FAQ
+          </span>
+          <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-5">
+            Preguntas frecuentes
+          </h2>
+          <p className="text-muted-foreground text-lg leading-relaxed">
+            Si tienes alguna duda que no aparece aquí, escríbenos directamente.
           </p>
         </div>
 
         <div className="max-w-3xl mx-auto">
-          <Accordion type="single" collapsible className="space-y-4">
+          <Accordion type="single" collapsible className="space-y-3">
             {faqs.map((faq, i) => (
               <AccordionItem
                 key={i}
@@ -80,6 +85,7 @@ export default function FAQ() {
             ))}
           </Accordion>
         </div>
+
       </div>
     </section>
   );

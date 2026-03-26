@@ -48,35 +48,53 @@ export default function LandingClient() {
         <Hero onAuthClick={() => setAuthOpen(true)} />
         <AboutUs />
 
-        {/* Sección de registro destacada */}
-        <section style={{ background: '#0d1f3c', padding: '64px 24px', textAlign: 'center' }}>
-          <div style={{ maxWidth: 580, margin: '0 auto' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(13,148,136,0.2)', border: '1px solid rgba(13,148,136,0.4)', borderRadius: 20, padding: '4px 14px', fontSize: '0.78rem', color: '#5eead4', fontWeight: 700, marginBottom: 20 }}>
-              ✓ Sin riesgo · Solo pagas si ganamos
+        {/* CTA intermedio */}
+        <section style={{ background: '#0d1f3c', padding: '80px 24px', textAlign: 'center' }}>
+          <div style={{ maxWidth: 620, margin: '0 auto' }}>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              background: 'rgba(13,148,136,0.18)', border: '1px solid rgba(13,148,136,0.35)',
+              borderRadius: 100, padding: '5px 16px',
+              fontSize: '0.78rem', color: '#5eead4', fontWeight: 700, marginBottom: 24,
+              letterSpacing: '0.01em',
+            }}>
+              Sin riesgo · Sin coste inicial · Solo pagas si hay éxito
             </div>
-            <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', lineHeight: 1.2, marginBottom: 16 }}>
-              Consigue subvenciones a éxito
+            <h2 style={{
+              fontSize: 'clamp(1.7rem, 4vw, 2.5rem)', fontWeight: 900,
+              color: '#fff', lineHeight: 1.15, marginBottom: 18, letterSpacing: '-0.03em',
+            }}>
+              ¿Tu empresa está dejando pasar<br />dinero público?
             </h2>
-            <p style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.65)', marginBottom: 32, lineHeight: 1.6 }}>
-              Crea tu cuenta gratuita y descubre en minutos qué subvenciones están disponibles para tu empresa.
-              Nuestro equipo tramita todo — tú solo recibes el dinero.
+            <p style={{ fontSize: '1.05rem', color: 'rgba(255,255,255,0.6)', marginBottom: 36, lineHeight: 1.65, maxWidth: 480, margin: '0 auto 36px' }}>
+              Regístrate gratis, analizamos tu empresa y te decimos exactamente qué subvenciones puedes conseguir.
+              Si las tramitamos y no se conceden, <strong style={{ color: 'rgba(255,255,255,0.85)' }}>no te cobramos nada</strong>.
             </p>
-            <button
-              onClick={() => setAuthOpen(true)}
-              style={{
-                background: '#0d9488', color: '#fff', border: 'none', borderRadius: 12,
-                padding: '16px 36px', fontSize: '1rem', fontWeight: 800, cursor: 'pointer',
-                fontFamily: 'inherit', letterSpacing: '-0.01em',
-              }}
-            >
-              Crear cuenta gratuita →
-            </button>
-            <p style={{ marginTop: 14, fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)' }}>
-              ¿Ya tienes cuenta?{' '}
-              <button onClick={() => setAuthOpen(true)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', fontSize: '0.78rem', textDecoration: 'underline', fontFamily: 'inherit' }}>
-                Iniciar sesión
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+              <button
+                onClick={() => setAuthOpen(true)}
+                style={{
+                  background: '#0d9488', color: '#fff', border: 'none', borderRadius: 14,
+                  padding: '17px 40px', fontSize: '1.05rem', fontWeight: 800, cursor: 'pointer',
+                  fontFamily: 'inherit', letterSpacing: '-0.01em',
+                  boxShadow: '0 4px 24px rgba(13,148,136,0.4)',
+                  transition: 'transform 0.15s, box-shadow 0.15s',
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)';
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 32px rgba(13,148,136,0.5)';
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 24px rgba(13,148,136,0.4)';
+                }}
+              >
+                Ver mis subvenciones gratis
               </button>
-            </p>
+              <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.28)' }}>
+                Gratuito · Sin tarjeta · Sin compromiso
+              </p>
+            </div>
           </div>
         </section>
 

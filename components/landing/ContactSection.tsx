@@ -2,54 +2,62 @@ export default function ContactSection() {
   return (
     <section id="contacto" className="section-padding bg-background">
       <div className="container-custom">
-        <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">Contacta con nosotros</h2>
-          <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
-            Si tienes dudas sobre las subvenciones, el proceso o quieres que revisemos tu caso, escríbenos o solicita
-            una llamada.
+
+        <div className="text-center mb-12">
+          <span className="inline-block text-accent font-semibold text-sm uppercase tracking-wider mb-4">
+            Contacto
+          </span>
+          <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
+            ¿Tienes dudas? Hablamos.
+          </h2>
+          <p className="text-base md:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
+            Cuéntanos tu caso y te decimos en el mismo día si hay subvenciones que encajan con tu empresa.
           </p>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-2">
-          <div className="rounded-2xl bg-[#f5f7fa] border border-[#e3e8ef] shadow p-8 text-[#1a202c]">
-            <h3 className="text-2xl font-bold mb-3 flex items-center gap-2">
+        <div className="grid gap-6 md:grid-cols-2 max-w-3xl mx-auto">
+
+          <div className="rounded-2xl bg-[#f5f7fa] border border-[#e3e8ef] shadow-sm p-8 text-[#1a202c]">
+            <h3 className="text-xl font-bold mb-1 flex items-center gap-2">
               <span className="inline-block w-2 h-2 rounded-full bg-primary" />
-              Horario de llamadas
+              Llámanos
             </h3>
-            <p className="text-sm text-[#4b5563] mb-2">(hora peninsular española):</p>
-            <ul className="space-y-1 text-base font-medium">
+            <p className="text-sm text-[#6b7280] mb-5">Lunes a viernes, 10:00 – 19:00 (hora peninsular)</p>
+            <ul className="space-y-2 text-base font-semibold text-[#1a202c]">
               <li>
-                Lunes a viernes: 10:00 – 19:00{' '}
-                <span className="ml-2 font-semibold text-primary">601 64 63 62</span>
+                <a href="tel:+34601646362" className="hover:text-primary transition-colors">
+                  601 64 63 62
+                </a>
               </li>
               <li>
-                Lunes a viernes: 11:00 – 19:00{' '}
-                <span className="ml-2 font-semibold text-primary">611 08 59 21</span>
+                <a href="tel:+34611085921" className="hover:text-primary transition-colors">
+                  611 08 59 21
+                </a>
               </li>
             </ul>
-            <p className="mt-4 text-sm text-[#6b7280]">
-              Indica tu disponibilidad en el formulario y ajustaremos la llamada lo máximo posible.
-            </p>
           </div>
 
-          <div className="rounded-2xl bg-[#f5f7fa] border border-[#e3e8ef] shadow p-8 flex flex-col justify-between text-[#1a202c]">
+          <div className="rounded-2xl bg-[#f5f7fa] border border-[#e3e8ef] shadow-sm p-8 text-[#1a202c] flex flex-col justify-between">
             <div>
-              <h3 className="text-2xl font-bold mb-3 flex items-center gap-2">
+              <h3 className="text-xl font-bold mb-1 flex items-center gap-2">
                 <span className="inline-block w-2 h-2 rounded-full bg-primary" />
-                Correo electrónico
+                Escríbenos
               </h3>
-              <p className="text-sm text-[#4b5563] mb-4">Si lo prefieres, puedes escribirnos directamente.</p>
+              <p className="text-sm text-[#6b7280] mb-5">
+                Respondemos en el mismo día laborable.
+              </p>
               <a
                 href="mailto:admin@ayudapyme.es"
-                className="inline-flex items-center font-semibold underline underline-offset-4 hover:text-primary"
+                className="inline-flex items-center font-semibold text-primary underline underline-offset-4 hover:opacity-80 transition-opacity"
               >
                 admin@ayudapyme.es
               </a>
             </div>
-            <p className="mt-6 text-xs text-[#6b7280]">
-              Cuanta más información (sector, tamaño, ubicación), más precisa será la respuesta.
+            <p className="mt-6 text-xs text-[#9ca3af] leading-relaxed">
+              Cuanta más información nos des (sector, tamaño, ubicación), más rápido podemos decirte qué subvenciones tienes disponibles.
             </p>
           </div>
+
         </div>
       </div>
     </section>
