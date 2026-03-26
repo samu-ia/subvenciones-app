@@ -9,7 +9,7 @@ import {
   CheckCircle, AlertTriangle, Clock, Zap, Star,
   CreditCard, Landmark, ArrowRight, ArrowLeft,
   Shield, X, Check, Loader2, User, Building2, Save,
-  MessageCircle, Send, Bot, Paperclip, Menu,
+  MessageCircle, Send, Bot, Paperclip, Menu, Upload,
 } from 'lucide-react';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -66,8 +66,22 @@ interface Expediente {
   id: string;
   numero_bdns?: number;
   estado: string;
+  fase?: string;
+  titulo?: string;
+  organismo?: string;
+  plazo_solicitud?: string;
   created_at: string;
   contrato_firmado: boolean;
+}
+
+interface ChecklistItem {
+  id: string;
+  nombre: string;
+  descripcion?: string;
+  categoria?: string;
+  obligatorio: boolean;
+  completado: boolean;
+  orden: number;
 }
 
 // ─── Colores ──────────────────────────────────────────────────────────────────
@@ -1406,6 +1420,10 @@ export default function PortalPage() {
   const [cliente, setCliente] = useState<ClienteData | null>(null);
   const [matches, setMatches] = useState<MatchItem[]>([]);
   const [expedientes, setExpedientes] = useState<Expediente[]>([]);
+  const [expedienteActivo, setExpedienteActivo] = useState<Expediente | null>(null);
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+  const [cargandoChecklist, setCargandoChecklist] = useState(false);
+  const [subiendoDoc, setSubiendoDoc] = useState<string | null>(null);
   const [vista, setVista] = useState<Vista>('dashboard');
   const [matchSolicitando, setMatchSolicitando] = useState<MatchItem | null>(null);
   const [toast, setToast] = useState('');
@@ -1489,7 +1507,7 @@ export default function PortalPage() {
         // Cargar expedientes
         const { data: expData } = await supabase
           .from('expediente')
-          .select('id, numero_bdns, estado, created_at, contrato_firmado')
+          .select('id, numero_bdns, estado, fase, titulo, organismo, plazo_solicitud, created_at, contrato_firmado')
           .eq('nif', perfil.nif)
           .order('created_at', { ascending: false });
         setExpedientes(expData ?? []);
@@ -1518,12 +1536,51 @@ export default function PortalPage() {
     setMatchSolicitando(null);
     setToast('✓ Solicitud registrada. Nuestro equipo se pondrá en contacto pronto.');
     setTimeout(() => setToast(''), 5000);
-    // Refrescar matches para mostrar "solicitud activa"
     setMatches(prev => prev.map(m =>
       m.id === matchSolicitando?.id
         ? { ...m, solicitud: { id: 'new', estado: 'activo', contrato_firmado: true, metodo_pago_ok: true } }
         : m
     ));
+    // Ir a expedientes tras confirmar
+    setTimeout(() => { setVista('expedientes'); }, 1500);
+  }
+
+  async function abrirExpediente(exp: Expediente) {
+    setExpedienteActivo(exp);
+    setCargandoChecklist(true);
+    setChecklist([]);
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('checklist_items')
+      .select('id, nombre, descripcion, categoria, obligatorio, completado, orden')
+      .eq('expediente_id', exp.id)
+      .order('orden');
+    setChecklist(data ?? []);
+    setCargandoChecklist(false);
+  }
+
+  async function subirDocumento(item: ChecklistItem, file: File) {
+    if (!cliente?.nif || !expedienteActivo) return;
+    setSubiendoDoc(item.id);
+    try {
+      const supabase = createClient();
+      const ext = file.name.split('.').pop();
+      const path = `${cliente.nif}/${expedienteActivo.id}/${item.id}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('archivos')
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      // Marcar como completado
+      await supabase.from('checklist_items').update({ completado: true }).eq('id', item.id);
+      setChecklist(prev => prev.map(i => i.id === item.id ? { ...i, completado: true } : i));
+      setToast('✓ Documento subido correctamente');
+      setTimeout(() => setToast(''), 4000);
+    } catch (e) {
+      setToast('Error al subir el documento. Inténtalo de nuevo.');
+      setTimeout(() => setToast(''), 4000);
+    } finally {
+      setSubiendoDoc(null);
+    }
   }
 
   if (checking) {
@@ -1778,56 +1835,207 @@ export default function PortalPage() {
           )}
 
           {/* ── EXPEDIENTES ── */}
-          {vista === 'expedientes' && (
-            <div style={{ maxWidth: 700, margin: '0 auto' }}>
-              <h1 style={{ fontSize: '1.3rem', fontWeight: 800, color: C.navy, marginBottom: 20 }}>Mis expedientes</h1>
-              {expedientes.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 20px', color: C.muted }}>
-                  <CheckCircle size={40} style={{ marginBottom: 12, opacity: 0.4 }} />
-                  <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>Aún no tienes expedientes activos</p>
-                  <p style={{ fontSize: '0.82rem', marginTop: 6 }}>Cuando solicites una subvención y la aprobemos, aparecerá aquí.</p>
-                  <button onClick={() => setVista('ayudas')}
-                    style={{ marginTop: 16, background: C.navy, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    Ver subvenciones disponibles <ArrowRight size={14} />
+          {vista === 'expedientes' && (() => {
+            const estadoMap: Record<string, { bg: string; color: string; label: string; desc: string }> = {
+              en_tramitacion: { bg: '#eff6ff', color: C.blue,  label: 'En tramitación',  desc: 'Estamos preparando la documentación para la presentación.' },
+              pendiente_docs: { bg: '#fefce8', color: C.amber, label: 'Pendiente de docs', desc: 'Necesitamos documentos de tu empresa para continuar.' },
+              presentado:     { bg: '#f0fdf4', color: C.green, label: 'Presentado',        desc: 'La solicitud ha sido presentada. Esperando resolución.' },
+              subsanacion:    { bg: '#fff7ed', color: C.fire,  label: 'Subsanación',       desc: 'La administración solicita correcciones. Estamos en ello.' },
+              concedido:      { bg: '#dcfce7', color: C.green, label: 'Concedido ✓',       desc: '¡Enhorabuena! La subvención ha sido aprobada.' },
+              denegado:       { bg: '#fef2f2', color: C.red,   label: 'Denegado',          desc: 'La solicitud no fue aprobada en esta convocatoria.' },
+              cerrado:        { bg: '#f1f5f9', color: C.muted, label: 'Cerrado',           desc: 'Expediente cerrado.' },
+            };
+
+            if (expedienteActivo) {
+              const est = estadoMap[expedienteActivo.estado] ?? { bg: '#f1f5f9', color: C.muted, label: expedienteActivo.estado, desc: '' };
+              const completados = checklist.filter(i => i.completado).length;
+              const total = checklist.length;
+              const pct = total > 0 ? Math.round((completados / total) * 100) : 0;
+              const porCategoria = checklist.reduce<Record<string, ChecklistItem[]>>((acc, item) => {
+                const cat = item.categoria ?? 'Documentación';
+                if (!acc[cat]) acc[cat] = [];
+                acc[cat].push(item);
+                return acc;
+              }, {});
+
+              return (
+                <div style={{ maxWidth: 720, margin: '0 auto' }}>
+                  {/* Breadcrumb */}
+                  <button onClick={() => setExpedienteActivo(null)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.muted, fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 16 }}>
+                    <ArrowLeft size={14} /> Todos los expedientes
                   </button>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {expedientes.map(exp => (
-                    <div key={exp.id} style={{ background: '#fff', borderRadius: 14, border: `1px solid ${C.border}`, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 10, background: exp.contrato_firmado ? '#dcfce7' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <FileText size={18} color={exp.contrato_firmado ? C.green : C.muted} />
-                      </div>
+
+                  {/* Cabecera expediente */}
+                  <div style={{ background: '#fff', borderRadius: 16, border: `1px solid ${C.border}`, padding: '24px', marginBottom: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.navy }}>
-                          {exp.numero_bdns ? `Subvención BDNS #${exp.numero_bdns}` : 'Expediente en gestión'}
+                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: C.navy, marginBottom: 4 }}>
+                          {expedienteActivo.titulo ?? (expedienteActivo.numero_bdns ? `Subvención BDNS #${expedienteActivo.numero_bdns}` : 'Expediente en gestión')}
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: C.muted, marginTop: 2 }}>
-                          Abierto el {fmt(exp.created_at)}
+                        {expedienteActivo.organismo && (
+                          <div style={{ fontSize: '0.8rem', color: C.muted, marginBottom: 8 }}>{expedienteActivo.organismo}</div>
+                        )}
+                        <span style={{ background: est.bg, color: est.color, borderRadius: 20, padding: '4px 12px', fontSize: '0.75rem', fontWeight: 700, display: 'inline-block' }}>
+                          {est.label}
+                        </span>
+                      </div>
+                      {expedienteActivo.plazo_solicitud && (
+                        <div style={{ background: '#fefce8', border: '1px solid #fde68a', borderRadius: 10, padding: '8px 14px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '0.7rem', color: C.amber, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Plazo</div>
+                          <div style={{ fontSize: '0.88rem', fontWeight: 800, color: C.navy }}>{fmt(expedienteActivo.plazo_solicitud)}</div>
+                          {(() => { const d = diasRestantes(expedienteActivo.plazo_solicitud); return d !== null && d > 0 ? <div style={{ fontSize: '0.72rem', color: d <= 14 ? C.red : C.muted }}>{d} días</div> : null; })()}
                         </div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        {(() => {
-                          const estadoMap: Record<string, { bg: string; color: string; label: string }> = {
-                            en_tramitacion: { bg: '#eff6ff', color: C.blue,  label: 'En tramitación' },
-                            concedido:      { bg: '#dcfce7', color: C.green, label: 'Concedido' },
-                            denegado:       { bg: '#fef2f2', color: C.red,   label: 'Denegado' },
-                            cerrado:        { bg: '#f1f5f9', color: C.muted, label: 'Cerrado' },
-                          };
-                          const e = estadoMap[exp.estado] ?? { bg: '#f1f5f9', color: C.muted, label: exp.estado };
-                          return (
-                            <span style={{ background: e.bg, color: e.color, borderRadius: 20, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
-                              {e.label}
-                            </span>
-                          );
-                        })()}
-                      </div>
+                      )}
                     </div>
-                  ))}
+                    {est.desc && (
+                      <div style={{ background: est.bg, border: `1px solid ${est.color}22`, borderRadius: 10, padding: '10px 14px', marginTop: 16, fontSize: '0.83rem', color: est.color, fontWeight: 600 }}>
+                        {est.desc}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Progreso documentación */}
+                  {total > 0 && (
+                    <div style={{ background: '#fff', borderRadius: 16, border: `1px solid ${C.border}`, padding: '20px 24px', marginBottom: 16 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 700, color: C.navy }}>Documentación</div>
+                        <div style={{ fontSize: '0.8rem', color: pct === 100 ? C.green : C.muted, fontWeight: 700 }}>
+                          {completados}/{total} documentos {pct === 100 ? '✓ Completo' : ''}
+                        </div>
+                      </div>
+                      <div style={{ background: '#f1f5f9', borderRadius: 999, height: 8, overflow: 'hidden', marginBottom: 20 }}>
+                        <div style={{ background: pct === 100 ? C.green : C.teal, height: '100%', width: `${pct}%`, borderRadius: 999, transition: 'width 0.4s ease' }} />
+                      </div>
+
+                      {cargandoChecklist ? (
+                        <div style={{ textAlign: 'center', padding: '20px', color: C.muted, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                          <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Cargando checklist…
+                        </div>
+                      ) : (
+                        Object.entries(porCategoria).map(([cat, items]) => (
+                          <div key={cat} style={{ marginBottom: 16 }}>
+                            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>{cat}</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              {items.map(item => (
+                                <div key={item.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, background: item.completado ? '#f0fdf4' : '#fafafa', borderRadius: 10, border: `1px solid ${item.completado ? '#bbf7d0' : C.border}`, padding: '12px 14px' }}>
+                                  <div style={{ width: 22, height: 22, borderRadius: 6, background: item.completado ? C.green : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                                    {item.completado ? <Check size={13} color="#fff" /> : <span style={{ fontSize: '0.65rem', color: C.muted, fontWeight: 700 }}>{item.orden}</span>}
+                                  </div>
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: item.completado ? C.green : C.navy }}>
+                                      {item.nombre}
+                                      {item.obligatorio && !item.completado && <span style={{ color: C.red, marginLeft: 4 }}>*</span>}
+                                    </div>
+                                    {item.descripcion && (
+                                      <div style={{ fontSize: '0.75rem', color: C.muted, marginTop: 2 }}>{item.descripcion}</div>
+                                    )}
+                                  </div>
+                                  {!item.completado && (
+                                    <label style={{ cursor: 'pointer', flexShrink: 0 }}>
+                                      <input type="file" style={{ display: 'none' }} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                        onChange={e => { const f = e.target.files?.[0]; if (f) subirDocumento(item, f); }} />
+                                      <div style={{ background: subiendoDoc === item.id ? '#e2e8f0' : C.teal, color: '#fff', borderRadius: 8, padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5, transition: 'background 0.2s' }}>
+                                        {subiendoDoc === item.id ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Upload size={12} />}
+                                        {subiendoDoc === item.id ? 'Subiendo…' : 'Subir'}
+                                      </div>
+                                    </label>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))
+                      )}
+
+                      {checklist.length === 0 && !cargandoChecklist && (
+                        <div style={{ textAlign: 'center', padding: '20px', color: C.muted, fontSize: '0.82rem' }}>
+                          Tu gestor preparará la lista de documentos necesarios pronto.
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Timeline de fases */}
+                  <div style={{ background: '#fff', borderRadius: 16, border: `1px solid ${C.border}`, padding: '20px 24px' }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: C.navy, marginBottom: 16 }}>Proceso de tramitación</div>
+                    {[
+                      { key: 'solicitud',     label: 'Solicitud recibida',   desc: 'Has solicitado esta subvención' },
+                      { key: 'documentacion', label: 'Documentación',        desc: 'Recopilación de documentos necesarios' },
+                      { key: 'presentacion',  label: 'Presentación',         desc: 'Envío oficial a la administración' },
+                      { key: 'resolucion',    label: 'Resolución',           desc: 'Respuesta de la administración' },
+                      { key: 'cobro',         label: 'Cobro',                desc: 'Recepción del importe concedido' },
+                    ].map((fase, idx) => {
+                      const faseActualIdx = ['solicitud','documentacion','presentacion','resolucion','cobro'].indexOf(expedienteActivo.fase ?? 'solicitud');
+                      const done    = idx < faseActualIdx;
+                      const current = idx === faseActualIdx;
+                      return (
+                        <div key={fase.key} style={{ display: 'flex', gap: 14, paddingBottom: idx < 4 ? 20 : 0 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <div style={{ width: 28, height: 28, borderRadius: '50%', background: done ? C.green : current ? C.teal : '#e2e8f0', border: `2px solid ${done ? C.green : current ? C.teal : '#cbd5e1'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              {done ? <Check size={14} color="#fff" /> : <span style={{ width: 8, height: 8, borderRadius: '50%', background: current ? '#fff' : 'transparent', display: 'block' }} />}
+                            </div>
+                            {idx < 4 && <div style={{ width: 2, flex: 1, background: done ? C.green : '#e2e8f0', marginTop: 4 }} />}
+                          </div>
+                          <div style={{ paddingBottom: 4 }}>
+                            <div style={{ fontSize: '0.85rem', fontWeight: current ? 800 : 600, color: current ? C.navy : done ? C.green : C.muted }}>{fase.label}</div>
+                            <div style={{ fontSize: '0.75rem', color: C.muted, marginTop: 1 }}>{fase.desc}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
+              );
+            }
+
+            return (
+              <div style={{ maxWidth: 700, margin: '0 auto' }}>
+                <h1 style={{ fontSize: '1.3rem', fontWeight: 800, color: C.navy, marginBottom: 20 }}>Mis expedientes</h1>
+                {expedientes.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '60px 20px', color: C.muted }}>
+                    <CheckCircle size={40} style={{ marginBottom: 12, opacity: 0.4 }} />
+                    <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>Aún no tienes expedientes activos</p>
+                    <p style={{ fontSize: '0.82rem', marginTop: 6 }}>Cuando solicites una subvención y la aprobemos, aparecerá aquí.</p>
+                    <button onClick={() => setVista('ayudas')}
+                      style={{ marginTop: 16, background: C.navy, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      Ver subvenciones disponibles <ArrowRight size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {expedientes.map(exp => {
+                      const est = estadoMap[exp.estado] ?? { bg: '#f1f5f9', color: C.muted, label: exp.estado, desc: '' };
+                      return (
+                        <button key={exp.id} onClick={() => abrirExpediente(exp)}
+                          style={{ background: '#fff', borderRadius: 14, border: `1px solid ${C.border}`, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'box-shadow 0.15s' }}>
+                          <div style={{ width: 42, height: 42, borderRadius: 10, background: exp.contrato_firmado ? '#dcfce7' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <FileText size={18} color={exp.contrato_firmado ? C.green : C.muted} />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.navy }}>
+                              {exp.titulo ?? (exp.numero_bdns ? `Subvención BDNS #${exp.numero_bdns}` : 'Expediente en gestión')}
+                            </div>
+                            {exp.organismo && <div style={{ fontSize: '0.74rem', color: C.muted, marginTop: 1 }}>{exp.organismo}</div>}
+                            <div style={{ fontSize: '0.74rem', color: C.muted, marginTop: 2 }}>
+                              Abierto el {fmt(exp.created_at)}
+                              {exp.plazo_solicitud && (() => { const d = diasRestantes(exp.plazo_solicitud); return d !== null && d > 0 ? <span style={{ color: d <= 7 ? C.red : C.amber, marginLeft: 8, fontWeight: 700 }}> · {d}d para plazo</span> : null; })()}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ background: est.bg, color: est.color, borderRadius: 20, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
+                              {est.label}
+                            </span>
+                            <ChevronRight size={16} color={C.muted} />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           {/* ── MI GESTOR ── */}
           {vista === 'gestor' && cliente?.nif && (
             <VistaMiGestor nif={cliente.nif} />
