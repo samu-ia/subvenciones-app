@@ -1,18 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { enviarNotificacion } from '@/lib/notifications';
 import type { NotifChannel } from '@/lib/notifications';
+import { requireRole } from '@/lib/auth/helpers';
 
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ matchId: string }> }
 ) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email?.toLowerCase().endsWith('@ayudapyme.es')) {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
-  }
+  const auth = await requireRole('admin');
+  if (auth instanceof NextResponse) return auth;
 
   const { matchId } = await params;
   const sb = createServiceClient();

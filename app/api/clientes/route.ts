@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-
-async function requireAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email?.toLowerCase().endsWith('@ayudapyme.es')) return null;
-  return user;
-}
+import { requireRole } from '@/lib/auth/helpers';
 
 export async function GET() {
-  if (!await requireAdmin()) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+  const authGet = await requireRole('admin');
+  if (authGet instanceof NextResponse) return authGet;
 
   const sb = createServiceClient();
   const { data, error } = await sb
@@ -23,7 +17,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  if (!await requireAdmin()) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+  const authPost = await requireRole('admin');
+  if (authPost instanceof NextResponse) return authPost;
 
   const body = await request.json().catch(() => null);
   if (!body?.nif) return NextResponse.json({ error: 'NIF requerido' }, { status: 400 });

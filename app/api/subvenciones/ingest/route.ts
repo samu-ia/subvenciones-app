@@ -12,9 +12,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { ejecutarPipeline } from '@/lib/subvenciones/pipeline';
 import type { PipelineOptions } from '@/lib/types/subvenciones-pipeline';
+import { requireRole } from '@/lib/auth/helpers';
 
 export const maxDuration = 300; // 5 minutos (máximo Railway Pro)
 
@@ -29,15 +29,8 @@ export async function POST(request: NextRequest) {
 
   if (!secretOk) {
     // Si no viene el secret (o es incorrecto), verificar sesión de usuario admin
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-    // VULN-06: Verificar que el usuario es admin (no solo autenticado)
-    if (!user.email?.endsWith('@ayudapyme.es')) {
-      return NextResponse.json({ error: 'Solo administradores pueden ejecutar el pipeline' }, { status: 403 });
-    }
+    const authResult = await requireRole('admin');
+    if (authResult instanceof NextResponse) return authResult;
   }
 
   // ── Parámetros opcionales en body ─────────────────────────────────────────

@@ -7,6 +7,7 @@ import { Menu, X } from 'lucide-react';
 const navLinks = [
   { href: '#inicio', label: 'Inicio' },
   { href: '#quienes-somos', label: 'Quiénes somos' },
+  { href: '#como-funciona', label: 'Cómo funciona' },
   { href: '#faq', label: 'Preguntas frecuentes' },
   { href: '#contacto', label: 'Contacto' },
 ];
@@ -32,6 +33,7 @@ export default function LandingHeader({ onAuthClick }: { onAuthClick?: () => voi
           ? 'bg-card/95 backdrop-blur-md shadow-md border-border/30'
           : 'hero-gradient border-white/15'
       }`}
+      style={isScrolled ? { background: 'rgba(255,255,255,0.97)' } : undefined}
     >
       <div className="max-w-7xl mx-auto" style={{ paddingLeft: '1.25rem', paddingRight: '1.25rem' }}>
         <div className="flex items-center justify-between h-16 md:h-20">

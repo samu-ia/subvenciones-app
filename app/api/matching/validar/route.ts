@@ -38,17 +38,17 @@ export async function POST(request: NextRequest) {
     respuestas?: InputFase2['respuestas'];
   };
 
+  // Verificar rol desde la tabla perfiles (no por email)
+  const sb = createServiceClient();
+  const { data: perfilUsuario } = await sb.from('perfiles').select('rol, nif').eq('id', user.id).maybeSingle();
+  const esAdmin = perfilUsuario?.rol === 'admin';
+
   // Clientes solo pueden validar su propio NIF
-  const esAdmin = user.email?.toLowerCase().endsWith('@ayudapyme.es');
   if (!esAdmin) {
-    const sb = createServiceClient();
-    const { data: perfil } = await sb.from('perfiles').select('nif').eq('id', user.id).maybeSingle();
-    if (perfil?.nif !== nif) {
+    if (perfilUsuario?.nif !== nif) {
       return NextResponse.json({ error: 'No autorizado para este NIF' }, { status: 403 });
     }
   }
-
-  const sb = createServiceClient();
 
   // Cargar subvención con todas las tablas auxiliares
   const [

@@ -4,7 +4,7 @@ export default function LandingFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="bg-foreground text-background py-16">
+    <footer className="bg-foreground text-background py-16" style={{ background: '#0d1f3c', color: '#ffffff' }}>
       <div className="container-custom">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-12">
           {/* Brand */}
@@ -49,8 +49,8 @@ export default function LandingFooter() {
           </div>
         </div>
 
-        <div className="pt-8 border-t border-background/20 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-background/60 text-sm">© {year} AyudaPyme. Todos los derechos reservados.</p>
+        <div className="pt-8 border-t border-background/20 flex flex-col md:flex-row justify-between items-center gap-4" style={{ borderColor: 'rgba(255,255,255,0.2)' }}>
+          <p className="text-background/60 text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>© {year} AyudaPyme. Todos los derechos reservados.</p>
         </div>
       </div>
     </footer>

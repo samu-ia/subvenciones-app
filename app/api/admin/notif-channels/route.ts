@@ -1,16 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-
-async function requireAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email?.toLowerCase().endsWith('@ayudapyme.es')) return null;
-  return user;
-}
+import { requireRole } from '@/lib/auth/helpers';
 
 export async function GET() {
-  if (!await requireAdmin()) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+  const auth = await requireRole('admin');
+  if (auth instanceof NextResponse) return auth;
   const sb = createServiceClient();
   const { data, error } = await sb.from('notif_channels').select('*').order('canal');
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -21,7 +15,7 @@ export async function GET() {
     for (const [k, v] of Object.entries(cfg)) {
       maskedCfg[k] = v ? '•'.repeat(Math.min(v.length, 8)) : '';
     }
-    return { ...r, config_masked: maskedCfg };
+    return { ...r, config: undefined, config_masked: maskedCfg };
   });
   return NextResponse.json(masked);
 }

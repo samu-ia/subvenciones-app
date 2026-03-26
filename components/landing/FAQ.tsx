@@ -55,11 +55,11 @@ export default function FAQ() {
     <section id="faq" className="section-padding bg-muted">
       <div className="container-custom">
 
-        <div className="text-center max-w-2xl mx-auto mb-10">
-          <span className="inline-block text-accent font-semibold text-sm uppercase tracking-wider mb-4">
+        <div className="text-center max-w-2xl mx-auto mb-10" style={{ marginBottom: '2.5rem' }}>
+          <span className="inline-block text-accent font-semibold text-sm uppercase tracking-wider mb-4" style={{ display: 'inline-block', marginBottom: '1rem' }}>
             FAQ
           </span>
-          <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-5">
+          <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-5" style={{ marginBottom: '1.25rem' }}>
             Preguntas frecuentes
           </h2>
           <p className="text-muted-foreground text-lg leading-relaxed">

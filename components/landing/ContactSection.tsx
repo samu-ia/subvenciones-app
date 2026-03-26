@@ -3,11 +3,11 @@ export default function ContactSection() {
     <section id="contacto" className="section-padding bg-background">
       <div className="container-custom">
 
-        <div className="text-center mb-16">
-          <span className="inline-block text-accent font-semibold text-sm uppercase tracking-wider mb-4">
+        <div className="text-center mb-16" style={{ textAlign: 'center', marginBottom: '4rem' }}>
+          <span className="inline-block text-accent font-semibold text-sm uppercase tracking-wider mb-4" style={{ display: 'inline-block', marginBottom: '1rem' }}>
             Contacto
           </span>
-          <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
+          <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4" style={{ marginBottom: '1rem' }}>
             ¿Tienes dudas? Hablamos.
           </h2>
           <p className="text-base md:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">

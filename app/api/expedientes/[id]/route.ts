@@ -4,15 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-
-async function requireAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email?.toLowerCase().endsWith('@ayudapyme.es')) return null;
-  return user;
-}
+import { requireRole } from '@/lib/auth/helpers';
 
 const FASES_VALIDAS = [
   'preparacion', 'presentada', 'instruccion', 'resolucion_provisional',
@@ -24,7 +17,8 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!await requireAdmin()) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+  const authGet = await requireRole('admin');
+  if (authGet instanceof NextResponse) return authGet;
 
   const { id } = await params;
   const sb = createServiceClient();
@@ -49,7 +43,8 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!await requireAdmin()) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+  const authPatch = await requireRole('admin');
+  if (authPatch instanceof NextResponse) return authPatch;
 
   const { id } = await params;
   const body = await request.json().catch(() => null);
@@ -88,8 +83,48 @@ export async function PATCH(
   campos.updated_at = new Date().toISOString();
 
   const sb = createServiceClient();
+
+  // Leer expediente actual antes de actualizar (para success fee alert)
+  const nuevaFase: string | undefined = campos.fase as string | undefined;
+  let expedienteActual: Record<string, unknown> | null = null;
+  if (nuevaFase === 'cobro') {
+    const { data: expData } = await sb
+      .from('expediente')
+      .select('id, nif, titulo, importe_concedido, fase, subvencion:subvencion_id(titulo)')
+      .eq('id', id)
+      .maybeSingle();
+    expedienteActual = expData as Record<string, unknown> | null;
+  }
+
   const { error } = await sb.from('expediente').update(campos).eq('id', id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Alerta automática de success fee cuando se llega a fase 'cobro'
+  if (
+    nuevaFase === 'cobro' &&
+    expedienteActual &&
+    expedienteActual.fase !== 'cobro' // evitar duplicados si ya estaba en cobro
+  ) {
+    const importeConcedido = (campos.importe_concedido as number | undefined) ?? (expedienteActual.importe_concedido as number | null);
+    if (importeConcedido && importeConcedido > 0) {
+      const porcentaje = 0.15;
+      const importeFee = importeConcedido * porcentaje;
+      const subv = expedienteActual.subvencion as Record<string, unknown> | null;
+      const tituloSubvencion = expedienteActual.titulo || subv?.titulo || `Expediente ${id.slice(0, 8)}`;
+      await sb.from('alertas').insert({
+        tipo: 'custom',
+        titulo: `💰 Cobro success fee pendiente`,
+        descripcion: `La subvención "${tituloSubvencion}" ha sido concedida por ${importeConcedido}€. Fee a cobrar: ${importeFee.toFixed(2)}€ (${porcentaje * 100}%)`,
+        prioridad: 'critica',
+        expediente_id: id,
+        nif: expedienteActual.nif as string | null,
+        fecha_limite: null,
+        auto_generada: false,
+        resuelta: false,
+      });
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }

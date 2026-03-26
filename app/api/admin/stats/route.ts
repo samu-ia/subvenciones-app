@@ -1,13 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { requireRole } from '@/lib/auth/helpers';
 
 export async function GET() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-
-  if (!user.email?.endsWith('@ayudapyme.es')) return NextResponse.json({ error: 'Solo admins' }, { status: 403 });
+  const auth = await requireRole('admin');
+  if (auth instanceof NextResponse) return auth;
 
   const sb = createServiceClient();
 
@@ -30,7 +27,7 @@ export async function GET() {
     sb.from('expediente').select('*', { count: 'exact', head: true })
       .not('estado', 'in', '("denegado","cerrado","cancelado","descartado")'),
     sb.from('expediente').select('*', { count: 'exact', head: true })
-      .eq('estado', 'concedido'),
+      .in('fase', ['cobro', 'aceptacion', 'ejecucion', 'justificacion']),
     sb.from('cliente_subvencion_match').select('*', { count: 'exact', head: true })
       .eq('estado', 'nuevo').gte('score', 0.5).eq('es_hard_exclude', false),
     sb.from('solicitudes').select('*', { count: 'exact', head: true })

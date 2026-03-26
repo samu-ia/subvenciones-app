@@ -5,15 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-
-async function requireAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email?.toLowerCase().endsWith('@ayudapyme.es')) return null;
-  return user;
-}
+import { requireRole } from '@/lib/auth/helpers';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -54,7 +47,8 @@ function prioridadPorDias(dias: number | null, critica: number, alta: number, me
 // ─── GET ──────────────────────────────────────────────────────────────────────
 
 export async function GET() {
-  if (!await requireAdmin()) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+  const authGet = await requireRole('admin');
+  if (authGet instanceof NextResponse) return authGet;
 
   const sb = createServiceClient();
   const alertas: Alerta[] = [];
@@ -261,7 +255,7 @@ export async function GET() {
     .from('cliente_subvencion_match')
     .select('id, nif, score, subvencion_id, created_at, cliente:nif(nombre_empresa, nombre_normalizado), subvencion:subvencion_id(titulo)')
     .eq('notificado_admin', false)
-    .gte('score', 70)
+    .gte('score', 0.70)
     .order('score', { ascending: false })
     .limit(10);
 
@@ -273,7 +267,7 @@ export async function GET() {
       alertas.push({
         id: `dyn-match-${m.id}`,
         tipo: 'match_nuevo',
-        prioridad: m.score >= 85 ? 'alta' : 'media',
+        prioridad: m.score >= 0.85 ? 'alta' : 'media',
         titulo: `Nuevo match ${m.score}% — ${clienteNombre}`,
         descripcion: `${subv?.titulo || 'Subvención'} — Pendiente de notificar al cliente.`,
         expediente_id: null,
@@ -338,7 +332,8 @@ export async function GET() {
 // ─── POST — crear alerta manual ───────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  if (!await requireAdmin()) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+  const authPost = await requireRole('admin');
+  if (authPost instanceof NextResponse) return authPost;
 
   const body = await request.json().catch(() => null);
   if (!body?.titulo || !body?.tipo) return NextResponse.json({ error: 'titulo y tipo son obligatorios' }, { status: 400 });
@@ -366,7 +361,8 @@ export async function POST(request: NextRequest) {
 // ─── PATCH — resolver alerta manual ───────────────────────────────────────────
 
 export async function PATCH(request: NextRequest) {
-  if (!await requireAdmin()) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+  const authPatch = await requireRole('admin');
+  if (authPatch instanceof NextResponse) return authPatch;
 
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');

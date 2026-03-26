@@ -13,7 +13,7 @@ const CAMPOS_PERMITIDOS = [
   'nombre_empresa', 'cnae_codigo', 'cnae_descripcion',
   'comunidad_autonoma', 'provincia', 'ciudad',
   'num_empleados', 'facturacion_anual', 'forma_juridica',
-  'anos_antiguedad', 'descripcion_actividad',
+  'anos_antiguedad', 'descripcion_actividad', 'tamano_empresa',
 ] as const;
 
 export async function PATCH(request: NextRequest) {
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
 
   const { data: cliente } = await supabase
     .from('cliente')
-    .select('nif,nombre_empresa,cnae_codigo,cnae_descripcion,comunidad_autonoma,provincia,ciudad,num_empleados,facturacion_anual,forma_juridica,anos_antiguedad,descripcion_actividad')
+    .select('nif,nombre_empresa,cnae_codigo,cnae_descripcion,comunidad_autonoma,provincia,ciudad,num_empleados,facturacion_anual,forma_juridica,anos_antiguedad,descripcion_actividad,tamano_empresa')
     .eq('nif', perfil.nif)
     .maybeSingle();
 

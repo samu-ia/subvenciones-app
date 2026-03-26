@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { createProvider } from '@/lib/ai/providers/factory';
+import { requireRole } from '@/lib/auth/helpers';
 
 const CHEAP_MODELS: Record<string, string> = {
   openai: 'gpt-4o-mini',
@@ -14,11 +14,8 @@ export async function POST(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-
-  if (!user.email?.endsWith('@ayudapyme.es')) return NextResponse.json({ error: 'Solo admins' }, { status: 403 });
+  const auth = await requireRole('admin');
+  if (auth instanceof NextResponse) return auth;
 
   const { id } = await params;
   const sb = createServiceClient();

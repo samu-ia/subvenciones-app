@@ -10,9 +10,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { createClient } from '@/lib/supabase/server';
 import { calcularMatch } from '@/lib/matching/engine';
 import type { ClienteMatchProfile, SubvencionMatchProfile } from '@/lib/matching/engine';
+import { requireRole } from '@/lib/auth/helpers';
 
 // Foco geográfico: false = toda España (por defecto)
 // true solo si GALICIA_FOCUS=true está explícitamente en .env
@@ -28,10 +28,8 @@ export async function POST(request: NextRequest) {
   const secretOk = secret && authHeader.replace('Bearer ', '').trim() === secret;
 
   if (!secretOk) {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    if (!user.email?.endsWith('@ayudapyme.es')) return NextResponse.json({ error: 'Solo admins' }, { status: 403 });
+    const authResult = await requireRole('admin');
+    if (authResult instanceof NextResponse) return authResult;
   }
 
   const body = await request.json().catch(() => ({}));

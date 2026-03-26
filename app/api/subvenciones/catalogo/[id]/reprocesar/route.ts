@@ -9,25 +9,19 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { requireRole } from '@/lib/auth/helpers';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireRole('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
+
     const { id } = await params;
-    const supabase = await createClient();
-
-    // Auth
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
-
-    // Solo admins
-    if (!user.email?.endsWith('@ayudapyme.es')) {
-      return NextResponse.json({ error: 'Solo administradores' }, { status: 403 });
-    }
 
     // Verificar que existe la subvención
     const serviceSupabase = createServiceClient();

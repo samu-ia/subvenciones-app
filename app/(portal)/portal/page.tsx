@@ -796,6 +796,7 @@ function VistaPerfilEmpresa({
     forma_juridica: cliente?.forma_juridica ?? '',
     anos_antiguedad: String(cliente?.anos_antiguedad ?? ''),
     descripcion_actividad: cliente?.descripcion_actividad ?? '',
+    tamano_empresa: cliente?.tamano_empresa ?? '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -997,6 +998,20 @@ function VistaPerfilEmpresa({
                 placeholder="Ej: 15"
                 style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.85rem', boxSizing: 'border-box', fontFamily: 'inherit' }}
               />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.78rem', fontWeight: 600, color: C.ink2, display: 'block', marginBottom: 5 }}>Tamaño empresa</label>
+              <select
+                value={form.tamano_empresa}
+                onChange={e => set('tamano_empresa', e.target.value)}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.85rem', background: '#fff', fontFamily: 'inherit' }}
+              >
+                <option value="">Seleccionar…</option>
+                <option value="micro">Micro (1–9 empleados)</option>
+                <option value="pequeña">Pequeña (10–49 empleados)</option>
+                <option value="mediana">Mediana (50–249 empleados)</option>
+                <option value="grande">Grande (250+ empleados)</option>
+              </select>
             </div>
             <div>
               <label style={{ fontSize: '0.78rem', fontWeight: 600, color: C.ink2, display: 'block', marginBottom: 5 }}>
@@ -1779,18 +1794,20 @@ export default function PortalPage() {
                 </div>
               )}
 
-              {/* Indicador foco Galicia */}
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '8px 14px', borderRadius: 20,
-                background: '#f0fdf4', border: '1px solid #bbf7d0',
-                marginBottom: 16, width: 'fit-content',
-              }}>
-                <span style={{ fontSize: '0.8rem' }}>🌍</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#065f46' }}>
-                  Galicia · Cobertura nacional próximamente
-                </span>
-              </div>
+              {/* Indicador foco Galicia — solo para clientes de Galicia */}
+              {cliente?.comunidad_autonoma === 'Galicia' && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '8px 14px', borderRadius: 20,
+                  background: '#f0fdf4', border: '1px solid #bbf7d0',
+                  marginBottom: 16, width: 'fit-content',
+                }}>
+                  <span style={{ fontSize: '0.8rem' }}>🌍</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#065f46' }}>
+                    Galicia · Cobertura nacional próximamente
+                  </span>
+                </div>
+              )}
 
               {/* Top 3 matches */}
               <h2 style={{ fontSize: '1rem', fontWeight: 800, color: C.navy, marginBottom: 14 }}>
@@ -1959,14 +1976,29 @@ export default function PortalPage() {
                   {/* Timeline de fases */}
                   <div style={{ background: '#fff', borderRadius: 16, border: `1px solid ${C.border}`, padding: '20px 24px' }}>
                     <div style={{ fontSize: '0.9rem', fontWeight: 700, color: C.navy, marginBottom: 16 }}>Proceso de tramitación</div>
-                    {[
-                      { key: 'solicitud',     label: 'Solicitud recibida',   desc: 'Has solicitado esta subvención' },
-                      { key: 'documentacion', label: 'Documentación',        desc: 'Recopilación de documentos necesarios' },
-                      { key: 'presentacion',  label: 'Presentación',         desc: 'Envío oficial a la administración' },
-                      { key: 'resolucion',    label: 'Resolución',           desc: 'Respuesta de la administración' },
-                      { key: 'cobro',         label: 'Cobro',                desc: 'Recepción del importe concedido' },
-                    ].map((fase, idx) => {
-                      const faseActualIdx = ['solicitud','documentacion','presentacion','resolucion','cobro'].indexOf(expedienteActivo.fase ?? 'solicitud');
+                    {(() => {
+                      const FASE_A_PASO: Record<string, number> = {
+                        'preparacion': 0,
+                        'presentada': 1,
+                        'instruccion': 2,
+                        'resolucion_provisional': 2,
+                        'alegaciones': 2,
+                        'resolucion_definitiva': 3,
+                        'aceptacion': 3,
+                        'ejecucion': 3,
+                        'justificacion': 3,
+                        'cobro': 4,
+                        'denegada': -1,
+                        'desistida': -1,
+                      };
+                      const faseActualIdx = FASE_A_PASO[expedienteActivo.fase ?? ''] ?? 0;
+                      return [
+                        { key: 'solicitud',     label: 'Solicitud recibida',   desc: 'Has solicitado esta subvención' },
+                        { key: 'documentacion', label: 'Documentación',        desc: 'Recopilación de documentos necesarios' },
+                        { key: 'presentacion',  label: 'Presentación',         desc: 'Envío oficial a la administración' },
+                        { key: 'resolucion',    label: 'Resolución',           desc: 'Respuesta de la administración' },
+                        { key: 'cobro',         label: 'Cobro',                desc: 'Recepción del importe concedido' },
+                      ].map((fase, idx) => {
                       const done    = idx < faseActualIdx;
                       const current = idx === faseActualIdx;
                       return (
@@ -1983,7 +2015,8 @@ export default function PortalPage() {
                           </div>
                         </div>
                       );
-                    })}
+                    });
+                    })()}
                   </div>
                 </div>
               );
