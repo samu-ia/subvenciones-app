@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { requireRole, requireAdminOrTramitador } from '@/lib/auth/helpers';
+import { sendTransactionalEmail } from '@/lib/email';
 
 const FASES_VALIDAS = [
   'preparacion', 'presentada', 'instruccion', 'resolucion_provisional',
@@ -84,13 +85,13 @@ export async function PATCH(
 
   const sb = createServiceClient();
 
-  // Leer expediente actual antes de actualizar (para success fee alert)
+  // Leer expediente actual antes de actualizar
   const nuevaFase: string | undefined = campos.fase as string | undefined;
   let expedienteActual: Record<string, unknown> | null = null;
-  if (nuevaFase === 'cobro') {
+  if (nuevaFase === 'cobro' || nuevaFase === 'resolucion_definitiva') {
     const { data: expData } = await sb
       .from('expediente')
-      .select('id, nif, titulo, importe_concedido, fase, subvencion:subvencion_id(titulo)')
+      .select('id, nif, titulo, importe_concedido, fase, subvencion:subvencion_id(titulo, organismo)')
       .eq('id', id)
       .maybeSingle();
     expedienteActual = expData as Record<string, unknown> | null;
@@ -100,29 +101,129 @@ export async function PATCH(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Alerta automática de success fee cuando se llega a fase 'cobro'
+  // Obtener emails admin para notificaciones
+  async function getAdminEmails(): Promise<string[]> {
+    const { data: admins } = await sb.from('perfiles').select('id').eq('rol', 'admin');
+    const { data: { users } } = await sb.auth.admin.listUsers();
+    return (admins ?? []).map(a => users.find(u => u.id === a.id)?.email).filter(Boolean) as string[];
+  }
+
+  async function getClienteEmail(nif: string): Promise<string | null> {
+    const { data } = await sb.from('perfiles').select('id').eq('nif', nif).eq('rol', 'cliente').maybeSingle();
+    if (!data) return null;
+    const { data: { users } } = await sb.auth.admin.listUsers();
+    return users.find(u => u.id === data.id)?.email ?? null;
+  }
+
+  function fmtE(n: number) { return n.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }); }
+
+  // ── Fase COBRO: calcular fee, guardar en BD, enviar emails ─────────────────
   if (
     nuevaFase === 'cobro' &&
     expedienteActual &&
-    expedienteActual.fase !== 'cobro' // evitar duplicados si ya estaba en cobro
+    expedienteActual.fase !== 'cobro'
   ) {
-    const importeConcedido = (campos.importe_concedido as number | undefined) ?? (expedienteActual.importe_concedido as number | null);
-    if (importeConcedido && importeConcedido > 0) {
-      const porcentaje = 0.15;
-      const importeFee = importeConcedido * porcentaje;
-      const subv = expedienteActual.subvencion as Record<string, unknown> | null;
-      const tituloSubvencion = expedienteActual.titulo || subv?.titulo || `Expediente ${id.slice(0, 8)}`;
+    const importeConcedido = (campos.importe_concedido as number | undefined) ?? (expedienteActual.importe_concedido as number | null) ?? 0;
+    const subv = expedienteActual.subvencion as Record<string, unknown> | null;
+    const titulo = (expedienteActual.titulo || subv?.titulo || `Expediente ${id.slice(0, 8)}`) as string;
+    const nif = expedienteActual.nif as string | null;
+
+    if (importeConcedido > 0) {
+      const feeAmount = Math.max(importeConcedido * 0.15, 300);
+
+      // Guardar fee en BD
+      await sb.from('expediente').update({
+        fee_amount: feeAmount,
+        fee_estado: 'pendiente',
+      }).eq('id', id);
+
+      // Alerta en bandeja gestor
       await sb.from('alertas').insert({
         tipo: 'custom',
-        titulo: `💰 Cobro success fee pendiente`,
-        descripcion: `La subvención "${tituloSubvencion}" ha sido concedida por ${importeConcedido}€. Fee a cobrar: ${importeFee.toFixed(2)}€ (${porcentaje * 100}%)`,
+        titulo: `💰 Emitir factura ${fmtE(feeAmount)}`,
+        descripcion: `"${titulo}" cobrada por ${fmtE(importeConcedido)}. Comisión del 15%: ${fmtE(feeAmount)}. Enviar factura al cliente y esperar transferencia.`,
         prioridad: 'critica',
         expediente_id: id,
-        nif: expedienteActual.nif as string | null,
-        fecha_limite: null,
-        auto_generada: false,
+        nif,
         resuelta: false,
+        auto_generada: true,
       });
+
+      // Emails
+      const adminEmails = await getAdminEmails();
+      for (const email of adminEmails) {
+        await sendTransactionalEmail({
+          to: email,
+          subject: `💰 Subvención cobrada — emitir factura ${fmtE(feeAmount)}`,
+          html: `<!DOCTYPE html><html><body style="font-family:sans-serif;background:#f4f6fb;margin:0;padding:40px 0">
+<div style="max-width:540px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden">
+<div style="background:#0d1f3c;padding:24px 32px"><span style="color:#fff;font-weight:800;font-size:16px">AyudaPyme</span></div>
+<div style="padding:32px">
+<h2 style="color:#059669;margin:0 0 16px">💰 Subvención cobrada</h2>
+<p style="color:#475569"><strong>${titulo}</strong></p>
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px;margin:20px 0">
+  <div style="font-size:0.85rem;color:#059669;font-weight:600">IMPORTE CONCEDIDO</div>
+  <div style="font-size:2rem;font-weight:900;color:#0d1f3c">${fmtE(importeConcedido)}</div>
+  <div style="font-size:0.85rem;color:#059669;font-weight:600;margin-top:12px">COMISIÓN A COBRAR (15%)</div>
+  <div style="font-size:1.5rem;font-weight:800;color:#0d9488">${fmtE(feeAmount)}</div>
+</div>
+<p style="color:#475569">Acción requerida: emitir factura al cliente${nif ? ` (${nif})` : ''} por <strong>${fmtE(feeAmount)}</strong> e indicar datos bancarios para transferencia.</p>
+</div></div></body></html>`,
+        }).catch(() => {});
+      }
+
+      if (nif) {
+        const clienteEmail = await getClienteEmail(nif);
+        if (clienteEmail) {
+          await sendTransactionalEmail({
+            to: clienteEmail,
+            subject: `🎉 ¡Subvención cobrada! — ${titulo}`,
+            html: `<!DOCTYPE html><html><body style="font-family:sans-serif;background:#f4f6fb;margin:0;padding:40px 0">
+<div style="max-width:540px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden">
+<div style="background:#0d1f3c;padding:24px 32px"><span style="color:#fff;font-weight:800;font-size:16px">AyudaPyme</span></div>
+<div style="padding:32px">
+<h2 style="color:#059669;margin:0 0 8px">🎉 ¡Enhorabuena!</h2>
+<p style="color:#475569;margin:0 0 20px">La subvención <strong>${titulo}</strong> ha sido concedida y el importe está en camino.</p>
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px;margin:20px 0;text-align:center">
+  <div style="font-size:0.85rem;color:#059669;font-weight:600">IMPORTE CONSEGUIDO</div>
+  <div style="font-size:2.5rem;font-weight:900;color:#0d1f3c">${fmtE(importeConcedido)}</div>
+</div>
+<p style="color:#475569">Según nuestro acuerdo, la comisión por éxito es del 15%: <strong>${fmtE(feeAmount)}</strong>. En los próximos días recibirás una factura con los datos para la transferencia bancaria.</p>
+<p style="color:#94a3b8;font-size:0.85rem">Gracias por confiar en AyudaPyme. Ha sido un placer trabajar contigo.</p>
+</div></div></body></html>`,
+          }).catch(() => {});
+        }
+      }
+    }
+  }
+
+  // ── Fase RESOLUCIÓN DEFINITIVA: email de enhorabuena ──────────────────────
+  if (
+    nuevaFase === 'resolucion_definitiva' &&
+    expedienteActual &&
+    expedienteActual.fase !== 'resolucion_definitiva'
+  ) {
+    const subv = expedienteActual.subvencion as Record<string, unknown> | null;
+    const titulo = (expedienteActual.titulo || subv?.titulo || `Expediente ${id.slice(0, 8)}`) as string;
+    const nif = expedienteActual.nif as string | null;
+    const importeConcedido = (campos.importe_concedido as number | undefined) ?? (expedienteActual.importe_concedido as number | null);
+
+    if (nif) {
+      const clienteEmail = await getClienteEmail(nif);
+      if (clienteEmail) {
+        await sendTransactionalEmail({
+          to: clienteEmail,
+          subject: `✅ Resolución favorable — ${titulo}`,
+          html: `<!DOCTYPE html><html><body style="font-family:sans-serif;background:#f4f6fb;margin:0;padding:40px 0">
+<div style="max-width:540px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden">
+<div style="background:#0d1f3c;padding:24px 32px"><span style="color:#fff;font-weight:800;font-size:16px">AyudaPyme</span></div>
+<div style="padding:32px">
+<h2 style="color:#059669;margin:0 0 8px">✅ ¡Resolución favorable!</h2>
+<p style="color:#475569">La administración ha resuelto favorablemente la solicitud de <strong>${titulo}</strong>${importeConcedido ? ` por un importe de <strong>${fmtE(importeConcedido)}</strong>` : ''}.</p>
+<p style="color:#475569">Los siguientes pasos son la aceptación formal y la fase de ejecución del proyecto. Nos pondremos en contacto contigo con los detalles.</p>
+</div></div></body></html>`,
+        }).catch(() => {});
+      }
     }
   }
 
