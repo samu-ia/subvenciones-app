@@ -46,37 +46,44 @@ interface AgentTask {
 // ─── System prompts por agente ─────────────────────────────────────────────
 
 const AGENT_PROMPTS: Record<AgentType, string> = {
-  lead: `Eres el agente líder del proyecto AyudaPyme. Tu trabajo es:
-- Entender el estado del proyecto leyendo el código y el historial git
-- Dividir tareas complejas en subtareas más pequeñas
-- Priorizar lo más importante
-- Crear commits ordenados y con mensajes claros
-- Solo escalar al humano cuando sea estrictamente necesario (pagos, credenciales, decisiones de producto clave)
+  lead: `Eres el agente líder del proyecto AyudaPyme. EMPIEZA SIEMPRE leyendo CLAUDE.md para entender el proyecto.
 
-El proyecto es una app Next.js + Supabase que detecta subvenciones para PYMEs españolas.
-Lee CLAUDE.md si existe para contexto adicional.`,
+Tu trabajo:
+- Entender el estado del proyecto leyendo CLAUDE.md, el código y el historial git
+- Dividir tareas complejas en subtareas concretas y delegarlas a agentes especializados
+- Priorizar por impacto real en el negocio
+- Hacer commits ordenados con mensajes descriptivos
+- Solo escalar al humano cuando sea estrictamente necesario (pagos, credenciales externas, decisiones de negocio clave)
 
-  product: `Eres el agente de producto e investigación de AyudaPyme. Tu trabajo es:
+Para crear subtareas para otros agentes usa este comando desde bash:
+  npx dotenvx run -f .env.local -- npx tsx scripts/agents/add-task.ts --agent <tipo> --title "<título>" --desc "<descripción detallada>"
+Tipos disponibles: lead, product, programmer, database, security, matching
+
+Sé específico en las descripciones: incluye qué archivos tocar, qué cambiar exactamente, y qué NO hacer.`,
+
+  product: `Eres el agente de producto e investigación de AyudaPyme. EMPIEZA SIEMPRE leyendo CLAUDE.md.
+
+Tu trabajo:
 - Analizar el código existente para entender el estado actual
-- Buscar en internet soluciones, librerías, mejores prácticas
-- Proponer mejoras de UX basadas en lo que ves en el código
+- Buscar en internet soluciones, librerías, mejores prácticas relevantes
+- Proponer mejoras de UX concretas basadas en lo que ves en el código
 - Investigar APIs, servicios externos, comparar opciones
-- Escribir análisis y propuestas en archivos markdown en /docs/proposals/
+- Escribir análisis y propuestas en /docs/proposals/ (crea el directorio si no existe)
 - NO implementar código directamente — escribir especificaciones claras para el agente programador
 
-Sé específico: incluye código de ejemplo, URLs concretas, pros/contras.`,
+Formato de propuesta: título, problema actual, solución propuesta, código de ejemplo, pros/contras, esfuerzo estimado.`,
 
-  programmer: `Eres el agente programador de AyudaPyme. Tu trabajo es:
+  programmer: `Eres el agente programador de AyudaPyme. EMPIEZA SIEMPRE leyendo CLAUDE.md — contiene el bug crítico de CSS que DEBES conocer antes de tocar cualquier componente.
+
+Tu trabajo:
 - Implementar funcionalidades según las especificaciones
 - Arreglar bugs detectados
-- Refactorizar código cuando mejora la mantenibilidad
-- Conectar frontend con backend correctamente
-- Hacer commits frecuentes con mensajes descriptivos
-- Correr tests si existen, arreglar los que fallen
-- NO hacer commits a main directamente — trabajas en tu branch
+- Hacer commits frecuentes con mensajes descriptivos (en español, formato: tipo: descripción)
+- Trabajas en tu propio branch (nunca en main directamente)
 
-Stack: Next.js 16, TypeScript, Supabase, Tailwind CSS.
-Antes de implementar, leer el código existente para entender patrones usados.`,
+Stack: Next.js 16.1.6, TypeScript, Supabase, Tailwind CSS v4, React 19.
+⚠️ BUG CRÍTICO: Los utilitarios de padding/margin/background de Tailwind NO funcionan en la landing — usa inline styles. Lee CLAUDE.md para entender por qué.
+Antes de implementar, leer el código existente del área que vas a tocar.`,
 
   database: `Eres el agente de base de datos de AyudaPyme. Tu trabajo es:
 - Revisar y optimizar el schema de Supabase
@@ -148,6 +155,30 @@ async function cleanupWorktree(worktreePath: string): Promise<void> {
     console.log(`Worktree eliminado: ${worktreePath}`);
   } catch (e) {
     console.warn(`No se pudo eliminar worktree: ${worktreePath}`);
+  }
+}
+
+async function mergeWorktreeBranch(taskId: string, agentType: AgentType): Promise<void> {
+  const branchName = `agent/${agentType}/${taskId.slice(0, 8)}`;
+  try {
+    // Check if branch has commits ahead of main
+    const { stdout: aheadCount } = await execAsync(
+      `git -C "${ROOT}" rev-list --count main..${branchName}`,
+    );
+    if (parseInt(aheadCount.trim()) === 0) {
+      console.log(`[${agentType}] Sin cambios que mergear.`);
+      return;
+    }
+
+    // Merge into main with a merge commit
+    await execAsync(`git -C "${ROOT}" merge --no-ff ${branchName} -m "merge: agente ${agentType} — tarea ${taskId.slice(0, 8)}"`, { cwd: ROOT });
+    console.log(`✅ [${agentType}] Merge a main completado: ${branchName}`);
+
+    // Delete the branch
+    await execAsync(`git -C "${ROOT}" branch -d ${branchName}`, { cwd: ROOT });
+  } catch (e: any) {
+    console.warn(`[${agentType}] No se pudo hacer merge automático: ${e.message}`);
+    console.warn(`  → Mergea manualmente: git merge ${branchName}`);
   }
 }
 
@@ -233,6 +264,11 @@ async function runAgent(task: AgentTask): Promise<void> {
           process.stdout.write(`[${agent_type}] ${textBlock.text.slice(0, 120)}\n`);
         }
       }
+    }
+
+    // Merge cambios a main antes de limpiar el worktree
+    if (worktreePath) {
+      await mergeWorktreeBranch(id, agent_type);
     }
 
     // Guardar resultado
