@@ -245,6 +245,17 @@ export async function normalizarYGuardar(
         hash_despues: hashContenido,
       });
 
+      // Encolar re-matching para clientes afectados
+      try {
+        await supabase.from('subvencion_reanalisis_jobs').insert({
+          subvencion_id: existente.id,
+          bdns_id,
+          tipo_job: 'reanalisis_completo',
+          prioridad: 3,
+          motivo: `Hash change detectado. Campos: ${cambiosCampos.join(', ')}`,
+        });
+      } catch { /* non-fatal */ }
+
       return { ok: true, subvencionId: existente.id, esNueva: false, haCambiado: true };
 
     } else {

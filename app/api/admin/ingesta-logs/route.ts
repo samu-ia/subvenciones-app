@@ -9,7 +9,7 @@ export async function GET() {
   const sb = createServiceClient();
   const { data } = await sb
     .from('subvenciones_ingesta_log')
-    .select('id, created_at, modo, total_procesadas, nuevas, actualizadas, matches_generados, estado, error_msg')
+    .select('id, created_at, fuente, total_consultadas, nuevas, actualizadas, sin_cambios, errores, duracion_ms, estado, error_msg')
     .order('created_at', { ascending: false })
     .limit(20);
 

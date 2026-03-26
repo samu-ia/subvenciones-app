@@ -293,6 +293,27 @@ async function procesarConvocatoria(
       return { resultado: 'error', bdnsId, error };
     }
 
+    // ── PASO 5: Calcular y persistir estado automático ────────────────────────
+    if (subvencionId) {
+      try {
+        const { data: eventos } = await supabase
+          .from('subvencion_eventos')
+          .select('tipo_evento, fecha_evento, fecha_evento_fin')
+          .eq('bdns_id', bdnsId);
+
+        const { persistirEstadoCalculado } = await import('./estado-calculator');
+        await persistirEstadoCalculado(supabase, subvencionId, bdnsId, {
+          plazo_inicio: iaResult?.plazo_inicio ?? null,
+          plazo_fin: iaResult?.plazo_fin ?? null,
+          fecha_publicacion: null,
+          eventos: eventos ?? [],
+        });
+      } catch (estadoErr) {
+        // non-fatal — no interrumpir el pipeline por error en estado
+        console.warn(`[Pipeline] Error calculando estado para ${bdnsId}:`, estadoErr);
+      }
+    }
+
     if (esNueva) return { resultado: 'nueva', bdnsId };
     if (haCambiado) return { resultado: 'actualizada', bdnsId };
     return { resultado: 'sin_cambio', bdnsId };

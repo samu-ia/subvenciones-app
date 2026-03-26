@@ -1,8 +1,6 @@
 {
   "crons": [
-    {
-      "path": "/api/subvenciones/ingest",
-      "schedule": "0 3 * * *"
-    }
+    { "path": "/api/subvenciones/ingest", "schedule": "0 3 * * *" },
+    { "path": "/api/subvenciones/refresh-estados", "schedule": "0 6 * * *" }
   ]
 }
