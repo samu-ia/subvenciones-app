@@ -9,44 +9,39 @@ import {
 
 const faqs = [
   {
-    question: '¿Cuánto tiempo tarda el proceso?',
+    question: '¿Es esto legal?',
     answer:
-      'Depende de la convocatoria, pero en general el análisis inicial lo hacemos en 24-48 horas. La tramitación completa del expediente varía según el organismo — puede ir de unas semanas a varios meses. Te informaremos del plazo concreto antes de empezar.',
+      'Completamente. Son subvenciones públicas convocadas por administraciones españolas y europeas. El proceso de solicitud es el mismo que cualquier empresa haría — nosotros simplemente lo hacemos por ti mejor y más rápido.',
   },
   {
-    question: '¿Qué documentación necesito aportar?',
+    question: '¿Por qué no lo hago yo solo?',
     answer:
-      'Para el análisis inicial solo necesitamos el NIF/CIF y datos básicos de tu actividad (sector, tamaño, ubicación). Si decidimos tramitar una subvención concreta, te indicaremos exactamente qué documentos se necesitan para ese expediente.',
+      'Puedes. Pero requiere saber qué convocatorias existen, cuáles aplican a tu empresa, qué documentación piden cada una, cómo redactar la memoria, cómo presentarlo en cada plataforma... La mayoría de empresas que lo intentan solas lo dejan a medias o presentan expedientes incompletos que se deniegan.',
   },
   {
-    question: '¿Cómo funciona el pago?',
+    question: '¿De verdad no pago nada si no conseguís la subvención?',
     answer:
-      'El servicio es 100% a éxito. No pagas nada hasta que la subvención se concede y cobras el dinero. Cuando identificamos una subvención concreta para tu empresa y decides tramitarla, firmamos un contrato de encargo donde se especifica el porcentaje de honorarios acordado. Si no hay subvención, no hay factura.',
+      'Absolutamente nada. Ni análisis, ni gestión, ni comisión. El 15% solo se aplica sobre el importe que efectivamente se concede y se cobra. Si no hay subvención, no hay factura. Es así de simple.',
   },
   {
-    question: '¿Puedo hacer seguimiento de mi trámite?',
+    question: '¿Cuánto tiempo tarda?',
     answer:
-      'Sí. Tienes acceso a tu panel donde puedes ver el estado de cada expediente en tiempo real. Además te avisamos por email en cada hito importante del proceso.',
+      'El análisis inicial lo tenemos en 24h. La tramitación depende de cada convocatoria — puede ser de semanas a meses. Te informamos del plazo exacto antes de firmar nada. Y te avisamos en cada paso.',
   },
   {
-    question: '¿Qué tipo de empresas pueden solicitar vuestros servicios?',
+    question: '¿Qué documentación me vais a pedir?',
     answer:
-      'Trabajamos con autónomos, microempresas, pymes y empresas medianas. El perfil de subvenciones disponibles varía según tu sector, comunidad autónoma y tamaño — por eso hacemos el análisis personalizado primero.',
+      'Para empezar, solo el NIF y dos minutos de tu tiempo. Si decidimos tramitar una subvención concreta, te diremos exactamente qué necesitamos para ese expediente — nada más.',
   },
   {
-    question: '¿Ofrecéis asesoramiento fiscal o contable?',
+    question: '¿Cómo sé que sois de fiar?',
     answer:
-      'No. Nos especializamos exclusivamente en detectar y gestionar subvenciones. Para asesoramiento fiscal o contable te recomendamos acudir a un gestor o asesor especializado.',
+      'Firmamos un contrato antes de empezar donde quedan claras las condiciones, el porcentaje y lo que nos comprometemos a hacer. Puedes leerlo entero antes de firmar. No cobramos nada por adelantado — eso es la mejor garantía.',
   },
   {
-    question: '¿Qué garantías ofrecéis?',
+    question: '¿Trabajáis con cualquier tipo de empresa?',
     answer:
-      'Garantizamos la confidencialidad total de tus datos, el cumplimiento de todas las normativas vigentes y máxima profesionalidad en cada expediente. Pero la garantía más importante es el propio modelo: si no conseguimos la subvención, no cobramos. Nuestros intereses están alineados con los tuyos.',
-  },
-  {
-    question: '¿Es una suscripción? ¿Hay algún coste oculto?',
-    answer:
-      'No. No hay suscripción, ni cuota mensual, ni coste de análisis inicial. Solo firmamos contrato cuando hay una subvención concreta que tramitar, y solo facturamos si se concede. Sin letra pequeña.',
+      'Con autónomos, microempresas, pymes y medianas. El análisis es completamente gratuito — en 24h sabes si hay subvenciones para ti y cuánto representan. Sin compromiso.',
   },
 ];
 

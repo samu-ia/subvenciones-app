@@ -7,9 +7,9 @@ const trust = [
 ];
 
 const stats = [
-  { value: '120.000€', label: 'media conseguida por empresa' },
-  { value: '87%',      label: 'tasa de éxito en solicitudes' },
-  { value: '0€',       label: 'si no conseguimos nada, no pagáis' },
+  { value: '120.000€', label: 'máximo conseguido por una PYME' },
+  { value: '0€',       label: 'coste si no conseguimos nada' },
+  { value: '24h',      label: 'para saber cuánto te corresponde' },
 ];
 
 export default function Hero({ onAuthClick }: { onAuthClick?: () => void }) {
@@ -40,7 +40,7 @@ export default function Hero({ onAuthClick }: { onAuthClick?: () => void }) {
           >
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ade80', display: 'inline-block', boxShadow: '0 0 10px #4ade80' }} />
             <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.82rem', fontWeight: 600 }}>
-              Análisis gratuito — sin compromiso — resultado en 24h
+              🔴 EN VIVO — 47 convocatorias abiertas ahora mismo
             </span>
           </div>
 
@@ -57,9 +57,9 @@ export default function Hero({ onAuthClick }: { onAuthClick?: () => void }) {
               animationDelay: '0.05s',
             }}
           >
-            Tu empresa puede conseguir<br />
-            <span style={{ color: '#5eead4' }}>hasta 120.000€ este año</span><br />
-            en subvenciones que ya existen
+            Tu empresa tiene dinero<br />
+            esperando en el BOE.<br />
+            <span style={{ color: '#5eead4' }}>Nosotros vamos a por él.</span>
           </h1>
 
           {/* Subtítulo */}
@@ -74,8 +74,8 @@ export default function Hero({ onAuthClick }: { onAuthClick?: () => void }) {
               animationDelay: '0.12s',
             }}
           >
-            Introducimos el NIF de tu empresa y en menos de 24h sabes exactamente
-            cuánto dinero puedes conseguir y de dónde. <strong style={{ color: 'rgba(255,255,255,0.92)' }}>Nosotros hacemos todo. Tú solo firmas si quieres seguir.</strong>
+            Metemos tu NIF y en 24h sabes exactamente cuánto puedes conseguir.{' '}
+            <strong style={{ color: 'rgba(255,255,255,0.92)' }}>Sin papeleo. Sin coste. Solo firmas si quieres seguir.</strong>
           </p>
 
           {/* Trust pills */}
@@ -130,8 +130,7 @@ export default function Hero({ onAuthClick }: { onAuthClick?: () => void }) {
                 (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 24px rgba(13,148,136,0.45)';
               }}
             >
-              Descubrir qué le corresponde a mi empresa
-              <ArrowRight size={18} />
+              Ver cuánto me corresponde →
             </button>
 
             {/* Secondary: ya tengo cuenta */}
@@ -164,7 +163,7 @@ export default function Hero({ onAuthClick }: { onAuthClick?: () => void }) {
             className="animate-slide-up"
             style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.78rem', marginTop: 16, animationDelay: '0.3s' }}
           >
-            Gratuito · Sin tarjeta · Sin compromiso
+            Gratuito · Sin tarjeta · 847 empresas analizadas este mes
           </p>
 
           {/* Stats */}

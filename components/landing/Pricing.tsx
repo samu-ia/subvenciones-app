@@ -37,10 +37,10 @@ export default function Pricing({ onAuthClick }: { onAuthClick?: () => void }) {
             className="font-heading font-bold text-foreground"
             style={{ fontSize: 'clamp(1.75rem, 3vw, 2.25rem)', marginBottom: 12, lineHeight: 1.2 }}
           >
-            Solo pagas si ganas
+            El trato más justo que vas a encontrar
           </h2>
           <p className="text-muted-foreground" style={{ fontSize: '1.05rem', lineHeight: 1.7, maxWidth: 520, margin: '0 auto' }}>
-            Nuestros honorarios son un porcentaje de la subvención concedida. Si no hay subvención, no hay coste.
+            Solo ganamos si tú ganas. Y eso nos obliga a hacerlo bien.
           </p>
         </div>
 
@@ -104,9 +104,26 @@ export default function Pricing({ onAuthClick }: { onAuthClick?: () => void }) {
                 </span>
               </div>
 
-              <p style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.7, marginBottom: 28 }}>
+              <p style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.7, marginBottom: 20 }}>
                 Analizamos tu empresa gratis. Solo cobramos un porcentaje si conseguimos que te concedan la subvención.
               </p>
+
+              {/* Ejemplo de cálculo */}
+              <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: '16px 20px', marginBottom: 28, border: '1px solid rgba(255,255,255,0.1)' }}>
+                <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginBottom: 8, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>EJEMPLO REAL</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem' }}>Subvención conseguida</span>
+                  <span style={{ color: '#5eead4', fontWeight: 700 }}>40.000€</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+                  <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem' }}>Nuestra comisión (15%)</span>
+                  <span style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700 }}>6.000€</span>
+                </div>
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 10, paddingTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#fff', fontWeight: 700 }}>Lo que te quedas</span>
+                  <span style={{ color: '#4ade80', fontWeight: 900, fontSize: '1.1rem' }}>34.000€ netos</span>
+                </div>
+              </div>
 
               <button
                 onClick={onAuthClick}

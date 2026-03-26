@@ -1,36 +1,36 @@
 'use client';
 
-import { Search, FileCheck, BadgeCheck, Lock } from 'lucide-react';
+import { TrendingUp, FileCheck, BadgeCheck, Shield } from 'lucide-react';
 import { useMediaQuery } from '@/lib/hooks/use-media-query';
 
 const features = [
   {
-    icon: Search,
-    title: 'Búsqueda automática',
-    description: 'Escaneamos miles de convocatorias públicas cada día y filtramos únicamente las que encajan con tu empresa.',
+    icon: TrendingUp,
+    title: 'El dinero ya está aprobado',
+    description: 'No inventamos nada. Son convocatorias públicas reales, ya publicadas, con presupuesto asignado. Solo hay que solicitarlas.',
   },
   {
     icon: FileCheck,
-    title: 'Gestión completa',
-    description: 'Preparamos toda la documentación, coordinamos el proceso y lo presentamos en tu nombre. Sin burocracia para ti.',
+    title: 'Hacemos el 100% del trabajo',
+    description: 'Tú nos das 4 datos. Nosotros buscamos, preparamos, presentamos y hacemos el seguimiento. Sin que toques un papel.',
   },
   {
     icon: BadgeCheck,
-    title: 'Solo pagas si ganas',
-    description: 'Honorarios únicamente si se concede la subvención. Sin cuotas mensuales, sin costes iniciales, sin sorpresas.',
+    title: 'Solo cobras tú primero',
+    description: 'Recibes la subvención. Luego nos pagas el 15%. Si no hay subvención, no hay factura. Sin letra pequeña.',
   },
   {
-    icon: Lock,
-    title: 'Datos seguros',
-    description: 'Tratamos tu información con total confidencialidad y pleno cumplimiento del RGPD. Nunca compartimos tus datos.',
+    icon: Shield,
+    title: 'Llevamos años en esto',
+    description: 'Conocemos cada convocatoria, cada requisito, cada plazo. El expediente que presentamos es el que se aprueba.',
   },
 ];
 
 const stats = [
-  { value: '+1.000', label: 'Subvenciones en base de datos' },
-  { value: '24/7',   label: 'Monitorización de convocatorias' },
-  { value: '0 €',    label: 'Coste si no hay subvención' },
-  { value: '100%',   label: 'Gestionado por nosotros' },
+  { value: '4.000M€', label: 'sin pedir cada año en España' },
+  { value: '87%',     label: 'de nuestras solicitudes se aprueban' },
+  { value: '15%',     label: 'solo si conseguimos la subvención' },
+  { value: '24h',     label: 'para tu análisis personalizado' },
 ];
 
 export default function AboutUs() {
@@ -43,7 +43,7 @@ export default function AboutUs() {
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto" style={{ marginBottom: '3rem' }}>
           <span className="inline-block text-accent font-semibold text-sm uppercase tracking-wider" style={{ marginBottom: '1rem', display: 'block' }}>
-            Quiénes somos
+            Por qué funciona
           </span>
           <h2 className="font-heading font-bold text-foreground" style={{ fontSize: 'clamp(1.75rem, 3vw, 2.25rem)', marginBottom: '1rem', lineHeight: 1.2 }}>
             Hacemos el trabajo duro.<br />Tú recibes el dinero.
@@ -86,17 +86,15 @@ export default function AboutUs() {
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '1.5rem' : '3rem', alignItems: 'center' }}>
             <div>
               <h3 className="font-heading font-bold text-foreground" style={{ fontSize: '1.6rem', marginBottom: '1rem' }}>
-                Por qué existimos
+                El problema que resolvemos
               </h3>
               <p className="text-muted-foreground" style={{ lineHeight: 1.7, marginBottom: '1rem' }}>
-                Cada año se convocan miles de millones en subvenciones públicas para empresas. La gran mayoría
-                quedan sin solicitar porque los empresarios no tienen tiempo, no conocen los requisitos o se
-                pierden en la burocracia.
+                Cada año se quedan sin pedir más de 4.000 millones en subvenciones. No porque las empresas
+                no cumplan los requisitos. Sino porque no se enteran a tiempo, no saben cómo pedirlas
+                o se pierden en el papeleo. Nosotros existimos para que ese dinero llegue a quien le corresponde.
               </p>
               <p className="text-muted-foreground" style={{ lineHeight: 1.7 }}>
-                Nosotros detectamos las ayudas que encajan con tu negocio, preparamos el expediente completo
-                y lo presentamos. Solo firmamos contrato cuando hay una subvención concreta lista para tramitar —
-                y solo cobramos si se concede.
+                Tú pones la empresa. Nosotros ponemos el resto.
               </p>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>

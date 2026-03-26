@@ -7,24 +7,24 @@ const steps = [
   {
     number: '01',
     icon: Search,
-    title: 'Analizamos tu empresa',
-    description: 'Nos cuentas a qué te dedicas y nosotros cruzamos tu perfil con miles de convocatorias públicas activas.',
+    title: 'Introduces tu NIF',
+    description: 'Nada más. En 24 horas tenemos un análisis completo de qué subvenciones encajan con tu empresa y cuánto dinero representan.',
     accent: 'hsl(215 70% 35%)',
     accentBg: 'hsl(215 70% 35% / 0.1)',
   },
   {
     number: '02',
     icon: FileCheck,
-    title: 'Gestionamos el expediente',
-    description: 'Preparamos toda la documentación, la revisamos y presentamos la solicitud en tu nombre. Tú no tocas un papel.',
+    title: 'Nosotros hacemos todo',
+    description: 'Preparamos el expediente completo, reunimos la documentación, lo presentamos y hacemos el seguimiento. Sin molestarte.',
     accent: 'hsl(175 60% 35%)',
     accentBg: 'hsl(175 60% 35% / 0.12)',
   },
   {
     number: '03',
     icon: BadgeEuro,
-    title: 'Cobras la subvención',
-    description: 'Si se concede, recibes el dinero y solo entonces nos pagas un porcentaje. Si no se concede, coste cero.',
+    title: 'El dinero llega a tu cuenta',
+    description: 'Y entonces — solo entonces — nos pagas el 15% acordado. Si no hay subvención, no hay coste.',
     accent: 'hsl(142 60% 38%)',
     accentBg: 'hsl(142 60% 38% / 0.12)',
   },
@@ -49,10 +49,10 @@ export default function HowItWorks() {
             className="font-heading font-bold text-foreground"
             style={{ fontSize: 'clamp(1.75rem, 3vw, 2.25rem)', marginBottom: 12, lineHeight: 1.2 }}
           >
-            De cero a subvención en 3 pasos
+            Tres pasos. Tú haces uno.
           </h2>
           <p className="text-muted-foreground" style={{ fontSize: '1.05rem', lineHeight: 1.7, maxWidth: 540, margin: '0 auto' }}>
-            Sin burocracia, sin complicaciones. Nosotros nos encargamos de todo el proceso.
+            Introducir el NIF. Eso es todo lo que te pedimos.
           </p>
         </div>
 

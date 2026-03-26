@@ -14,6 +14,7 @@ import ContactSection from '@/components/landing/ContactSection';
 import LandingFooter from '@/components/landing/LandingFooter';
 import AuthModal from '@/components/landing/AuthModal';
 import BenefitsTicker from '@/components/landing/BenefitsTicker';
+import FinalCTA from '@/components/landing/FinalCTA';
 
 export default function LandingClient() {
   const [authOpen, setAuthOpen] = useState(false);
@@ -58,9 +59,10 @@ export default function LandingClient() {
         <BenefitsTicker />
         <AboutUs />
         <HowItWorks />
-        <Testimonials />
+        <Testimonials onAuthClick={() => setAuthOpen(true)} />
         <Pricing onAuthClick={() => setAuthOpen(true)} />
         <FAQ />
+        <FinalCTA onAuthClick={() => setAuthOpen(true)} />
         <ContactSection />
       </main>
       <LandingFooter />

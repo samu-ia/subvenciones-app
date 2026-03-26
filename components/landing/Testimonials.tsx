@@ -67,7 +67,7 @@ function Initials({ name }: { name: string }) {
   );
 }
 
-export default function Testimonials() {
+export default function Testimonials({ onAuthClick }: { onAuthClick?: () => void }) {
   const isMobile = useMediaQuery('(max-width: 768px)');
 
   return (
@@ -86,10 +86,10 @@ export default function Testimonials() {
             className="font-heading font-bold text-foreground"
             style={{ fontSize: 'clamp(1.75rem, 3vw, 2.25rem)', marginBottom: 12, lineHeight: 1.2 }}
           >
-            Empresas que ya confían en nosotros
+            Ya hay empresas como la tuya que lo han conseguido
           </h2>
           <p className="text-muted-foreground" style={{ fontSize: '1.05rem', lineHeight: 1.7, maxWidth: 540, margin: '0 auto' }}>
-            PYMEs reales que han conseguido financiación pública sin complicaciones.
+            Empresas normales. Sin contactos. Sin saber nada de subvenciones.
           </p>
         </div>
 
@@ -125,22 +125,22 @@ export default function Testimonials() {
                 strokeWidth={1.5}
               />
 
-              {/* Rating + amount badge */}
-              <div className="flex items-center justify-between">
+              {/* Rating */}
+              <div className="flex items-center">
                 <StarRating count={t.rating} />
-                <span
-                  style={{
-                    background: 'hsl(142 60% 38% / 0.1)',
-                    color: 'hsl(142 60% 38%)',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    padding: '4px 12px',
-                    borderRadius: 100,
-                    border: '1px solid hsl(142 60% 38% / 0.2)',
-                  }}
-                >
-                  +{t.amount} conseguidos
-                </span>
+              </div>
+
+              {/* Big amount */}
+              <div>
+                <div style={{
+                  fontSize: '2.2rem', fontWeight: 900, color: '#059669',
+                  letterSpacing: '-0.04em', lineHeight: 1, marginBottom: 4
+                }}>
+                  +{t.amount}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  conseguidos
+                </div>
               </div>
 
               {/* Quote text */}
@@ -177,10 +177,22 @@ export default function Testimonials() {
         </div>
 
         {/* Social proof footer */}
-        <div className="text-center" style={{ marginTop: 40 }}>
-          <p className="text-muted-foreground" style={{ fontSize: '0.85rem' }}>
-            <span style={{ fontWeight: 700, color: 'hsl(215 70% 35%)' }}>+50 empresas</span> ya gestionan sus subvenciones con AyudaPyme
+        <div className="text-center" style={{ marginTop: 48, padding: '32px 24px', background: 'hsl(210 25% 94%)', borderRadius: '1rem' }}>
+          <p className="text-muted-foreground" style={{ fontSize: '0.95rem', lineHeight: 1.7, marginBottom: 20 }}>
+            <strong className="text-foreground">¿Sabías que el 78% de las pymes españolas nunca ha solicitado una subvención?</strong><br />
+            La mayoría no es porque no cumplan requisitos — es porque nadie les avisó.
           </p>
+          <button
+            onClick={onAuthClick}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              background: 'hsl(215 70% 35%)', color: '#fff',
+              border: 'none', borderRadius: 12, padding: '12px 24px',
+              fontSize: '0.92rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            Comprueba si tu empresa tiene dinero esperando →
+          </button>
         </div>
 
       </div>
