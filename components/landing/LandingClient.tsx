@@ -18,17 +18,22 @@ export default function LandingClient() {
   const supabase = createClient();
 
   useEffect(() => {
+    const timeout = setTimeout(() => setChecking(false), 3000);
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: perfil } = await supabase
-          .from('perfiles').select('rol').eq('id', user.id).maybeSingle();
-        const rol = perfil?.rol ?? user.user_metadata?.rol ?? 'cliente';
-        router.replace(rol === 'admin' ? '/clientes' : '/portal');
-        return;
-      }
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: perfil } = await supabase
+            .from('perfiles').select('rol').eq('id', user.id).maybeSingle();
+          const rol = perfil?.rol ?? user.user_metadata?.rol ?? 'cliente';
+          router.replace(rol === 'admin' ? '/clientes' : '/portal');
+          return;
+        }
+      } catch { /* ignora errores de red — muestra landing */ }
+      clearTimeout(timeout);
       setChecking(false);
     })();
+    return () => clearTimeout(timeout);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -49,7 +54,7 @@ export default function LandingClient() {
         <AboutUs />
 
         {/* CTA intermedio */}
-        <section style={{ background: '#0d1f3c', padding: '80px 24px', textAlign: 'center' }}>
+        <section style={{ background: '#0d1f3c', padding: '56px 24px', textAlign: 'center' }}>
           <div style={{ maxWidth: 620, margin: '0 auto' }}>
             <div style={{
               display: 'inline-flex', alignItems: 'center', gap: 8,

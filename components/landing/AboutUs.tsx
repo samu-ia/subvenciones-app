@@ -36,7 +36,7 @@ export default function AboutUs() {
       <div className="container-custom">
 
         {/* Header */}
-        <div className="text-center max-w-2xl mx-auto mb-20">
+        <div className="text-center max-w-2xl mx-auto mb-12">
           <span className="inline-block text-accent font-semibold text-sm uppercase tracking-wider mb-4">
             Quiénes somos
           </span>
@@ -50,7 +50,7 @@ export default function AboutUs() {
         </div>
 
         {/* Feature cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           {features.map((f) => (
             <div key={f.title} className="bg-card p-7 rounded-xl card-elevated group">
               <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary group-hover:scale-110 transition-all duration-300">

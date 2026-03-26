@@ -55,7 +55,7 @@ export default function FAQ() {
     <section id="faq" className="section-padding bg-muted">
       <div className="container-custom">
 
-        <div className="text-center max-w-2xl mx-auto mb-16">
+        <div className="text-center max-w-2xl mx-auto mb-10">
           <span className="inline-block text-accent font-semibold text-sm uppercase tracking-wider mb-4">
             FAQ
           </span>

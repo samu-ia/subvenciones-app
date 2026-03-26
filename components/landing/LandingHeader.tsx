@@ -33,7 +33,7 @@ export default function LandingHeader({ onAuthClick }: { onAuthClick?: () => voi
           : 'hero-gradient border-white/15'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto" style={{ paddingLeft: '2rem', paddingRight: '2.5rem' }}>
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
@@ -49,7 +49,7 @@ export default function LandingHeader({ onAuthClick }: { onAuthClick?: () => voi
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-8">
+          <nav className="hidden md:flex items-center gap-5">
             {navLinks.map((link) => (
               <a key={link.href} href={link.href} className={linkClass}>
                 {link.label}
