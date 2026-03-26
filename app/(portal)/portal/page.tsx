@@ -1742,7 +1742,7 @@ export default function PortalPage() {
                 {[
                   { label: 'Subvenciones abiertas', value: String(matchesActivos.length), sub: 'En plazo ahora mismo', color: C.green, bg: '#f0fdf4' },
                   { label: 'Muy recomendables', value: String(matchesFuego.length), sub: 'Encaje alto con tu empresa', color: C.fire, bg: '#fff7ed' },
-                  { label: 'Importe potencial', value: totalPotencial > 0 ? fmtE(totalPotencial) ?? '—' : '—', sub: 'Suma de importes máximos', color: C.teal, bg: '#f0fdfa' },
+                  { label: 'Importe potencial', value: totalPotencial > 0 ? fmtE(totalPotencial) ?? 'A calcular' : 'A calcular', sub: totalPotencial > 0 ? 'Suma de importes máximos' : 'Pendiente de datos', color: C.teal, bg: '#f0fdfa' },
                 ].map(card => (
                   <div key={card.label} style={{ background: card.bg, borderRadius: 14, padding: '16px 18px', border: `1px solid ${card.bg}` }}>
                     <div style={{ fontSize: '1.6rem', fontWeight: 900, color: card.color }}>{card.value}</div>

@@ -342,9 +342,9 @@ export default function NovedadesPage() {
             marginBottom: -2,
           }}>
             {t.icon}
-            {t.label}
+            <span>{t.label}</span>
             {t.count > 0 && (
-              <span style={{ background: tab === t.key ? '#eff6ff' : '#f1f5f9', color: tab === t.key ? '#1d4ed8' : '#94a3b8', borderRadius: 20, padding: '1px 7px', fontSize: '0.72rem', fontWeight: 700 }}>
+              <span style={{ background: tab === t.key ? '#eff6ff' : '#f1f5f9', color: tab === t.key ? '#1d4ed8' : '#94a3b8', borderRadius: 20, padding: '1px 7px', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0 }}>
                 {t.count}
               </span>
             )}

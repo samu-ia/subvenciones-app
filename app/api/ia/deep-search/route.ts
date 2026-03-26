@@ -225,7 +225,7 @@ Proporciona una investigación completa de subvenciones actuales para esta empre
           nif: clienteSnapshot.nif,
           generado_por_ia: true,
           tipo_documento: 'investigacion',
-          prompt_usado: userMessage.substring(0, 500),
+
           orden: 999,
         })
         .select()

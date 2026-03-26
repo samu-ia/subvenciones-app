@@ -337,7 +337,7 @@ export default function ReunionNotebookPage() {
     }
     const { data: newDoc } = await supabase.from('documentos').insert({
       nombre, contenido, reunion_id: reunionId,
-      generado_por_ia: true, prompt_usado: promptUsado, orden: documentos.length,
+      generado_por_ia: true, orden: documentos.length,
     }).select().single();
     if (newDoc) {
       setDocumentos(prev => [...prev, newDoc]);

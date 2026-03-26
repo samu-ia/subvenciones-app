@@ -29,7 +29,7 @@ export default function LandingClient() {
           const { data: perfil } = await supabase
             .from('perfiles').select('rol').eq('id', user.id).maybeSingle();
           const rol = perfil?.rol ?? user.user_metadata?.rol ?? 'cliente';
-          router.replace(rol === 'admin' ? '/clientes' : '/portal');
+          router.replace(rol === 'admin' ? '/dashboard' : '/portal');
           return;
         }
       } catch { /* ignora errores de red — muestra landing */ }
@@ -50,7 +50,7 @@ export default function LandingClient() {
   }
 
   return (
-    <div className="landing min-h-screen bg-background overflow-x-hidden">
+    <div className="landing min-h-screen bg-background overflow-x-hidden" style={{ overflowX: 'hidden' }}>
       <LandingHeader onAuthClick={() => setAuthOpen(true)} />
       <main>
         <Hero onAuthClick={() => setAuthOpen(true)} />

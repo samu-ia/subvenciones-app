@@ -787,7 +787,6 @@ export default function ExpedienteWorkspacePage() {
         expediente_id: expedienteId,
         nif: expediente?.nif,
         generado_por_ia: true,
-        prompt_usado: prompt,
         orden: documentos.length,
       })
       .select()

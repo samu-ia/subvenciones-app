@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       contenido,
       tipo_documento: tipo,
       generado_por_ia: true,
-      prompt_usado: prompt || promptFinal.user,
+
       orden: 999 // Al final de la lista
     };
 
