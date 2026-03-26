@@ -17,7 +17,11 @@
     "matching": "node scripts/run-matching.mjs --all",
     "team": "npx tsx scripts/agents/langgraph/run.ts",
     "team:task": "npx tsx scripts/agents/langgraph/run.ts --task-id",
-    "team:list": "npx tsx scripts/agents/langgraph/run.ts --list"
+    "team:list": "npx tsx scripts/agents/langgraph/run.ts --list",
+    "db:backup": "dotenvx run -f .env.local -- node scripts/backup-db.mjs",
+    "db:restore": "dotenvx run -f .env.local -- node scripts/restore-db.mjs",
+    "db:migrate": "dotenvx run -f .env.local -- node scripts/run-migration.js",
+    "titulos": "dotenvx run -f .env.local -- node scripts/generate-titulos-comerciales.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.41",

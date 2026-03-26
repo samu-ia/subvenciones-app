@@ -40,7 +40,18 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# agent worktrees
+# agent worktrees & claude internals
 .agent-worktrees/
+.claude/worktrees/
 logs/
-test-screenshots-recheck/
+
+# backups de base de datos (nunca al repo — pueden tener datos de clientes)
+/backups/
+
+# archivos de QA/test temporales
+test-screenshots*/
+qa-screenshots/
+qa-report.json
+test-*.js
+qa-*.js
+QA-*.md
