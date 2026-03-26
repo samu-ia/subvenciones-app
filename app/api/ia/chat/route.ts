@@ -10,6 +10,13 @@ const getOpenAI = () => {
 
 export async function POST(request: NextRequest) {
   try {
+    // VULN-01: Verificar autenticación antes de procesar
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+    }
+
     const openai = getOpenAI();
     if (!openai) {
       return NextResponse.json(
@@ -26,8 +33,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    const supabase = await createClient();
 
     // Recopilar contexto
     const contexto = await recopilarContexto(supabase, contextoId, contextoTipo, documentosReferenciados);

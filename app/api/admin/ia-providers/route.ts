@@ -15,5 +15,13 @@ export async function GET() {
     .select('id, provider, api_key, base_url, enabled')
     .order('provider');
 
-  return NextResponse.json(data ?? []);
+  // VULN-08: Enmascarar API keys — solo mostrar últimos 4 caracteres
+  const masked = (data ?? []).map((row: { id: string; provider: string; api_key: string | null; base_url: string | null; enabled: boolean }) => ({
+    ...row,
+    api_key: row.api_key
+      ? `${'•'.repeat(Math.max(0, row.api_key.length - 4))}${row.api_key.slice(-4)}`
+      : null,
+  }));
+
+  return NextResponse.json(masked);
 }

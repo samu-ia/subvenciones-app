@@ -122,15 +122,28 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
 
   const body = await request.json().catch(() => null);
-  if (!body?.nif || !body?.subvencion_id) {
+  if (!body?.subvencion_id) {
     return NextResponse.json({ error: 'Faltan datos requeridos' }, { status: 400 });
   }
 
   const sb = createServiceClient();
 
+  // VULN-05: Obtener NIF del perfil del usuario (no del body) para prevenir IDOR
+  const { data: perfil } = await sb
+    .from('perfiles')
+    .select('nif')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (!perfil?.nif) {
+    return NextResponse.json({ error: 'Perfil sin NIF vinculado. Completa el setup primero.' }, { status: 400 });
+  }
+
+  const nif = perfil.nif;
+
   // Preparar datos de la solicitud
   const solicitudData = {
-    nif: body.nif,
+    nif,
     subvencion_id: body.subvencion_id,
     user_id: user.id,
     match_id: body.match_id ?? null,
@@ -167,7 +180,7 @@ export async function POST(request: NextRequest) {
   if (body.respuestas_ia?.length) {
     const [{ data: subv }, { data: cliente }, { data: iaProvider }] = await Promise.all([
       sb.from('subvenciones').select('titulo, organismo, objeto, para_quien, importe_maximo').eq('id', body.subvencion_id).maybeSingle(),
-      sb.from('cliente').select('nombre_empresa, actividad, tamano_empresa, comunidad_autonoma, num_empleados, facturacion_anual').eq('nif', body.nif).maybeSingle(),
+      sb.from('cliente').select('nombre_empresa, actividad, tamano_empresa, comunidad_autonoma, num_empleados, facturacion_anual').eq('nif', nif).maybeSingle(),
       sb.from('ia_providers').select('provider, api_key, base_url').eq('enabled', true).not('api_key', 'is', null).limit(1).maybeSingle(),
     ]);
 

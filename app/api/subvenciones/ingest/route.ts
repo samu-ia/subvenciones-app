@@ -28,11 +28,15 @@ export async function POST(request: NextRequest) {
   const secretOk = secret && token === secret;
 
   if (!secretOk) {
-    // Si no viene el secret (o es incorrecto), verificar sesión de usuario
+    // Si no viene el secret (o es incorrecto), verificar sesión de usuario admin
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+    // VULN-06: Verificar que el usuario es admin (no solo autenticado)
+    if (!user.email?.endsWith('@ayudapyme.es')) {
+      return NextResponse.json({ error: 'Solo administradores pueden ejecutar el pipeline' }, { status: 403 });
     }
   }
 

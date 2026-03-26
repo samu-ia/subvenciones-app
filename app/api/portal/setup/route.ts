@@ -25,6 +25,21 @@ export async function POST(request: NextRequest) {
 
   const sb = createServiceClient();
 
+  // VULN-04: Verificar que el NIF no esté ya vinculado a otro usuario
+  const { data: perfilExistente } = await sb
+    .from('perfiles')
+    .select('id')
+    .eq('nif', nif)
+    .neq('id', user.id)
+    .maybeSingle();
+
+  if (perfilExistente) {
+    return NextResponse.json(
+      { error: 'Este NIF ya está vinculado a otro usuario' },
+      { status: 409 }
+    );
+  }
+
   // ── 1. Crear cliente si no existe ────────────────────────────────────────────
   const { data: clienteExistente } = await sb
     .from('cliente').select('nif').eq('nif', nif).maybeSingle();
