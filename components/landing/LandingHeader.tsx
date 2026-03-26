@@ -8,7 +8,6 @@ const navLinks = [
   { href: '#inicio', label: 'Inicio' },
   { href: '#quienes-somos', label: 'Quiénes somos' },
   { href: '#faq', label: 'Preguntas frecuentes' },
-  { href: '#formulario', label: 'Formulario' },
   { href: '#contacto', label: 'Contacto' },
 ];
 

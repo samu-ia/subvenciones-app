@@ -8,7 +8,6 @@ import Hero from '@/components/landing/Hero';
 import AboutUs from '@/components/landing/AboutUs';
 import FAQ from '@/components/landing/FAQ';
 import ContactSection from '@/components/landing/ContactSection';
-import MultiStepForm from '@/components/landing/MultiStepForm';
 import LandingFooter from '@/components/landing/LandingFooter';
 import AuthModal from '@/components/landing/AuthModal';
 
@@ -83,7 +82,6 @@ export default function LandingClient() {
 
         <FAQ />
         <ContactSection />
-        <MultiStepForm />
       </main>
       <LandingFooter />
       {authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}
