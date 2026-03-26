@@ -75,6 +75,33 @@ supabase/
 
 ---
 
+## Pipeline de ingestión viva — sistema por fases (v3)
+
+El pipeline de ingestión ya NO es lineal. Cada convocatoria pasa por **5 fases** independientes con estados explícitos:
+
+```
+1. INGESTA        → Fetch BDNS API, upsert raw, crear subvención
+2. DESCARGA       → Descargar PDFs, registrar grant_documents
+3. EXTRACCIÓN IA  → Enviar PDFs a Gemini, extraer campos con grounding
+4. NORMALIZACIÓN  → Aplicar campos a tabla principal, sectores, tipos empresa
+5. VALIDACIÓN     → Estado calculado, conflictos, cierre de versión
+```
+
+**Tablas v3:** `grant_documents`, `grant_versions`, `grant_field_values`, `grant_change_events`
+**Columna de fase:** `subvenciones.pipeline_fase` (pendiente → ingesta → descarga → extraccion_ia → normalizacion → completado | error)
+
+```bash
+npm run pipeline                     # completo, últimos 7 días
+npm run pipeline:ingesta             # solo fase 1
+npm run pipeline:descarga            # solo fase 2
+npm run pipeline:extraccion          # solo fase 3
+npm run pipeline:normalizar          # solo fase 4
+npm run pipeline:validar             # solo fase 5
+node scripts/pipeline-magistral.mjs --fase descarga --id 893737  # fase específica para un ID
+```
+
+---
+
 ## Base de datos — tablas principales
 
 | Tabla | Descripción |
@@ -90,6 +117,10 @@ supabase/
 | `reuniones` | Reuniones con clientes |
 | `agent_tasks` | Cola de tareas para los agentes de IA |
 | `agent_escalations` | Escalaciones que necesitan input humano |
+| `grant_documents` | Documentos PDF por convocatoria (pipeline v3) |
+| `grant_versions` | Versiones de análisis IA (snapshots por ejecución) |
+| `grant_field_values` | Valores extraídos con grounding por versión |
+| `grant_change_events` | Log de cambios, conflictos y eventos de pipeline |
 
 **Columnas clave en `subvenciones`:** `id, bdns_id, titulo, titulo_comercial, organismo, importe_maximo, presupuesto_total, fecha_fin_solicitud, descripcion, beneficiarios, sectores_actividad, regiones, activa`
 
