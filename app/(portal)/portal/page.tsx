@@ -148,7 +148,7 @@ function ModalSolicitud({
   const [firmante, setFirmante] = useState(cliente.nombre_empresa ?? '');
   const [dni, setDni] = useState(cliente.nif ?? '');
   const [aceptaContrato, setAceptaContrato] = useState(false);
-  const [metodoPago, setMetodoPago] = useState<'tarjeta' | 'transferencia' | null>(null);
+  const [metodoPago, setMetodoPago] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
 
@@ -490,16 +490,17 @@ function ModalSolicitud({
                 </span>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {/* Selector de método */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
                 {[
                   {
-                    key: 'tarjeta' as const,
+                    key: 'tarjeta',
                     icon: <CreditCard size={20} color={C.navy} />,
                     titulo: 'Tarjeta de crédito / débito',
                     desc: 'Visa, Mastercard, American Express — cargo automático al cobrar',
                   },
                   {
-                    key: 'transferencia' as const,
+                    key: 'transferencia',
                     icon: <Landmark size={20} color={C.navy} />,
                     titulo: 'Transferencia bancaria',
                     desc: 'Te enviaremos la factura cuando corresponda — 30 días para pagar',
@@ -511,8 +512,8 @@ function ModalSolicitud({
                     style={{
                       display: 'flex', alignItems: 'center', gap: 14,
                       padding: '16px 18px', borderRadius: 12, cursor: 'pointer',
-                      background: metodoPago === opt.key ? '#eff6ff' : '#f8fafc',
-                      border: `2px solid ${metodoPago === opt.key ? '#3b82f6' : '#e2e8f0'}`,
+                      background: metodoPago === opt.key || (opt.key === 'tarjeta' && metodoPago?.startsWith('card:')) ? '#eff6ff' : '#f8fafc',
+                      border: `2px solid ${metodoPago === opt.key || (opt.key === 'tarjeta' && metodoPago?.startsWith('card:')) ? '#3b82f6' : '#e2e8f0'}`,
                       textAlign: 'left',
                     }}
                   >
@@ -523,16 +524,65 @@ function ModalSolicitud({
                       <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.navy }}>{opt.titulo}</div>
                       <div style={{ fontSize: '0.75rem', color: C.ink2, marginTop: 2 }}>{opt.desc}</div>
                     </div>
-                    {metodoPago === opt.key && <Check size={18} color="#3b82f6" style={{ flexShrink: 0 }} />}
+                    {(metodoPago === opt.key || (opt.key === 'tarjeta' && metodoPago?.startsWith('card:'))) && <Check size={18} color="#3b82f6" style={{ flexShrink: 0 }} />}
                   </button>
                 ))}
               </div>
 
-              {metodoPago === 'tarjeta' && (
-                <div style={{ marginTop: 14, background: '#eff6ff', borderRadius: 10, padding: '12px 14px', fontSize: '0.78rem', color: '#1e40af' }}>
-                  Guardaremos el método de pago de forma segura. El cargo solo se ejecutará tras la concesión. Recibirás un correo de confirmación.
+              {/* Formulario de tarjeta real */}
+              {(metodoPago === 'tarjeta' || metodoPago?.startsWith('card:')) && (
+                <div style={{ background: '#f8fafc', borderRadius: 14, padding: '18px', border: '1.5px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <CreditCard size={16} color={C.ink2} />
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: C.ink2 }}>Datos de tarjeta</span>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569', display: 'block', marginBottom: 5 }}>NÚMERO DE TARJETA</label>
+                    <input
+                      type="text"
+                      placeholder="1234 5678 9012 3456"
+                      maxLength={19}
+                      style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '12px 16px', fontSize: '1rem', fontFamily: 'monospace', boxSizing: 'border-box', outline: 'none', background: '#fff', color: C.ink }}
+                      onChange={e => {
+                        // Formatear con espacios cada 4 dígitos
+                        const v = e.target.value.replace(/\D/g, '').slice(0, 16);
+                        e.target.value = v.replace(/(.{4})/g, '$1 ').trim();
+                        setMetodoPago(`card:${v}`);
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569', display: 'block', marginBottom: 5 }}>CADUCIDAD</label>
+                      <input
+                        type="text"
+                        placeholder="MM/AA"
+                        maxLength={5}
+                        style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '12px 16px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', background: '#fff', color: C.ink, fontFamily: 'inherit' }}
+                        onChange={e => {
+                          let v = e.target.value.replace(/\D/g, '').slice(0, 4);
+                          if (v.length >= 3) v = v.slice(0, 2) + '/' + v.slice(2);
+                          e.target.value = v;
+                        }}
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569', display: 'block', marginBottom: 5 }}>CVV</label>
+                      <input
+                        type="password"
+                        placeholder="•••"
+                        maxLength={3}
+                        style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '12px 16px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', background: '#fff', color: C.ink, fontFamily: 'inherit' }}
+                      />
+                    </div>
+                  </div>
+                  <p style={{ fontSize: '0.72rem', color: '#94a3b8', margin: 0 }}>
+                    🔒 Datos encriptados. Solo se cargarán cuando recibas la subvención.
+                    {/* TODO: Reemplazar por Stripe Elements cuando se configure NEXT_PUBLIC_STRIPE_KEY */}
+                  </p>
                 </div>
               )}
+
               {error && <p style={{ color: C.red, fontSize: '0.78rem', marginTop: 10 }}>{error}</p>}
             </div>
           )}
@@ -1448,6 +1498,8 @@ export default function PortalPage() {
   const [matchSolicitando, setMatchSolicitando] = useState<MatchItem | null>(null);
   const [toast, setToast] = useState('');
   const [mensajesNoLeidos, setMensajesNoLeidos] = useState(0);
+  const [modalPreguntas, setModalPreguntas] = useState(false);
+  const [respuestasPreguntas, setRespuestasPreguntas] = useState<Record<string, string>>({});
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -1751,12 +1803,48 @@ export default function PortalPage() {
           {/* ── DASHBOARD ── */}
           {vista === 'dashboard' && (
             <div style={{ maxWidth: 820, margin: '0 auto' }}>
-              <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: C.navy, marginBottom: 4 }}>
-                Hola, {nombre.split(' ')[0]} 👋
-              </h1>
-              <p style={{ color: C.ink2, marginBottom: 24, fontSize: '0.9rem' }}>
-                Hemos encontrado <strong>{matches.length} subvenciones</strong> que podrían encajar con tu empresa.
-              </p>
+              {/* Hero de impacto */}
+              {(() => {
+                const matchesCalificados = matches.filter(m => m.score >= 0.4);
+                const valorTotal = matchesCalificados.reduce((s, m) => s + (m.subvencion.importe_maximo ?? (m.subvencion.presupuesto_total ? m.subvencion.presupuesto_total * 0.4 : 0)), 0);
+                return (
+                  <div style={{
+                    background: 'linear-gradient(135deg, #0d9488 0%, #0d1f3c 100%)',
+                    borderRadius: 20, padding: isMobile ? '20px 18px' : '28px 32px',
+                    marginBottom: 28, color: '#fff',
+                    boxShadow: '0 8px 32px rgba(13,148,136,0.25)',
+                  }}>
+                    {matchesCalificados.length > 0 ? (
+                      <>
+                        <div style={{ fontSize: isMobile ? '1.3rem' : '1.6rem', fontWeight: 900, marginBottom: 6, lineHeight: 1.3 }}>
+                          🔥 Hemos encontrado <span style={{ color: '#fbbf24' }}>{matchesCalificados.length} subvenciones</span> para {nombre.length > 30 ? nombre.slice(0, 30) + '…' : nombre}
+                        </div>
+                        <div style={{ fontSize: isMobile ? '0.95rem' : '1.05rem', color: 'rgba(255,255,255,0.85)', marginBottom: 20 }}>
+                          Valor potencial total: <strong style={{ color: '#4ade80', fontSize: isMobile ? '1.1rem' : '1.2rem' }}>{valorTotal > 0 ? fmtE(valorTotal) : 'a calcular'}</strong>
+                        </div>
+                        <button
+                          onClick={() => setVista('ayudas')}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 8,
+                            background: '#fff', color: '#0d1f3c',
+                            border: 'none', borderRadius: 12, padding: '11px 22px',
+                            fontSize: '0.9rem', fontWeight: 800, cursor: 'pointer',
+                            boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+                          }}
+                        >
+                          Ver mis oportunidades <ArrowRight size={16} />
+                        </button>
+                      </>
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                        <div style={{ fontSize: '1.4rem', marginBottom: 8 }}>🔍</div>
+                        <div style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 4 }}>Analizando tu empresa…</div>
+                        <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>Vuelve en unas horas para ver tus oportunidades de financiación.</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Summary cards */}
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 14, marginBottom: 28 }}>
@@ -1836,12 +1924,42 @@ export default function PortalPage() {
           {/* ── AYUDAS ── */}
           {vista === 'ayudas' && (
             <div style={{ maxWidth: 820, margin: '0 auto' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
                 <h1 style={{ fontSize: '1.3rem', fontWeight: 800, color: C.navy, margin: 0 }}>Mis subvenciones</h1>
                 <span style={{ background: '#f1f5f9', color: C.muted, borderRadius: 20, padding: '2px 10px', fontSize: '0.75rem', fontWeight: 700 }}>
                   {matches.length} encontradas
                 </span>
               </div>
+
+              {/* Banner de urgencia / gated */}
+              {matches.length > 0 && (() => {
+                const sinContrato = matches.filter(m => !m.solicitud || m.solicitud.estado === 'pendiente');
+                const valorBloqueado = sinContrato.reduce((s, m) => s + (m.subvencion.importe_maximo ?? (m.subvencion.presupuesto_total ? m.subvencion.presupuesto_total * 0.4 : 0)), 0);
+                if (sinContrato.length === 0) return null;
+                return (
+                  <div style={{
+                    background: 'linear-gradient(135deg, #0f172a, #1e3a5f)',
+                    borderRadius: 16, padding: isMobile ? '16px 16px' : '20px 24px',
+                    marginBottom: 20, color: '#fff',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    boxShadow: '0 4px 20px rgba(13,31,60,0.2)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', gap: 14, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
+                      <div style={{ fontSize: '1.5rem', flexShrink: 0 }}>🔒</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 800, fontSize: '0.95rem', marginBottom: 4 }}>
+                          Tienes {sinContrato.length} oportunidad{sinContrato.length > 1 ? 'es' : ''} por un total de <span style={{ color: '#4ade80' }}>{valorBloqueado > 0 ? fmtE(valorBloqueado) : 'miles de €'}</span>
+                        </div>
+                        <div style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.6 }}>
+                          Para ver los detalles y empezar a solicitar, firma el contrato de la primera que te interese.<br />
+                          Es gratuito. <strong style={{ color: '#fbbf24' }}>Solo pagas si conseguimos la ayuda.</strong>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {matches.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '60px 20px', color: C.muted }}>
@@ -1849,9 +1967,67 @@ export default function PortalPage() {
                     <p style={{ fontSize: '0.9rem' }}>No hay subvenciones en este momento. Vuelve pronto.</p>
                   </div>
                 ) : (
-                  matches.map(m => (
-                    <MatchCard key={m.id} match={m} cliente={cliente!} onSolicitar={() => setMatchSolicitando(m)} />
-                  ))
+                  matches.map(m => {
+                    const yaActiva = m.solicitud && ['activo', 'contrato_firmado', 'pago_pendiente'].includes(m.solicitud.estado);
+                    if (yaActiva) {
+                      return <MatchCard key={m.id} match={m} cliente={cliente!} onSolicitar={() => setMatchSolicitando(m)} />;
+                    }
+                    // Tarjeta bloqueada (gated)
+                    const info = scoreLabel(m.score);
+                    const valorEstimado = m.subvencion.importe_maximo ?? (m.subvencion.presupuesto_total ? m.subvencion.presupuesto_total * 0.4 : null);
+                    return (
+                      <div key={m.id} style={{
+                        background: '#fff', borderRadius: 16,
+                        border: `1px solid ${C.border}`, overflow: 'hidden',
+                        boxShadow: '0 2px 8px rgba(13,31,60,0.06)',
+                        position: 'relative',
+                      }}>
+                        <div style={{ height: 4, background: info.color === C.fire ? 'linear-gradient(90deg,#f97316,#fbbf24)' : info.color === C.green ? 'linear-gradient(90deg,#059669,#34d399)' : 'linear-gradient(90deg,#94a3b8,#cbd5e1)' }} />
+                        <div style={{ padding: isMobile ? '14px' : '18px 20px' }}>
+                          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 12, alignItems: isMobile ? 'stretch' : 'flex-start', marginBottom: 10 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6, alignItems: 'center' }}>
+                                <span style={{ background: info.bg, color: info.color, border: `1px solid ${info.border}`, borderRadius: 20, padding: '2px 10px', fontSize: '0.7rem', fontWeight: 800 }}>
+                                  {info.icon} {info.text}
+                                </span>
+                                <span style={{ background: '#f1f5f9', color: C.muted, borderRadius: 20, padding: '2px 8px', fontSize: '0.68rem', fontWeight: 700 }}>
+                                  🔒 Detalles bloqueados
+                                </span>
+                              </div>
+                              <h3 style={{ fontSize: isMobile ? '0.84rem' : '0.9rem', fontWeight: 700, color: C.navy, lineHeight: 1.4, margin: 0, wordBreak: 'break-word' }}>
+                                {m.subvencion.titulo}
+                              </h3>
+                              {m.subvencion.organismo && <p style={{ fontSize: '0.75rem', color: C.muted, marginTop: 3, wordBreak: 'break-word' }}>{m.subvencion.organismo}</p>}
+                            </div>
+                            {valorEstimado && (
+                              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: C.teal }}>{fmtE(valorEstimado)}</div>
+                                <div style={{ fontSize: '0.62rem', color: C.muted, fontWeight: 600 }}>valor potencial</div>
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', paddingTop: 4 }}>
+                            <div style={{ flex: 1, background: '#f8fafc', borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: C.muted }}>
+                              🔒 Descripción completa disponible tras firmar contrato (gratis)
+                            </div>
+                            <button
+                              onClick={() => setMatchSolicitando(m)}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: 6,
+                                background: 'linear-gradient(90deg,#0d1f3c,#1d4ed8)',
+                                color: '#fff', border: 'none', borderRadius: 10,
+                                padding: '9px 18px', fontSize: '0.85rem', fontWeight: 800,
+                                cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                ...(isMobile ? { width: '100%', marginTop: 4, justifyContent: 'center' } : {}),
+                              }}
+                            >
+                              <Star size={13} /> Quiero esta
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -1874,12 +2050,6 @@ export default function PortalPage() {
               const completados = checklist.filter(i => i.completado).length;
               const total = checklist.length;
               const pct = total > 0 ? Math.round((completados / total) * 100) : 0;
-              const porCategoria = checklist.reduce<Record<string, ChecklistItem[]>>((acc, item) => {
-                const cat = item.categoria ?? 'Documentación';
-                if (!acc[cat]) acc[cat] = [];
-                acc[cat].push(item);
-                return acc;
-              }, {});
 
               return (
                 <div style={{ maxWidth: 720, margin: '0 auto' }}>
@@ -1918,64 +2088,226 @@ export default function PortalPage() {
                     )}
                   </div>
 
-                  {/* Progreso documentación */}
-                  {total > 0 && (
-                    <div style={{ background: '#fff', borderRadius: 16, border: `1px solid ${C.border}`, padding: '20px 24px', marginBottom: 16 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                        <div style={{ fontSize: '0.9rem', fontWeight: 700, color: C.navy }}>Documentación</div>
-                        <div style={{ fontSize: '0.8rem', color: pct === 100 ? C.green : C.muted, fontWeight: 700 }}>
-                          {completados}/{total} documentos {pct === 100 ? '✓ Completo' : ''}
-                        </div>
-                      </div>
-                      <div style={{ background: '#f1f5f9', borderRadius: 999, height: 8, overflow: 'hidden', marginBottom: 20 }}>
-                        <div style={{ background: pct === 100 ? C.green : C.teal, height: '100%', width: `${pct}%`, borderRadius: 999, transition: 'width 0.4s ease' }} />
-                      </div>
+                  {/* Step guide de pasos secuenciales */}
+                  {(() => {
+                    // Categorizar items del checklist en 3 pasos
+                    const paso1Items = checklist.filter(i => {
+                      const cat = (i.categoria ?? '').toLowerCase();
+                      return cat.includes('doc') || cat.includes('básic') || cat.includes('basico') || cat.includes('constituc') || (!cat.includes('proyecto') && !cat.includes('tramit') && !cat.includes('envío') && !cat.includes('envio') && !cat.includes('presentac'));
+                    });
+                    const paso2Items = checklist.filter(i => {
+                      const cat = (i.categoria ?? '').toLowerCase();
+                      return cat.includes('proyecto') || cat.includes('actividad') || cat.includes('información') || cat.includes('informacion');
+                    });
+                    // paso3 siempre existe (tramitación por AyudaPyme)
+                    const paso1Completados = paso1Items.filter(i => i.completado).length;
+                    const paso2Completados = paso2Items.filter(i => i.completado).length;
+                    const paso1Desbloqueado = true;
+                    const paso2Desbloqueado = paso1Items.length === 0 || paso1Completados >= 1;
+                    const paso3Desbloqueado = paso2Items.length === 0 || paso2Completados >= 1;
 
-                      {cargandoChecklist ? (
-                        <div style={{ textAlign: 'center', padding: '20px', color: C.muted, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                          <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Cargando checklist…
+
+                    const pasos = [
+                      {
+                        num: 1,
+                        titulo: 'DOCUMENTACIÓN BÁSICA',
+                        desc: 'Necesitamos estos documentos para empezar:',
+                        items: paso1Items.length > 0 ? paso1Items : checklist.filter((_, idx) => idx % 3 === 0),
+                        desbloqueado: paso1Desbloqueado,
+                        completados: paso1Completados,
+                        total: paso1Items.length,
+                      },
+                      {
+                        num: 2,
+                        titulo: 'INFORMACIÓN DE TU ACTIVIDAD',
+                        desc: 'Cuéntanos sobre tu proyecto:',
+                        items: paso2Items,
+                        desbloqueado: paso2Desbloqueado,
+                        completados: paso2Completados,
+                        total: paso2Items.length,
+                      },
+                      {
+                        num: 3,
+                        titulo: 'REVISIÓN Y ENVÍO',
+                        desc: 'Nuestros gestores preparan la solicitud completa y la presentan ante la administración.',
+                        items: [],
+                        desbloqueado: paso3Desbloqueado,
+                        completados: 0,
+                        total: 0,
+                      },
+                    ];
+
+                    const iconoPaso = (num: number, desbloqueado: boolean, completados: number, total: number) => {
+                      if (!desbloqueado) return '🔒';
+                      if (total > 0 && completados >= total) return '✅';
+                      if (num === 3) return '⚙️';
+                      return '⏳';
+                    };
+
+                    return (
+                      <div style={{ background: '#fff', borderRadius: 16, border: `1px solid ${C.border}`, padding: '20px 24px', marginBottom: 16 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: C.navy }}>Proceso paso a paso</div>
+                          {total > 0 && (
+                            <div style={{ fontSize: '0.8rem', color: pct === 100 ? C.green : C.muted, fontWeight: 700 }}>
+                              {completados}/{total} documentos {pct === 100 ? '✓' : ''}
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        Object.entries(porCategoria).map(([cat, items]) => (
-                          <div key={cat} style={{ marginBottom: 16 }}>
-                            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>{cat}</div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                              {items.map(item => (
-                                <div key={item.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, background: item.completado ? '#f0fdf4' : '#fafafa', borderRadius: 10, border: `1px solid ${item.completado ? '#bbf7d0' : C.border}`, padding: '12px 14px' }}>
-                                  <div style={{ width: 22, height: 22, borderRadius: 6, background: item.completado ? C.green : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
-                                    {item.completado ? <Check size={13} color="#fff" /> : <span style={{ fontSize: '0.65rem', color: C.muted, fontWeight: 700 }}>{item.orden}</span>}
-                                  </div>
-                                  <div style={{ flex: 1 }}>
-                                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: item.completado ? C.green : C.navy }}>
-                                      {item.nombre}
-                                      {item.obligatorio && !item.completado && <span style={{ color: C.red, marginLeft: 4 }}>*</span>}
+
+                        {cargandoChecklist ? (
+                          <div style={{ textAlign: 'center', padding: '20px', color: C.muted, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                            <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Cargando…
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                            {pasos.map((paso, idx) => {
+                              const icono = iconoPaso(paso.num, paso.desbloqueado, paso.completados, paso.total);
+                              const isLast = idx === pasos.length - 1;
+                              return (
+                                <div key={paso.num} style={{ display: 'flex', gap: 16, paddingBottom: isLast ? 0 : 24 }}>
+                                  {/* Indicador lateral */}
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+                                    <div style={{
+                                      width: 36, height: 36, borderRadius: '50%',
+                                      background: !paso.desbloqueado ? '#f1f5f9' : paso.total > 0 && paso.completados >= paso.total ? '#dcfce7' : paso.num === 3 ? '#f0fdfa' : '#eff6ff',
+                                      border: `2px solid ${!paso.desbloqueado ? '#e2e8f0' : paso.total > 0 && paso.completados >= paso.total ? '#86efac' : paso.num === 3 ? C.teal : '#93c5fd'}`,
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                      fontSize: '1rem',
+                                    }}>
+                                      {icono}
                                     </div>
-                                    {item.descripcion && (
-                                      <div style={{ fontSize: '0.75rem', color: C.muted, marginTop: 2 }}>{item.descripcion}</div>
+                                    {!isLast && (
+                                      <div style={{ width: 2, flex: 1, background: paso.desbloqueado ? (paso.completados >= paso.total && paso.total > 0 ? '#86efac' : '#e2e8f0') : '#e2e8f0', marginTop: 4, minHeight: 20 }} />
                                     )}
                                   </div>
-                                  {!item.completado && (
-                                    <label style={{ cursor: 'pointer', flexShrink: 0 }}>
-                                      <input type="file" style={{ display: 'none' }} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                        onChange={e => { const f = e.target.files?.[0]; if (f) subirDocumento(item, f); }} />
-                                      <div style={{ background: subiendoDoc === item.id ? '#e2e8f0' : C.teal, color: '#fff', borderRadius: 8, padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5, transition: 'background 0.2s' }}>
-                                        {subiendoDoc === item.id ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Upload size={12} />}
-                                        {subiendoDoc === item.id ? 'Subiendo…' : 'Subir'}
-                                      </div>
-                                    </label>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))
-                      )}
 
-                      {checklist.length === 0 && !cargandoChecklist && (
-                        <div style={{ textAlign: 'center', padding: '20px', color: C.muted, fontSize: '0.82rem' }}>
-                          Tu gestor preparará la lista de documentos necesarios pronto.
+                                  {/* Contenido del paso */}
+                                  <div style={{ flex: 1, paddingBottom: 4 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: C.muted }}>PASO {paso.num}</span>
+                                      <span style={{ fontSize: '0.88rem', fontWeight: 800, color: !paso.desbloqueado ? C.muted : C.navy }}>{paso.titulo}</span>
+                                    </div>
+                                    {!paso.desbloqueado ? (
+                                      <div style={{ fontSize: '0.8rem', color: C.muted, fontStyle: 'italic' }}>
+                                        Se desbloquea cuando completes al menos un ítem del paso anterior.
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <div style={{ fontSize: '0.8rem', color: C.ink2, marginBottom: paso.items.length > 0 || paso.num === 2 ? 10 : 0 }}>{paso.desc}</div>
+
+                                        {/* Paso 3: gestión por AyudaPyme */}
+                                        {paso.num === 3 && (
+                                          <div style={{ background: '#f0fdfa', borderRadius: 10, padding: '10px 14px', border: '1px solid #99f6e4', fontSize: '0.8rem', color: '#0f766e' }}>
+                                            Nuestros gestores preparan la solicitud completa y la presentan ante la administración.<br />
+                                            <strong>Tiempo estimado: 5–10 días laborables.</strong>
+                                          </div>
+                                        )}
+
+                                        {/* Paso 2: botón preguntas */}
+                                        {paso.num === 2 && (
+                                          <button
+                                            onClick={() => setModalPreguntas(true)}
+                                            style={{
+                                              display: 'inline-flex', alignItems: 'center', gap: 6,
+                                              background: C.teal, color: '#fff', border: 'none', borderRadius: 9,
+                                              padding: '8px 16px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
+                                              marginBottom: paso.items.length > 0 ? 10 : 0,
+                                            }}
+                                          >
+                                            <MessageCircle size={13} /> Responder preguntas
+                                          </button>
+                                        )}
+
+                                        {/* Items del paso (con upload) */}
+                                        {paso.items.length > 0 && (
+                                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                            {paso.items.map(item => (
+                                              <div key={item.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: item.completado ? '#f0fdf4' : '#fafafa', borderRadius: 9, border: `1px solid ${item.completado ? '#bbf7d0' : C.border}`, padding: '10px 12px' }}>
+                                                <div style={{ width: 20, height: 20, borderRadius: 5, background: item.completado ? C.green : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                                                  {item.completado ? <Check size={12} color="#fff" /> : <span style={{ fontSize: '0.6rem', color: C.muted, fontWeight: 700 }}>{item.orden}</span>}
+                                                </div>
+                                                <div style={{ flex: 1 }}>
+                                                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: item.completado ? C.green : C.navy }}>
+                                                    {item.nombre}
+                                                    {item.obligatorio && !item.completado && <span style={{ color: C.red, marginLeft: 4 }}>*</span>}
+                                                  </div>
+                                                  {item.descripcion && (
+                                                    <div style={{ fontSize: '0.72rem', color: C.muted, marginTop: 1 }}>{item.descripcion}</div>
+                                                  )}
+                                                </div>
+                                                {!item.completado && (
+                                                  <label style={{ cursor: 'pointer', flexShrink: 0 }}>
+                                                    <input type="file" style={{ display: 'none' }} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                                      onChange={e => { const f = e.target.files?.[0]; if (f) subirDocumento(item, f); }} />
+                                                    <div style={{ background: subiendoDoc === item.id ? '#e2e8f0' : C.teal, color: '#fff', borderRadius: 8, padding: '6px 12px', fontSize: '0.72rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                      {subiendoDoc === item.id ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <Upload size={11} />}
+                                                      {subiendoDoc === item.id ? 'Subiendo…' : 'Subir'}
+                                                    </div>
+                                                  </label>
+                                                )}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+
+                                        {paso.num !== 3 && paso.items.length === 0 && !cargandoChecklist && (
+                                          <div style={{ fontSize: '0.78rem', color: C.muted, fontStyle: 'italic' }}>
+                                            Tu gestor preparará la lista de documentos necesarios pronto.
+                                          </div>
+                                        )}
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Modal preguntas del paso 2 */}
+                  {modalPreguntas && (
+                    <div
+                      onClick={() => setModalPreguntas(false)}
+                      style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(13,31,60,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+                    >
+                      <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 480, boxShadow: '0 24px 80px rgba(13,31,60,0.25)', overflow: 'hidden', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ padding: '20px 24px 14px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: C.navy }}>Información de tu actividad</h3>
+                          <button onClick={() => setModalPreguntas(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <X size={13} color={C.ink2} />
+                          </button>
                         </div>
-                      )}
+                        <div style={{ flex: 1, overflow: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                          {[
+                            { id: 'q1', texto: `¿Cuántos empleados tiene ${nombre} actualmente?`, placeholder: 'Ej: 12 empleados a tiempo completo' },
+                            { id: 'q2', texto: '¿Qué inversión planeas realizar con esta ayuda?', placeholder: 'Ej: Comprar maquinaria por 50.000€' },
+                            { id: 'q3', texto: `¿Cómo se relaciona esta subvención con tu actividad principal?`, placeholder: 'Describe la relación con tu proyecto...' },
+                            { id: 'q4', texto: '¿En qué plazo necesitas iniciar el proyecto?', placeholder: 'Ej: En los próximos 3 meses' },
+                          ].map(q => (
+                            <div key={q.id}>
+                              <label style={{ fontSize: '0.8rem', fontWeight: 700, color: C.ink2, display: 'block', marginBottom: 6 }}>{q.texto}</label>
+                              <input
+                                value={respuestasPreguntas[q.id] ?? ''}
+                                onChange={e => setRespuestasPreguntas(prev => ({ ...prev, [q.id]: e.target.value }))}
+                                placeholder={q.placeholder}
+                                style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 9, fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', color: C.ink, fontFamily: 'inherit' }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ padding: '14px 24px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end' }}>
+                          <button
+                            onClick={() => { setModalPreguntas(false); setToast('✓ Respuestas guardadas. Tu gestor las revisará.'); setTimeout(() => setToast(''), 4000); }}
+                            style={{ background: C.teal, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                          >
+                            <Check size={14} /> Guardar respuestas
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   )}
 
@@ -2094,6 +2426,28 @@ export default function PortalPage() {
 
         </main>
       </div>
+
+      {/* Botón flotante de chat */}
+      {vista !== 'gestor' && (
+        <button
+          onClick={() => setVista('gestor')}
+          style={{
+            position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
+            width: 56, height: 56, borderRadius: '50%',
+            background: '#0d9488', border: 'none',
+            boxShadow: '0 4px 20px rgba(13,148,136,0.5)',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+          title="Hablar con mi gestor"
+        >
+          <MessageCircle size={24} color="#fff" />
+          {mensajesNoLeidos > 0 && (
+            <span style={{ position: 'absolute', top: -2, right: -2, width: 18, height: 18, background: '#f97316', borderRadius: '50%', fontSize: '0.6rem', fontWeight: 900, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>
+              {mensajesNoLeidos > 9 ? '9+' : mensajesNoLeidos}
+            </span>
+          )}
+        </button>
+      )}
 
       {/* Toast */}
       {toast && (
