@@ -5,26 +5,26 @@ import { useMediaQuery } from '@/lib/hooks/use-media-query';
 
 const steps = [
   {
-    number: '01',
+    number: '1',
     icon: Search,
-    title: 'Analizamos tu empresa',
-    description: 'Nos cuentas a qué te dedicas y nosotros cruzamos tu perfil con miles de convocatorias públicas activas.',
+    title: 'Te analizamos',
+    description: 'Dinos tu sector y ubicacion. Cruzamos tu perfil con todas las convocatorias activas.',
     accent: 'hsl(215 70% 35%)',
     accentBg: 'hsl(215 70% 35% / 0.1)',
   },
   {
-    number: '02',
+    number: '2',
     icon: FileCheck,
-    title: 'Gestionamos el expediente',
-    description: 'Preparamos toda la documentación, la revisamos y presentamos la solicitud en tu nombre. Tú no tocas un papel.',
+    title: 'Lo gestionamos',
+    description: 'Preparamos el expediente completo y lo presentamos. Tu no tocas ningun papel.',
     accent: 'hsl(175 60% 35%)',
     accentBg: 'hsl(175 60% 35% / 0.12)',
   },
   {
-    number: '03',
+    number: '3',
     icon: BadgeEuro,
-    title: 'Cobras la subvención',
-    description: 'Si se concede, recibes el dinero y solo entonces nos pagas un porcentaje. Si no se concede, coste cero.',
+    title: 'Tu cobras',
+    description: 'Recibes el dinero. Solo entonces nos pagas. Si no hay subvencion, no pagas nada.',
     accent: 'hsl(142 60% 38%)',
     accentBg: 'hsl(142 60% 38% / 0.12)',
   },
@@ -38,21 +38,15 @@ export default function HowItWorks() {
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
 
         {/* Header */}
-        <div className="text-center" style={{ marginBottom: 56 }}>
-          <span
-            className="inline-block text-accent font-semibold text-sm uppercase tracking-wider"
-            style={{ marginBottom: 12, display: 'block' }}
-          >
-            Cómo funciona
-          </span>
+        <div className="text-center" style={{ marginBottom: 48 }}>
           <h2
             className="font-heading font-bold text-foreground"
-            style={{ fontSize: 'clamp(1.75rem, 3vw, 2.25rem)', marginBottom: 12, lineHeight: 1.2 }}
+            style={{ fontSize: 'clamp(1.6rem, 3vw, 2rem)', marginBottom: 8, lineHeight: 1.2 }}
           >
-            De cero a subvención en 3 pasos
+            3 pasos. Tu no haces nada.
           </h2>
-          <p className="text-muted-foreground" style={{ fontSize: '1.05rem', lineHeight: 1.7, maxWidth: 540, margin: '0 auto' }}>
-            Sin burocracia, sin complicaciones. Nosotros nos encargamos de todo el proceso.
+          <p className="text-muted-foreground" style={{ fontSize: '1rem', lineHeight: 1.6, maxWidth: 400, margin: '0 auto' }}>
+            Nosotros nos encargamos de todo.
           </p>
         </div>
 

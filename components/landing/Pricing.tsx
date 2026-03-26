@@ -4,18 +4,17 @@ import { Check, ArrowRight, ShieldCheck, Zap, Clock } from 'lucide-react';
 import { useMediaQuery } from '@/lib/hooks/use-media-query';
 
 const included = [
-  'Análisis de tu empresa y perfil de subvenciones',
-  'Monitorización continua de convocatorias',
-  'Notificaciones de nuevas ayudas compatibles',
-  'Preparación completa del expediente',
-  'Presentación de la solicitud en tu nombre',
-  'Seguimiento hasta resolución',
+  'Analisis de tu empresa',
+  'Busqueda de subvenciones',
+  'Preparacion del expediente',
+  'Presentacion de solicitud',
+  'Seguimiento completo',
 ];
 
 const guarantees = [
-  { icon: ShieldCheck, text: 'Sin coste si no se concede', detail: 'Si la subvención no se aprueba, no pagas absolutamente nada.' },
-  { icon: Zap,         text: 'Sin cuotas ni suscripciones', detail: 'No hay pagos mensuales, solo un porcentaje sobre el éxito.' },
-  { icon: Clock,       text: 'Sin permanencia', detail: 'Puedes dejar de usar el servicio cuando quieras, sin penalización.' },
+  { icon: ShieldCheck, text: 'Sin coste inicial', detail: 'No pagas nada hasta que cobras.' },
+  { icon: Zap,         text: 'Sin cuotas', detail: 'Nada de pagos mensuales.' },
+  { icon: Clock,       text: 'Sin permanencia', detail: 'Te vas cuando quieras.' },
 ];
 
 export default function Pricing({ onAuthClick }: { onAuthClick?: () => void }) {
@@ -26,21 +25,15 @@ export default function Pricing({ onAuthClick }: { onAuthClick?: () => void }) {
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
 
         {/* Header */}
-        <div className="text-center" style={{ marginBottom: 56 }}>
-          <span
-            className="inline-block text-accent font-semibold text-sm uppercase tracking-wider"
-            style={{ marginBottom: 12, display: 'block' }}
-          >
-            Modelo transparente
-          </span>
+        <div className="text-center" style={{ marginBottom: 40 }}>
           <h2
             className="font-heading font-bold text-foreground"
-            style={{ fontSize: 'clamp(1.75rem, 3vw, 2.25rem)', marginBottom: 12, lineHeight: 1.2 }}
+            style={{ fontSize: 'clamp(1.6rem, 3vw, 2rem)', marginBottom: 8, lineHeight: 1.2 }}
           >
-            Solo pagas si ganas
+            Solo pagas si cobras
           </h2>
-          <p className="text-muted-foreground" style={{ fontSize: '1.05rem', lineHeight: 1.7, maxWidth: 520, margin: '0 auto' }}>
-            Nuestros honorarios son un porcentaje de la subvención concedida. Si no hay subvención, no hay coste.
+          <p className="text-muted-foreground" style={{ fontSize: '1rem', lineHeight: 1.6, maxWidth: 400, margin: '0 auto' }}>
+            Sin subvencion = sin coste. Asi de simple.
           </p>
         </div>
 

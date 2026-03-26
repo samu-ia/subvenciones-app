@@ -1,15 +1,15 @@
-import { CheckCircle, LogIn, ArrowRight, Shield, Zap, TrendingUp } from 'lucide-react';
+import { CheckCircle, LogIn, ArrowRight, Shield, Zap, MessageCircle } from 'lucide-react';
 
 const trust = [
-  { icon: Shield,     text: '0€ hasta que cobres la subvención' },
-  { icon: CheckCircle,text: 'Gestionamos todo el papeleo por ti' },
-  { icon: Zap,        text: 'Resultado en semanas, no en meses' },
+  { icon: Shield,     text: '0 euros si no cobras' },
+  { icon: CheckCircle,text: 'Nosotros hacemos todo' },
+  { icon: Zap,        text: 'Respuesta en 24h' },
 ];
 
 const stats = [
-  { value: '120.000€', label: 'media conseguida por empresa' },
-  { value: '87%',      label: 'tasa de éxito en solicitudes' },
-  { value: '0€',       label: 'si no conseguimos nada, no pagáis' },
+  { value: '120.000', label: 'euros de media' },
+  { value: '87%',     label: 'tasa de exito' },
+  { value: '0',       label: 'coste inicial' },
 ];
 
 export default function Hero({ onAuthClick }: { onAuthClick?: () => void }) {
@@ -30,17 +30,17 @@ export default function Hero({ onAuthClick }: { onAuthClick?: () => void }) {
 
           {/* Live badge */}
           <div
-            className="inline-flex items-center gap-2 mb-8 animate-slide-up"
+            className="inline-flex items-center gap-2 mb-6 animate-slide-up"
             style={{
               background: 'rgba(255,255,255,0.1)',
               border: '1px solid rgba(255,255,255,0.2)',
               borderRadius: 100,
-              padding: '6px 18px',
+              padding: '5px 14px',
             }}
           >
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ade80', display: 'inline-block', boxShadow: '0 0 10px #4ade80' }} />
-            <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.82rem', fontWeight: 600 }}>
-              Análisis gratuito — sin compromiso — resultado en 24h
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', display: 'inline-block', boxShadow: '0 0 8px #4ade80' }} />
+            <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.75rem', fontWeight: 600 }}>
+              Gratis - Sin compromiso - 24h
             </span>
           </div>
 
@@ -48,34 +48,32 @@ export default function Hero({ onAuthClick }: { onAuthClick?: () => void }) {
           <h1
             className="animate-slide-up"
             style={{
-              fontSize: 'clamp(2.4rem, 6vw, 4rem)',
+              fontSize: 'clamp(2.2rem, 5.5vw, 3.5rem)',
               fontWeight: 900,
               color: '#fff',
-              lineHeight: 1.08,
-              letterSpacing: '-0.04em',
-              marginBottom: 24,
+              lineHeight: 1.1,
+              letterSpacing: '-0.03em',
+              marginBottom: 20,
               animationDelay: '0.05s',
             }}
           >
-            Tu empresa puede conseguir<br />
-            <span style={{ color: '#5eead4' }}>hasta 120.000€ este año</span><br />
-            en subvenciones que ya existen
+            Hay subvenciones para tu empresa.<br />
+            <span style={{ color: '#5eead4' }}>Te las conseguimos gratis.</span>
           </h1>
 
-          {/* Subtítulo */}
+          {/* Subtitulo */}
           <p
             className="animate-slide-up"
             style={{
-              fontSize: '1.15rem',
-              color: 'rgba(255,255,255,0.72)',
-              lineHeight: 1.7,
-              maxWidth: 560,
-              margin: '0 auto 36px',
+              fontSize: '1.1rem',
+              color: 'rgba(255,255,255,0.75)',
+              lineHeight: 1.6,
+              maxWidth: 480,
+              margin: '0 auto 32px',
               animationDelay: '0.12s',
             }}
           >
-            Introducimos el NIF de tu empresa y en menos de 24h sabes exactamente
-            cuánto dinero puedes conseguir y de dónde. <strong style={{ color: 'rgba(255,255,255,0.92)' }}>Nosotros hacemos todo. Tú solo firmas si quieres seguir.</strong>
+            Analizamos tu empresa en 24h y te decimos cuanto dinero puedes conseguir. Solo cobramos si tu cobras.
           </p>
 
           {/* Trust pills */}
@@ -103,84 +101,106 @@ export default function Hero({ onAuthClick }: { onAuthClick?: () => void }) {
 
           {/* CTAs */}
           <div
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up"
+            className="flex flex-col sm:flex-row items-center justify-center gap-3 animate-slide-up"
             style={{ animationDelay: '0.25s' }}
           >
-            {/* Primary: acceder / crear cuenta */}
-            <button
-              onClick={onAuthClick}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 10,
-                background: '#0d9488',
-                color: '#fff',
-                border: 'none', borderRadius: 14,
-                padding: '16px 32px',
-                fontSize: '1.05rem', fontWeight: 800,
-                cursor: 'pointer', fontFamily: 'inherit',
-                boxShadow: '0 4px 24px rgba(13,148,136,0.45)',
-                letterSpacing: '-0.01em',
-                transition: 'transform 0.15s, box-shadow 0.15s',
-              }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)';
-                (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 30px rgba(13,148,136,0.55)';
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
-                (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 24px rgba(13,148,136,0.45)';
-              }}
-            >
-              Descubrir qué le corresponde a mi empresa
-              <ArrowRight size={18} />
-            </button>
-
-            {/* Secondary: ya tengo cuenta */}
+            {/* Primary CTA */}
             <button
               onClick={onAuthClick}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
-                background: 'rgba(255,255,255,0.08)',
-                border: '1.5px solid rgba(255,255,255,0.3)',
-                color: 'rgba(255,255,255,0.88)',
-                borderRadius: 14, padding: '16px 26px',
-                fontFamily: 'inherit', fontWeight: 600, fontSize: '0.95rem',
+                background: '#0d9488',
+                color: '#fff',
+                border: 'none', borderRadius: 12,
+                padding: '14px 28px',
+                fontSize: '1rem', fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'inherit',
+                boxShadow: '0 4px 20px rgba(13,148,136,0.4)',
+                transition: 'transform 0.15s, box-shadow 0.15s',
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
+              }}
+            >
+              Ver mis subvenciones
+              <ArrowRight size={16} />
+            </button>
+
+            {/* WhatsApp CTA */}
+            <a
+              href="https://wa.me/34601646362?text=Hola%2C%20quiero%20saber%20qu%C3%A9%20subvenciones%20puedo%20conseguir"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                background: '#25D366',
+                color: '#fff',
+                border: 'none', borderRadius: 12,
+                padding: '14px 24px',
+                fontSize: '0.95rem', fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit',
+                textDecoration: 'none',
+                transition: 'transform 0.15s',
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(0)';
+              }}
+            >
+              <MessageCircle size={18} />
+              WhatsApp
+            </a>
+
+            {/* Secondary */}
+            <button
+              onClick={onAuthClick}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                background: 'transparent',
+                border: '1.5px solid rgba(255,255,255,0.25)',
+                color: 'rgba(255,255,255,0.85)',
+                borderRadius: 12, padding: '14px 20px',
+                fontFamily: 'inherit', fontWeight: 600, fontSize: '0.9rem',
                 cursor: 'pointer', transition: 'all 0.2s',
               }}
               onMouseEnter={e => {
-                (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.16)';
-                (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.5)';
+                (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.1)';
               }}
               onMouseLeave={e => {
-                (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.08)';
-                (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.3)';
+                (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
               }}
             >
-              <LogIn size={16} />
-              Ya tengo cuenta
+              <LogIn size={15} />
+              Entrar
             </button>
           </div>
 
           <p
             className="animate-slide-up"
-            style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.78rem', marginTop: 16, animationDelay: '0.3s' }}
+            style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', marginTop: 14, animationDelay: '0.3s' }}
           >
-            Gratuito · Sin tarjeta · Sin compromiso
+            Sin coste inicial - Sin compromiso - Respuesta en 24h
           </p>
 
           {/* Stats */}
           <div
-            className="flex flex-wrap justify-center gap-10 mt-16 pt-12 animate-slide-up"
+            className="flex flex-wrap justify-center gap-8 mt-14 pt-10 animate-slide-up"
             style={{
-              borderTop: '1px solid rgba(255,255,255,0.1)',
+              borderTop: '1px solid rgba(255,255,255,0.08)',
               animationDelay: '0.35s',
             }}
           >
             {stats.map((s, i) => (
               <div key={i} style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.05em', lineHeight: 1 }}>
+                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.04em', lineHeight: 1 }}>
                   {s.value}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', marginTop: 5, fontWeight: 500 }}>
+                <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 4, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
                   {s.label}
                 </div>
               </div>

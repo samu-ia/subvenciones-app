@@ -9,44 +9,28 @@ import {
 
 const faqs = [
   {
-    question: '¿Cuánto tiempo tarda el proceso?',
-    answer:
-      'Depende de la convocatoria, pero en general el análisis inicial lo hacemos en 24-48 horas. La tramitación completa del expediente varía según el organismo — puede ir de unas semanas a varios meses. Te informaremos del plazo concreto antes de empezar.',
+    question: 'Cuanto tarda?',
+    answer: 'Analisis en 24h. Tramitacion depende del organismo, de semanas a meses. Te decimos el plazo antes de empezar.',
   },
   {
-    question: '¿Qué documentación necesito aportar?',
-    answer:
-      'Para el análisis inicial solo necesitamos el NIF/CIF y datos básicos de tu actividad (sector, tamaño, ubicación). Si decidimos tramitar una subvención concreta, te indicaremos exactamente qué documentos se necesitan para ese expediente.',
+    question: 'Que documentos necesito?',
+    answer: 'Para el analisis solo NIF y datos basicos. Si tramitamos, te decimos exactamente que hace falta.',
   },
   {
-    question: '¿Cómo funciona el pago?',
-    answer:
-      'El servicio es 100% a éxito. No pagas nada hasta que la subvención se concede y cobras el dinero. Cuando identificamos una subvención concreta para tu empresa y decides tramitarla, firmamos un contrato de encargo donde se especifica el porcentaje de honorarios acordado. Si no hay subvención, no hay factura.',
+    question: 'Como funciona el pago?',
+    answer: 'Solo pagas si cobras la subvencion. Sin subvencion = sin factura.',
   },
   {
-    question: '¿Puedo hacer seguimiento de mi trámite?',
-    answer:
-      'Sí. Tienes acceso a tu panel donde puedes ver el estado de cada expediente en tiempo real. Además te avisamos por email en cada hito importante del proceso.',
+    question: 'Puedo ver el estado?',
+    answer: 'Si, tienes panel con seguimiento en tiempo real.',
   },
   {
-    question: '¿Qué tipo de empresas pueden solicitar vuestros servicios?',
-    answer:
-      'Trabajamos con autónomos, microempresas, pymes y empresas medianas. El perfil de subvenciones disponibles varía según tu sector, comunidad autónoma y tamaño — por eso hacemos el análisis personalizado primero.',
+    question: 'Que empresas podeis ayudar?',
+    answer: 'Autonomos, micro, pymes y medianas. Cualquier sector y comunidad.',
   },
   {
-    question: '¿Ofrecéis asesoramiento fiscal o contable?',
-    answer:
-      'No. Nos especializamos exclusivamente en detectar y gestionar subvenciones. Para asesoramiento fiscal o contable te recomendamos acudir a un gestor o asesor especializado.',
-  },
-  {
-    question: '¿Qué garantías ofrecéis?',
-    answer:
-      'Garantizamos la confidencialidad total de tus datos, el cumplimiento de todas las normativas vigentes y máxima profesionalidad en cada expediente. Pero la garantía más importante es el propio modelo: si no conseguimos la subvención, no cobramos. Nuestros intereses están alineados con los tuyos.',
-  },
-  {
-    question: '¿Es una suscripción? ¿Hay algún coste oculto?',
-    answer:
-      'No. No hay suscripción, ni cuota mensual, ni coste de análisis inicial. Solo firmamos contrato cuando hay una subvención concreta que tramitar, y solo facturamos si se concede. Sin letra pequeña.',
+    question: 'Hay cuotas o costes ocultos?',
+    answer: 'No. Sin suscripcion, sin cuotas, sin letra pequena. Solo cobramos si tu cobras.',
   },
 ];
 
@@ -55,15 +39,12 @@ export default function FAQ() {
     <section id="faq" className="section-padding bg-muted">
       <div className="container-custom">
 
-        <div className="text-center max-w-2xl mx-auto mb-10" style={{ marginBottom: '2.5rem' }}>
-          <span className="inline-block text-accent font-semibold text-sm uppercase tracking-wider mb-4" style={{ display: 'inline-block', marginBottom: '1rem' }}>
-            FAQ
-          </span>
-          <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-5" style={{ marginBottom: '1.25rem' }}>
-            Preguntas frecuentes
+        <div className="text-center max-w-xl mx-auto" style={{ marginBottom: '2rem' }}>
+          <h2 className="text-2xl md:text-3xl font-heading font-bold text-foreground" style={{ marginBottom: '0.5rem' }}>
+            Dudas?
           </h2>
-          <p className="text-muted-foreground text-lg leading-relaxed">
-            Si tienes alguna duda que no aparece aquí, escríbenos directamente.
+          <p className="text-muted-foreground text-base">
+            Las respuestas rapidas.
           </p>
         </div>
 

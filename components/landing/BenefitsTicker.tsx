@@ -4,14 +4,13 @@
 // Muestra ejemplos reales de lo que pueden conseguir, en lenguaje de la calle.
 
 const benefits = [
-  { emoji: '🚜', text: 'Maquinaria agrícola nueva', highlight: 'hasta 40.000€' },
-  { emoji: '💻', text: 'Digitalización de tu negocio', highlight: 'el Estado paga hasta el 80%' },
-  { emoji: '👷', text: 'Contratar 2 empleados', highlight: 'sueldo subvencionado 12 meses' },
-  { emoji: '🏭', text: 'Reformar tu local o nave', highlight: 'hasta 30.000€ sin devolver' },
-  { emoji: '⚡', text: 'Paneles solares para tu empresa', highlight: 'hasta el 60% del coste' },
-  { emoji: '🌱', text: 'Certificado medioambiental', highlight: 'tramitación 100% subvencionada' },
-  { emoji: '📦', text: 'Nuevo almacén o equipamiento', highlight: 'hasta 120.000€ disponibles' },
-  { emoji: '🔬', text: 'Invertir en I+D o innovación', highlight: 'deducciones + subvención directa' },
+  { text: 'Maquinaria', highlight: '40.000' },
+  { text: 'Digitalizacion', highlight: '80%' },
+  { text: 'Contratar', highlight: '12 meses' },
+  { text: 'Reformas', highlight: '30.000' },
+  { text: 'Placas solares', highlight: '60%' },
+  { text: 'Equipamiento', highlight: '120.000' },
+  { text: 'I+D', highlight: 'deducciones' },
 ];
 
 export default function BenefitsTicker() {
@@ -49,19 +48,18 @@ export default function BenefitsTicker() {
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 8,
-              padding: '0 32px',
-              borderRight: '1px solid rgba(255,255,255,0.1)',
+              gap: 6,
+              padding: '0 24px',
+              borderRight: '1px solid rgba(255,255,255,0.08)',
               whiteSpace: 'nowrap',
               flexShrink: 0,
             }}
           >
-            <span style={{ fontSize: '1rem' }}>{b.emoji}</span>
-            <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', fontWeight: 500 }}>
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', fontWeight: 500 }}>
               {b.text}
             </span>
-            <span style={{ color: '#5eead4', fontSize: '0.82rem', fontWeight: 700 }}>
-              — {b.highlight}
+            <span style={{ color: '#5eead4', fontSize: '0.78rem', fontWeight: 700 }}>
+              {b.highlight}
             </span>
           </div>
         ))}

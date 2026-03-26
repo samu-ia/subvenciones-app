@@ -3,62 +3,57 @@ export default function ContactSection() {
     <section id="contacto" className="section-padding bg-background">
       <div className="container-custom">
 
-        <div className="text-center mb-16" style={{ textAlign: 'center', marginBottom: '4rem' }}>
-          <span className="inline-block text-accent font-semibold text-sm uppercase tracking-wider mb-4" style={{ display: 'inline-block', marginBottom: '1rem' }}>
-            Contacto
-          </span>
-          <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4" style={{ marginBottom: '1rem' }}>
-            ¿Tienes dudas? Hablamos.
+        <div className="text-center" style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+          <h2 className="text-2xl md:text-3xl font-heading font-bold mb-2" style={{ marginBottom: '0.5rem' }}>
+            Hablamos?
           </h2>
-          <p className="text-base md:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
-            Cuéntanos tu caso y te decimos en el mismo día si hay subvenciones que encajan con tu empresa.
+          <p className="text-base text-muted-foreground max-w-md mx-auto">
+            Te decimos en el dia si hay subvenciones para tu empresa.
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 max-w-2xl mx-auto">
+        <div className="grid gap-4 md:grid-cols-3 max-w-3xl mx-auto">
 
-          <div className="rounded-2xl bg-[#f5f7fa] border border-[#e3e8ef] shadow-sm p-8 text-[#1a202c]">
-            <h3 className="text-xl font-bold mb-1 flex items-center gap-2">
-              <span className="inline-block w-2 h-2 rounded-full bg-primary" />
-              Llámanos
-            </h3>
-            <p className="text-sm text-[#6b7280] mb-5">Lunes a viernes, 10:00 – 19:00 (hora peninsular)</p>
-            <ul className="space-y-2 text-base font-semibold text-[#1a202c]">
-              <li>
-                <a href="tel:+34601646362" className="hover:text-primary transition-colors">
-                  601 64 63 62
-                </a>
-              </li>
-              <li>
-                <a href="tel:+34611085921" className="hover:text-primary transition-colors">
-                  611 08 59 21
-                </a>
-              </li>
-            </ul>
-          </div>
+          {/* WhatsApp - Principal */}
+          <a
+            href="https://wa.me/34601646362?text=Hola%2C%20quiero%20saber%20qu%C3%A9%20subvenciones%20puedo%20conseguir"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-xl border border-[#25D366] shadow-sm p-6 text-center hover:shadow-md transition-shadow"
+            style={{ background: '#25D366', textDecoration: 'none' }}
+          >
+            <div className="text-3xl mb-2">💬</div>
+            <h3 className="text-lg font-bold text-white mb-1">WhatsApp</h3>
+            <p className="text-sm text-white/80">Respuesta inmediata</p>
+          </a>
 
-          <div className="rounded-2xl bg-[#f5f7fa] border border-[#e3e8ef] shadow-sm p-8 text-[#1a202c] flex flex-col justify-between">
-            <div>
-              <h3 className="text-xl font-bold mb-1 flex items-center gap-2">
-                <span className="inline-block w-2 h-2 rounded-full bg-primary" />
-                Escríbenos
-              </h3>
-              <p className="text-sm text-[#6b7280] mb-5">
-                Respondemos en el mismo día laborable.
-              </p>
-              <a
-                href="mailto:admin@ayudapyme.es"
-                className="inline-flex items-center font-semibold text-primary underline underline-offset-4 hover:opacity-80 transition-opacity"
-              >
-                admin@ayudapyme.es
-              </a>
-            </div>
-            <p className="mt-6 text-xs text-[#9ca3af] leading-relaxed">
-              Cuanta más información nos des (sector, tamaño, ubicación), más rápido podemos decirte qué subvenciones tienes disponibles.
-            </p>
-          </div>
+          {/* Telefono */}
+          <a
+            href="tel:+34601646362"
+            className="rounded-xl bg-[#f5f7fa] border border-[#e3e8ef] shadow-sm p-6 text-center hover:shadow-md transition-shadow"
+            style={{ textDecoration: 'none' }}
+          >
+            <div className="text-3xl mb-2">📞</div>
+            <h3 className="text-lg font-bold text-[#1a202c] mb-1">Llamanos</h3>
+            <p className="text-sm text-[#6b7280]">601 64 63 62</p>
+          </a>
+
+          {/* Email */}
+          <a
+            href="mailto:admin@ayudapyme.es"
+            className="rounded-xl bg-[#f5f7fa] border border-[#e3e8ef] shadow-sm p-6 text-center hover:shadow-md transition-shadow"
+            style={{ textDecoration: 'none' }}
+          >
+            <div className="text-3xl mb-2">📧</div>
+            <h3 className="text-lg font-bold text-[#1a202c] mb-1">Email</h3>
+            <p className="text-sm text-[#6b7280]">admin@ayudapyme.es</p>
+          </a>
 
         </div>
+
+        <p className="text-center text-xs text-[#9ca3af] mt-6">
+          Lunes a viernes, 10:00 - 19:00
+        </p>
       </div>
     </section>
   );
