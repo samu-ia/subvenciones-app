@@ -42,6 +42,7 @@ interface MatchItem {
     id: string;
     bdns_id: string;
     titulo: string;
+    titulo_comercial?: string;
     organismo?: string;
     objeto?: string;
     resumen_ia?: string;
@@ -271,7 +272,7 @@ function ModalSolicitud({
                 </span>
               </div>
               <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: C.navy, lineHeight: 1.4, margin: 0 }}>
-                {(() => { const d = subv.objeto || subv.resumen_ia || subv.titulo; return d.length > 120 ? d.slice(0, 117) + '…' : d; })()}
+                {(() => { const d = subv.titulo_comercial || subv.objeto || subv.resumen_ia || subv.titulo; return d.length > 120 ? d.slice(0, 117) + '…' : d; })()}
               </h3>
               {subv.organismo && (
                 <p style={{ fontSize: '0.76rem', color: C.muted, marginTop: 4 }}>{subv.organismo}</p>
@@ -709,7 +710,7 @@ function MatchCard({
             </div>
             <h3 style={{ fontSize: isMobile ? '0.84rem' : '0.9rem', fontWeight: 700, color: C.navy, lineHeight: 1.4, margin: 0, wordBreak: 'break-word', overflowWrap: 'break-word' }}>
               {(() => {
-                const display = subv.objeto || subv.resumen_ia || subv.titulo;
+                const display = subv.titulo_comercial || subv.objeto || subv.resumen_ia || subv.titulo;
                 return display.length > 120 ? display.slice(0, 117) + '…' : display;
               })()}
             </h3>
@@ -1530,7 +1531,7 @@ export default function PortalPage() {
           .select(`
             id, score, motivos, estado, es_hard_exclude, detalle_scoring,
             subvenciones!inner(
-              id, bdns_id, titulo, organismo, objeto, resumen_ia, para_quien,
+              id, bdns_id, titulo, titulo_comercial, organismo, objeto, resumen_ia, para_quien,
               importe_maximo, presupuesto_total, porcentaje_financiacion, plazo_fin, plazo_inicio,
               estado_convocatoria, ambito_geografico, url_oficial
             )
@@ -1998,7 +1999,7 @@ export default function PortalPage() {
                                 </span>
                               </div>
                               <h3 style={{ fontSize: isMobile ? '0.84rem' : '0.9rem', fontWeight: 700, color: C.navy, lineHeight: 1.4, margin: 0, wordBreak: 'break-word' }}>
-                                {(() => { const d = m.subvencion.objeto || m.subvencion.resumen_ia || m.subvencion.titulo; return d.length > 120 ? d.slice(0, 117) + '…' : d; })()}
+                                {(() => { const d = m.subvencion.titulo_comercial || m.subvencion.objeto || m.subvencion.resumen_ia || m.subvencion.titulo; return d.length > 120 ? d.slice(0, 117) + '…' : d; })()}
                               </h3>
                               {m.subvencion.organismo && <p style={{ fontSize: '0.75rem', color: C.muted, marginTop: 3, wordBreak: 'break-word' }}>{m.subvencion.organismo}</p>}
                             </div>
