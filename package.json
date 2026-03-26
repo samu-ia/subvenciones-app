@@ -14,11 +14,16 @@
     "pipeline:all": "node scripts/pipeline-magistral.mjs --all --workers 15",
     "pipeline:id": "node scripts/pipeline-magistral.mjs --id",
     "enrich": "node scripts/enrich-with-gemini.mjs",
-    "matching": "node scripts/run-matching.mjs --all"
+    "matching": "node scripts/run-matching.mjs --all",
+    "team": "npx tsx scripts/agents/langgraph/run.ts",
+    "team:task": "npx tsx scripts/agents/langgraph/run.ts --task-id",
+    "team:list": "npx tsx scripts/agents/langgraph/run.ts --list"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.41",
     "@anthropic-ai/claude-agent-sdk": "^0.2.84",
+    "@langchain/core": "^1.1.36",
+    "@langchain/langgraph": "^1.2.5",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.99.1",
     "@tiptap/extension-link": "^3.20.2",
