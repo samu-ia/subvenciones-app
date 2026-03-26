@@ -101,24 +101,22 @@ La landing está en `app/(public)/page.tsx` y `components/landing/`.
 **Secciones:**
 1. `Hero` — CTA principal, botón → abre modal de login
 2. `AboutUs` — quiénes somos, 4 feature cards, sección "Por qué existimos"
-3. `FAQ` — preguntas frecuentes con accordion
-4. `ContactSection` — formulario de contacto
-5. `LandingHeader` — nav fija, se vuelve opaca al hacer scroll
-6. `LandingFooter`
+3. `HowItWorks` — proceso visual en 3 pasos con iconos y conectores
+4. `Testimonials` — 3 casos de éxito con importes y valoraciones
+5. `Pricing` — modelo success fee, qué incluye, 3 garantías, CTA
+6. `FAQ` — preguntas frecuentes con accordion
+7. `ContactSection` — formulario de contacto
+8. `LandingHeader` — nav fija, se vuelve opaca al hacer scroll
+9. `LandingFooter`
 
 **Estado visual actual (2026-03-26):**
-- Globalmente funcional pero mejorable
-- Feature cards en AboutUs usan inline styles (fix del bug CSS)
+- Landing completa con 7 secciones de contenido
+- Feature cards, testimonios, pricing todos usan inline styles (fix del bug CSS)
 - Header funciona correctamente con `scrollbar-gutter: stable`
-- La página no tiene testimonios, no tiene pricing, no tiene demo/video
-- El copy es correcto pero genérico, falta personalización
 
 **Lo que falta para tener una landing de 10:**
-- Sección de testimonios o casos de éxito
-- Sección de pricing (aunque sea "contacta para precio")
-- Un indicador visual más claro del proceso (steps 1-2-3)
 - Más urgencia/FOMO (ej: "X subvenciones activas ahora")
-- Mobile: revisar que todo se vea bien en 375px
+- Mobile: revisar que todo se vea bien en 375px (grids 3-col → 1-col)
 - Métricas reales o más creíbles en los stats
 - Animaciones sutiles (fade-in en scroll)
 
