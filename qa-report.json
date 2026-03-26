@@ -6,11 +6,6 @@
       "severity": "high"
     },
     {
-      "section": "landing-mobile",
-      "desc": "Overflow horizontal detectado (contenido se sale del viewport)",
-      "severity": "medium"
-    },
-    {
       "section": "admin-subvenciones-bd",
       "desc": "Texto de error visible: Error",
       "severity": "high"
@@ -19,11 +14,6 @@
       "section": "admin-proveedores",
       "desc": "Texto de error visible: Desde 1.500 €/año",
       "severity": "high"
-    },
-    {
-      "section": "portal-mobile",
-      "desc": "Overflow horizontal detectado (contenido se sale del viewport)",
-      "severity": "medium"
     }
   ],
   "warnings": [
@@ -149,7 +139,7 @@
     },
     {
       "section": "landing",
-      "desc": "Header con navegación: Inicio, Quiénes somos, Preguntas frecuentes, Contacto, Acceder"
+      "desc": "Header con navegación: AyudaPyme, Inicio, Quiénes somos, Preguntas frecuentes, Contacto, Acceder"
     },
     {
       "section": "landing-mobile",
