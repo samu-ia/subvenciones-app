@@ -108,7 +108,7 @@ function normCA(s?: string): string {
 const TAMANO_A_TIPO: Record<string, string[]> = {
   'micropyme':  ['micropyme', 'pyme', 'autonomo'],
   'microempresa': ['micropyme', 'pyme'],
-  'pequeña':    ['pyme'],
+  'pequeña':    ['pequeña', 'pyme'],
   'mediana':    ['pyme'],
   'pyme':       ['pyme', 'micropyme'],
   'grande':     ['grande'],
@@ -129,9 +129,10 @@ function tiposCliente(cliente: ClienteMatchProfile): string[] {
   // Por tamaño
   const emp = cliente.num_empleados ?? 0;
   const fac = cliente.facturacion_anual ?? 0;
-  if (emp <= 10 || fac <= 2_000_000) tipos.add('micropyme');
-  if (emp <= 250 || fac <= 50_000_000) tipos.add('pyme');
-  if (emp > 250) tipos.add('grande');
+  if (emp <= 10 && fac <= 2_000_000) tipos.add('micropyme');
+  if (emp <= 50 && fac <= 10_000_000) tipos.add('pequeña');
+  if (emp <= 250 && fac <= 50_000_000) tipos.add('pyme');
+  if (emp > 250 || fac > 50_000_000) tipos.add('grande');
 
   // Por forma jurídica
   if (forma.includes('autón') || forma === 'autonomo') tipos.add('autonomo');
@@ -172,7 +173,7 @@ export function calcularMatch(
     const excluidos = subvencion.sectores.filter(s => s.excluido);
     for (const exc of excluidos) {
       const cnaeExc = (exc.cnae_codigo ?? '').slice(0, 4);
-      if (cnaeExc && clienteCnae && clienteCnae === cnaeExc) {
+      if (cnaeExc && clienteCnae && (clienteCnae === cnaeExc || clienteCnae.startsWith(cnaeExc))) {
         return hard(`Tu sector (CNAE ${clienteCnae}) está excluido en esta convocatoria.`,
           { geografia: 0, tipo_empresa: 0, sector: 0, estado: 0, importe: 0 });
       }
@@ -315,14 +316,18 @@ export function calcularMatch(
     ? Math.ceil((new Date(subvencion.plazo_fin).getTime() - Date.now()) / 86_400_000)
     : null;
 
+  // Si el plazo ha vencido (fecha pasada), tratar como cerrada aunque BDNS no se haya actualizado
+  if (diasCierre !== null && diasCierre < 0) {
+    return hard('El plazo de presentación ha vencido.', { geografia: 0, tipo_empresa: 0, sector: 0, estado: 0, importe: 0 });
+  }
+
   switch (subvencion.estado_convocatoria) {
     case 'abierta':
-      estado = diasCierre !== null && diasCierre <= 15 ? 12 : 15;
-      if (diasCierre !== null && diasCierre <= 15) {
+      estado = 15;
+      if (diasCierre !== null && diasCierre <= 15 && diasCierre >= 0) {
         alertas.push(`⚡ Quedan solo ${diasCierre} días para el cierre del plazo`);
-      } else {
-        motivos.push('Convocatoria actualmente abierta');
       }
+      motivos.push('Convocatoria actualmente abierta');
       break;
     case 'proxima':
       estado = 11;
