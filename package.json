@@ -6,10 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "agents": "dotenvx run -f .env.local -- npx tsx scripts/agents/orchestrator.ts",
+    "agents:watch": "dotenvx run -f .env.local -- npx tsx scripts/agents/orchestrator.ts --watch",
+    "agents:add": "dotenvx run -f .env.local -- npx tsx scripts/agents/add-task.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.41",
+    "@anthropic-ai/claude-agent-sdk": "^0.2.84",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.99.1",
     "@tiptap/extension-link": "^3.20.2",
