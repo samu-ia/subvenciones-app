@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { consultarEmpresa } from '@/lib/einforma/client';
 import { runMatchingForClient } from '@/lib/matching/run-for-client';
+import { sendWelcomeEmail } from '@/lib/notifications';
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -124,6 +125,18 @@ export async function POST(request: NextRequest) {
 
       // 4. Calcular matching con los datos (ya enriquecidos si eInforma respondió)
       await runMatchingForClient(nif);
+
+      // 5. Enviar email de bienvenida
+      try {
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ayudapyme.es';
+        await sendWelcomeEmail(
+          user.email!,
+          body.nombre_empresa?.trim() || nif,
+          `${siteUrl}/portal`,
+        );
+      } catch (err) {
+        console.error('[setup] Error enviando bienvenida:', (err as Error).message);
+      }
 
     } catch (err) {
       console.error('[setup] Error en enriquecimiento/matching:', (err as Error).message);
