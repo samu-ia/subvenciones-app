@@ -50,7 +50,7 @@ export default function LandingClient() {
   }
 
   return (
-    <div className="landing min-h-screen bg-background">
+    <div className="landing min-h-screen bg-background overflow-x-hidden">
       <LandingHeader onAuthClick={() => setAuthOpen(true)} />
       <main>
         <Hero onAuthClick={() => setAuthOpen(true)} />

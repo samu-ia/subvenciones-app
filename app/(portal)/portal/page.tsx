@@ -3,12 +3,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useMediaQuery } from '@/lib/hooks/use-media-query';
 import {
   Bell, LogOut, ChevronRight, ExternalLink, FileText,
   CheckCircle, AlertTriangle, Clock, Zap, Star,
   CreditCard, Landmark, ArrowRight, ArrowLeft,
   Shield, X, Check, Loader2, User, Building2, Save,
-  MessageCircle, Send, Bot, Paperclip,
+  MessageCircle, Send, Bot, Paperclip, Menu,
 } from 'lucide-react';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -592,6 +593,7 @@ function MatchCard({
   onSolicitar: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const subv = match.subvencion;
   const info = scoreLabel(match.score);
   const dias = diasRestantes(subv.plazo_fin);
@@ -609,11 +611,11 @@ function MatchCard({
       {/* Strip de color por score */}
       <div style={{ height: 4, background: info.color === C.fire ? 'linear-gradient(90deg,#f97316,#fbbf24)' : info.color === C.green ? 'linear-gradient(90deg,#059669,#34d399)' : 'linear-gradient(90deg,#94a3b8,#cbd5e1)' }} />
 
-      <div style={{ padding: '18px 20px' }}>
+      <div style={{ padding: isMobile ? '14px 14px' : '18px 20px' }}>
         {/* Header card */}
-        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 10 }}>
+        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 12, alignItems: isMobile ? 'stretch' : 'flex-start', marginBottom: 10 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6, alignItems: 'center' }}>
               <span style={{ background: info.bg, color: info.color, border: `1px solid ${info.border}`, borderRadius: 20, padding: '2px 10px', fontSize: '0.7rem', fontWeight: 800 }}>
                 {info.icon} {info.text}
               </span>
@@ -633,18 +635,26 @@ function MatchCard({
                   ✓ Solicitud activa
                 </span>
               )}
+              {isMobile && (
+                <span style={{ marginLeft: 'auto', fontSize: '1.1rem', fontWeight: 900, color: info.color, lineHeight: 1 }}>
+                  {Math.round(match.score * 100)}%
+                  <span style={{ fontSize: '0.58rem', color: C.muted, fontWeight: 600, marginLeft: 3 }}>encaje</span>
+                </span>
+              )}
             </div>
-            <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: C.navy, lineHeight: 1.4, margin: 0 }}>
+            <h3 style={{ fontSize: isMobile ? '0.84rem' : '0.9rem', fontWeight: 700, color: C.navy, lineHeight: 1.4, margin: 0 }}>
               {subv.titulo}
             </h3>
             {subv.organismo && <p style={{ fontSize: '0.75rem', color: C.muted, marginTop: 3 }}>{subv.organismo}</p>}
           </div>
-          <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <div style={{ fontSize: '1.5rem', fontWeight: 900, color: info.color, lineHeight: 1 }}>
-              {Math.round(match.score * 100)}%
+          {!isMobile && (
+            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 900, color: info.color, lineHeight: 1 }}>
+                {Math.round(match.score * 100)}%
+              </div>
+              <div style={{ fontSize: '0.62rem', color: C.muted, fontWeight: 600 }}>encaje</div>
             </div>
-            <div style={{ fontSize: '0.62rem', color: C.muted, fontWeight: 600 }}>encaje</div>
-          </div>
+          )}
         </div>
 
         {/* Por qué encaja */}
@@ -692,7 +702,7 @@ function MatchCard({
         )}
 
         {/* Footer card */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', paddingTop: 4 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', paddingTop: 4 }}>
           <button
             onClick={() => setExpanded(!expanded)}
             style={{ background: '#f1f5f9', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: '0.76rem', fontWeight: 600, cursor: 'pointer', color: C.ink2 }}
@@ -709,8 +719,8 @@ function MatchCard({
             <button
               onClick={onSolicitar}
               style={{
-                marginLeft: 'auto',
-                display: 'flex', alignItems: 'center', gap: 6,
+                marginLeft: isMobile ? 0 : 'auto',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 background: info.color === C.fire ? 'linear-gradient(90deg,#f97316,#ea580c)' :
                              info.color === C.green ? 'linear-gradient(90deg,#059669,#047857)' :
                              'linear-gradient(90deg,#1a3561,#1e40af)',
@@ -718,13 +728,14 @@ function MatchCard({
                 padding: '9px 18px', fontSize: '0.85rem', fontWeight: 800,
                 cursor: 'pointer',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                ...(isMobile ? { width: '100%', marginTop: 4 } : {}),
               }}
             >
               <Star size={13} />
               Quiero esta
             </button>
           ) : (
-            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, color: C.green, fontSize: '0.8rem', fontWeight: 700 }}>
+            <div style={{ marginLeft: isMobile ? 0 : 'auto', display: 'flex', alignItems: 'center', gap: 6, color: C.green, fontSize: '0.8rem', fontWeight: 700 }}>
               <CheckCircle size={14} />
               Solicitud enviada
             </div>
@@ -1399,6 +1410,8 @@ export default function PortalPage() {
   const [matchSolicitando, setMatchSolicitando] = useState<MatchItem | null>(null);
   const [toast, setToast] = useState('');
   const [mensajesNoLeidos, setMensajesNoLeidos] = useState(0);
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Auth check
   useEffect(() => {
@@ -1542,15 +1555,20 @@ export default function PortalPage() {
     <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column' }}>
 
       {/* NAV */}
-      <nav style={{ background: C.navy, padding: '0 24px', display: 'flex', alignItems: 'center', height: 56, gap: 16, position: 'sticky', top: 0, zIndex: 100 }}>
+      <nav style={{ background: C.navy, padding: isMobile ? '0 12px' : '0 24px', display: 'flex', alignItems: 'center', height: 56, gap: isMobile ? 8 : 16, position: 'sticky', top: 0, zIndex: 100 }}>
+        {isMobile && (
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {sidebarOpen ? <X size={18} color="#fff" /> : <Menu size={18} color="#fff" />}
+          </button>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ width: 32, height: 32, background: '#fff', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.75rem', color: C.navy }}>AP</div>
-          <span style={{ color: '#fff', fontWeight: 800, fontSize: '0.95rem' }}>AyudaPyme</span>
+          {!isMobile && <span style={{ color: '#fff', fontWeight: 800, fontSize: '0.95rem' }}>AyudaPyme</span>}
         </div>
         <div style={{ flex: 1 }} />
         {matchesFuego.length > 0 && (
           <div style={{ background: '#f97316', borderRadius: 20, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Zap size={11} /> {matchesFuego.length} muy recomendable{matchesFuego.length > 1 ? 's' : ''}
+            <Zap size={11} /> {matchesFuego.length} {!isMobile && <>muy recomendable{matchesFuego.length > 1 ? 's' : ''}</>}
           </div>
         )}
         <button onClick={() => setVista('gestor')} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
@@ -1564,16 +1582,35 @@ export default function PortalPage() {
         <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <User size={16} color="#fff" />
         </div>
-        <button onClick={async () => { await supabase.auth.signOut(); router.push('/'); }}
-          style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: 5 }}>
-          <LogOut size={13} /> Salir
-        </button>
+        {!isMobile && (
+          <button onClick={async () => { await supabase.auth.signOut(); router.push('/'); }}
+            style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <LogOut size={13} /> Salir
+          </button>
+        )}
       </nav>
 
-      <div style={{ display: 'flex', flex: 1 }}>
+      <div style={{ display: 'flex', flex: 1, position: 'relative' }}>
+
+        {/* SIDEBAR OVERLAY (mobile) */}
+        {isMobile && sidebarOpen && (
+          <div
+            onClick={() => setSidebarOpen(false)}
+            style={{ position: 'fixed', inset: 0, top: 56, background: 'rgba(0,0,0,0.4)', zIndex: 90 }}
+          />
+        )}
 
         {/* SIDEBAR */}
-        <aside style={{ width: 220, background: '#fff', borderRight: `1px solid ${C.border}`, padding: '20px 0', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+        <aside style={{
+          width: 220, background: '#fff', borderRight: `1px solid ${C.border}`, padding: '20px 0',
+          display: 'flex', flexDirection: 'column', flexShrink: 0,
+          ...(isMobile ? {
+            position: 'fixed', top: 56, left: 0, bottom: 0, zIndex: 95,
+            transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
+            transition: 'transform 0.25s ease',
+            boxShadow: sidebarOpen ? '4px 0 20px rgba(0,0,0,0.15)' : 'none',
+          } : {}),
+        }}>
           {[
             { key: 'dashboard', label: 'Inicio', icon: <Star size={15} /> },
             { key: 'ayudas', label: 'Mis subvenciones', icon: <FileText size={15} />, badge: matchesActivos.length || undefined },
@@ -1581,7 +1618,7 @@ export default function PortalPage() {
             { key: 'gestor', label: 'Mi Gestor', icon: <MessageCircle size={15} />, badge: mensajesNoLeidos || undefined },
             { key: 'perfil', label: 'Mi empresa', icon: <Building2 size={15} />, badge: !cliente?.cnae_descripcion ? '!' : undefined },
           ].map(item => (
-            <button key={item.key} onClick={() => setVista(item.key as Vista)}
+            <button key={item.key} onClick={() => { setVista(item.key as Vista); if (isMobile) setSidebarOpen(false); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10,
                 padding: '10px 20px', background: vista === item.key ? '#eff6ff' : 'none',
@@ -1605,12 +1642,20 @@ export default function PortalPage() {
           {/* Perfil incompleto */}
           {!cliente?.cnae_descripcion && (
             <button
-              onClick={() => setVista('perfil')}
+              onClick={() => { setVista('perfil'); if (isMobile) setSidebarOpen(false); }}
               style={{ margin: '0 12px 12px', background: '#fffbeb', borderRadius: 12, padding: '12px 14px', border: '1px solid #fde68a', textAlign: 'left', cursor: 'pointer', width: 'calc(100% - 24px)', fontFamily: 'inherit' }}>
               <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#92400e', marginBottom: 4 }}>Completa tu perfil</p>
               <p style={{ fontSize: '0.7rem', color: '#92400e', margin: 0, lineHeight: 1.5 }}>
                 Añade tu CNAE y comunidad autónoma para mejores matches.
               </p>
+            </button>
+          )}
+
+          {/* Salir (mobile) */}
+          {isMobile && (
+            <button onClick={async () => { await supabase.auth.signOut(); router.push('/'); }}
+              style={{ margin: '0 12px 12px', background: '#f8fafc', border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px', cursor: 'pointer', color: C.ink2, fontSize: '0.82rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, width: 'calc(100% - 24px)', fontFamily: 'inherit' }}>
+              <LogOut size={14} /> Cerrar sesión
             </button>
           )}
 
@@ -1623,7 +1668,7 @@ export default function PortalPage() {
         </aside>
 
         {/* MAIN */}
-        <main style={{ flex: 1, padding: '28px 32px', overflow: 'auto', minWidth: 0 }}>
+        <main style={{ flex: 1, padding: isMobile ? '20px 14px' : '28px 32px', overflow: 'auto', minWidth: 0 }}>
 
           {/* ── DASHBOARD ── */}
           {vista === 'dashboard' && (
@@ -1636,7 +1681,7 @@ export default function PortalPage() {
               </p>
 
               {/* Summary cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 28 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 14, marginBottom: 28 }}>
                 {[
                   { label: 'Subvenciones abiertas', value: String(matchesActivos.length), sub: 'En plazo ahora mismo', color: C.green, bg: '#f0fdf4' },
                   { label: 'Muy recomendables', value: String(matchesFuego.length), sub: 'Encaje alto con tu empresa', color: C.fire, bg: '#fff7ed' },
@@ -1654,8 +1699,9 @@ export default function PortalPage() {
               {matchesFuego.length > 0 && (
                 <div style={{
                   background: 'linear-gradient(135deg,#0d1f3c,#1a3561)',
-                  borderRadius: 16, padding: '20px 24px', marginBottom: 24,
-                  display: 'flex', alignItems: 'center', gap: 16,
+                  borderRadius: 16, padding: isMobile ? '16px 16px' : '20px 24px', marginBottom: 24,
+                  display: 'flex', alignItems: isMobile ? 'flex-start' : 'center',
+                  flexWrap: isMobile ? 'wrap' : 'nowrap', gap: isMobile ? 12 : 16,
                   color: '#fff',
                 }}>
                   <div style={{ width: 44, height: 44, background: 'rgba(255,255,255,0.15)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -1670,7 +1716,7 @@ export default function PortalPage() {
                     </p>
                   </div>
                   <button onClick={() => setVista('ayudas')}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', flexShrink: 0 }}>
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', flexShrink: 0, ...(isMobile ? { width: '100%' } : {}) }}>
                     Ver todas <ChevronRight size={14} />
                   </button>
                 </div>

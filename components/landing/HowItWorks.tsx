@@ -1,4 +1,7 @@
+'use client';
+
 import { Search, FileCheck, BadgeEuro, ArrowRight } from 'lucide-react';
+import { useMediaQuery } from '@/lib/hooks/use-media-query';
 
 const steps = [
   {
@@ -28,8 +31,10 @@ const steps = [
 ];
 
 export default function HowItWorks() {
+  const isMobile = useMediaQuery('(max-width: 768px)');
+
   return (
-    <section id="como-funciona" style={{ padding: '80px 24px', background: '#fff' }}>
+    <section id="como-funciona" style={{ padding: isMobile ? '48px 16px' : '80px 24px', background: '#fff' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
 
         {/* Header */}
@@ -52,7 +57,7 @@ export default function HowItWorks() {
         </div>
 
         {/* Steps */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0, position: 'relative' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 40 : 0, position: 'relative' }}>
 
           {/* Connector line (desktop) */}
           <div

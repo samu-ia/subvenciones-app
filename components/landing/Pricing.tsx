@@ -1,6 +1,7 @@
 'use client';
 
 import { Check, ArrowRight, ShieldCheck, Zap, Clock } from 'lucide-react';
+import { useMediaQuery } from '@/lib/hooks/use-media-query';
 
 const included = [
   'Análisis de tu empresa y perfil de subvenciones',
@@ -18,8 +19,10 @@ const guarantees = [
 ];
 
 export default function Pricing({ onAuthClick }: { onAuthClick?: () => void }) {
+  const isMobile = useMediaQuery('(max-width: 768px)');
+
   return (
-    <section id="pricing" style={{ padding: '80px 24px', background: '#fff' }}>
+    <section id="pricing" style={{ padding: isMobile ? '48px 16px' : '80px 24px', background: '#fff' }}>
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
 
         {/* Header */}
@@ -46,7 +49,7 @@ export default function Pricing({ onAuthClick }: { onAuthClick?: () => void }) {
           style={{
             background: 'linear-gradient(135deg, hsl(210 100% 5%) 0%, hsl(215 60% 12%) 50%, hsl(210 45% 18%) 100%)',
             borderRadius: '1.25rem',
-            padding: '3rem',
+            padding: isMobile ? '1.5rem' : '3rem',
             marginBottom: 40,
             position: 'relative',
             overflow: 'hidden',
@@ -66,7 +69,7 @@ export default function Pricing({ onAuthClick }: { onAuthClick?: () => void }) {
             }}
           />
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem', alignItems: 'center' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '2rem' : '3rem', alignItems: 'center' }}>
             {/* Left: pricing info */}
             <div>
               <div
@@ -157,7 +160,7 @@ export default function Pricing({ onAuthClick }: { onAuthClick?: () => void }) {
         </div>
 
         {/* Guarantees */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '1.25rem' }}>
           {guarantees.map((g) => (
             <div
               key={g.text}

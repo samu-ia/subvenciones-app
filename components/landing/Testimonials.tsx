@@ -1,4 +1,7 @@
+'use client';
+
 import { Star, Quote } from 'lucide-react';
+import { useMediaQuery } from '@/lib/hooks/use-media-query';
 
 const testimonials = [
   {
@@ -65,8 +68,10 @@ function Initials({ name }: { name: string }) {
 }
 
 export default function Testimonials() {
+  const isMobile = useMediaQuery('(max-width: 768px)');
+
   return (
-    <section style={{ padding: '80px 24px', background: 'hsl(210 20% 97%)' }}>
+    <section style={{ padding: isMobile ? '48px 16px' : '80px 24px', background: 'hsl(210 20% 97%)' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
 
         {/* Header */}
@@ -89,7 +94,7 @@ export default function Testimonials() {
         </div>
 
         {/* Testimonial cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '1.25rem' }}>
           {testimonials.map((t) => (
             <div
               key={t.name}

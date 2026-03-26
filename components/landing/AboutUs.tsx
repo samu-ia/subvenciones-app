@@ -1,4 +1,7 @@
+'use client';
+
 import { Search, FileCheck, BadgeCheck, Lock } from 'lucide-react';
+import { useMediaQuery } from '@/lib/hooks/use-media-query';
 
 const features = [
   {
@@ -31,6 +34,8 @@ const stats = [
 ];
 
 export default function AboutUs() {
+  const isMobile = useMediaQuery('(max-width: 768px)');
+
   return (
     <section id="quienes-somos" className="section-padding bg-background">
       <div className="container-custom">
@@ -50,7 +55,7 @@ export default function AboutUs() {
         </div>
 
         {/* Feature cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem', marginBottom: '2.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: '1.25rem', marginBottom: '2.5rem' }}>
           {features.map((f) => (
             <div
               key={f.title}
@@ -77,8 +82,8 @@ export default function AboutUs() {
         </div>
 
         {/* Mission + stats */}
-        <div style={{ background: 'hsl(210 25% 93%)', borderRadius: '1.25rem', padding: '3rem 3.5rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem', alignItems: 'center' }}>
+        <div style={{ background: 'hsl(210 25% 93%)', borderRadius: '1.25rem', padding: isMobile ? '1.5rem 1.25rem' : '3rem 3.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '1.5rem' : '3rem', alignItems: 'center' }}>
             <div>
               <h3 className="font-heading font-bold text-foreground" style={{ fontSize: '1.6rem', marginBottom: '1rem' }}>
                 Por qué existimos
