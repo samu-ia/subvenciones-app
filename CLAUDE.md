@@ -117,6 +117,11 @@ npm run pipeline:extraccion          # solo fase 3
 npm run pipeline:normalizar          # solo fase 4
 npm run pipeline:validar             # solo fase 5
 node scripts/pipeline-magistral.mjs --fase descarga --id 893737  # fase específica para un ID
+
+# Pipeline PDF Real (15 campos estructurados)
+npm run pdf                          # últimos 7 días
+npm run pdf:all                      # todas sin pdf_procesado
+npm run pdf:id -- --id 893737        # solo un bdns_id
 ```
 
 ---
@@ -163,9 +168,11 @@ npm run db:restore       # restaurar un backup (interactivo)
 npm run db:migrate       # aplicar una migración SQL
 
 # Pipeline de datos
-npm run pipeline         # ingestar subvenciones de BDNS
+npm run pipeline         # ingestar subvenciones de BDNS (5 fases)
 npm run pipeline:all     # ingestar todo (workers paralelos)
-npm run enrich           # enriquecer con Gemini
+npm run pdf              # pipeline PDF real: 15 campos desde PDF oficial
+npm run pdf:all          # procesar todas sin pdf_procesado
+npm run enrich           # enriquecer con Gemini (legacy)
 npm run matching         # recalcular matches
 npm run titulos          # regenerar titulo_comercial con Claude Haiku
 

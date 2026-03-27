@@ -3,6 +3,9 @@
  *
  * Lógica de matching extraída del route handler para poder
  * llamarla directamente sin HTTP (ej. desde /api/portal/setup).
+ *
+ * v2: Carga datos enriquecidos (requisitos, gastos, beneficiarios)
+ *     cuando están disponibles para el motor v2.
  */
 
 import { createServiceClient } from '@/lib/supabase/service';
@@ -16,6 +19,7 @@ export interface MatchRunResult {
   nuevos: number;
   actualizados: number;
   excluidos: number;
+  version_stats?: { v1: number; v2: number };
 }
 
 /**
@@ -41,7 +45,7 @@ export async function runMatchingForClient(nif: string): Promise<MatchRunResult>
       id, bdns_id, titulo, organismo,
       ambito_geografico, comunidad_autonoma, provincia,
       estado_convocatoria, importe_maximo, importe_minimo,
-      presupuesto_total, plazo_fin
+      presupuesto_total, plazo_fin, para_quien
     `)
     .not('estado_convocatoria', 'in', '("cerrada","suspendida")');
 
@@ -57,17 +61,56 @@ export async function runMatchingForClient(nif: string): Promise<MatchRunResult>
 
   if (!subvFiltradas.length) return { nif, nuevos: 0, actualizados: 0, excluidos: 0 };
 
-  // Cargar sectores y tipos de empresa
+  // Cargar sectores, tipos, requisitos y gastos
   const subvIds = subvFiltradas.map(s => s.id);
-  const [{ data: sectores }, { data: tipos }] = await Promise.all([
-    sb.from('subvencion_sectores').select('subvencion_id,cnae_codigo,nombre_sector,excluido').in('subvencion_id', subvIds),
-    sb.from('subvencion_tipos_empresa').select('subvencion_id,tipo,excluido').in('subvencion_id', subvIds),
+  const [
+    { data: sectores },
+    { data: tipos },
+    { data: requisitos },
+    { data: gastos },
+    { data: camposBeneficiarios },
+  ] = await Promise.all([
+    sb.from('subvencion_sectores')
+      .select('subvencion_id,cnae_codigo,nombre_sector,excluido')
+      .in('subvencion_id', subvIds),
+    sb.from('subvencion_tipos_empresa')
+      .select('subvencion_id,tipo,excluido')
+      .in('subvencion_id', subvIds),
+    sb.from('subvencion_requisitos')
+      .select('subvencion_id,tipo,descripcion,obligatorio')
+      .in('subvencion_id', subvIds),
+    sb.from('subvencion_gastos')
+      .select('subvencion_id,categoria,descripcion,porcentaje_max')
+      .in('subvencion_id', subvIds),
+    // Cargar beneficiarios desde campos_extraidos
+    sb.from('subvencion_campos_extraidos')
+      .select('subvencion_id,nombre_campo,valor_texto,valor_json')
+      .in('subvencion_id', subvIds)
+      .in('nombre_campo', ['beneficiarios', 'para_quien']),
   ]);
+
+  // Construir mapa de beneficiarios desde campos_extraidos
+  const beneficiariosMap = new Map<string, string[]>();
+  const paraQuienMap = new Map<string, string>();
+  for (const campo of camposBeneficiarios ?? []) {
+    if (campo.nombre_campo === 'beneficiarios' && campo.valor_json) {
+      const arr = Array.isArray(campo.valor_json)
+        ? campo.valor_json as string[]
+        : typeof campo.valor_json === 'string' ? [campo.valor_json] : [];
+      if (arr.length > 0) beneficiariosMap.set(campo.subvencion_id, arr);
+    } else if (campo.nombre_campo === 'para_quien' && campo.valor_texto) {
+      paraQuienMap.set(campo.subvencion_id, campo.valor_texto);
+    }
+  }
 
   const subvProfiles: SubvencionMatchProfile[] = subvFiltradas.map(s => ({
     ...s,
-    sectores:      sectores?.filter(sec => sec.subvencion_id === s.id) ?? [],
-    tipos_empresa: tipos?.filter(t => t.subvencion_id === s.id) ?? [],
+    sectores:            sectores?.filter(sec => sec.subvencion_id === s.id) ?? [],
+    tipos_empresa:       tipos?.filter(t => t.subvencion_id === s.id) ?? [],
+    requisitos:          requisitos?.filter(r => r.subvencion_id === s.id) ?? [],
+    gastos:              gastos?.filter(g => g.subvencion_id === s.id) ?? [],
+    beneficiarios_texto: beneficiariosMap.get(s.id),
+    para_quien:          paraQuienMap.get(s.id) ?? (s as Record<string, unknown>).para_quien as string | undefined,
   }));
 
   const cliente: ClienteMatchProfile = {
@@ -86,9 +129,14 @@ export async function runMatchingForClient(nif: string): Promise<MatchRunResult>
   };
 
   let nuevos = 0, actualizados = 0, excluidos = 0;
+  let v1Count = 0, v2Count = 0;
 
   for (const subv of subvProfiles) {
     const scoreResult = calcularMatch(cliente, subv);
+
+    // Track version stats
+    if (scoreResult.version === 'v2') v2Count++;
+    else v1Count++;
 
     if (scoreResult.score < 0.35 && !scoreResult.hard_exclude) continue;
 
@@ -126,5 +174,11 @@ export async function runMatchingForClient(nif: string): Promise<MatchRunResult>
     }
   }
 
-  return { nif, nuevos, actualizados, excluidos };
+  return {
+    nif,
+    nuevos,
+    actualizados,
+    excluidos,
+    version_stats: { v1: v1Count, v2: v2Count },
+  };
 }
