@@ -309,6 +309,7 @@ async function runAgent(task: AgentTask): Promise<void> {
         allowDangerouslySkipPermissions: true,
         maxTurns: 80,
         model: 'claude-opus-4-6',
+        pathToClaudeCodeExecutable: process.env.CLAUDE_CODE_PATH ?? 'C:\\Users\\ABC\\.local\\bin\\claude.exe',
         hooks: {
           PreToolUse: [{
             matcher: 'AskUserQuestion',
@@ -431,39 +432,56 @@ Para cada tarea, llama a la herramienta add_task con:
 IMPORTANTE: Las tareas deben ser ejecutables directamente. Sin investigación vaga.
 Prioriza cosas que broken, que mejoren datos reales, o que ayuden a vender.`;
 
-  // Usar el SDK de agentes para generar las tareas
+  // Usar Anthropic API directamente (native fetch) para generar las tareas
   try {
-    await query({
-      model: 'claude-opus-4-6',
-      system: 'Eres el agente lead de AyudaPyme. Generas tareas concretas y ejecutables para el equipo técnico.',
-      prompt,
-      tools: [{
-        name: 'add_task',
-        description: 'Añade una nueva tarea a la cola de agentes',
-        input_schema: {
-          type: 'object' as const,
-          properties: {
-            agent_type: { type: 'string', enum: ['programmer', 'database', 'qa', 'product', 'matching'] },
-            title: { type: 'string' },
-            description: { type: 'string' },
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': process.env.ANTHROPIC_API_KEY!,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-6',
+        max_tokens: 2000,
+        system: 'Eres el agente lead de AyudaPyme. Generas tareas concretas y ejecutables para el equipo técnico.',
+        tools: [{
+          name: 'add_task',
+          description: 'Añade una nueva tarea a la cola de agentes',
+          input_schema: {
+            type: 'object',
+            properties: {
+              agent_type: { type: 'string', enum: ['programmer', 'database', 'qa', 'product', 'matching'] },
+              title: { type: 'string', description: 'Título concreto (max 60 chars)' },
+              description: { type: 'string', description: 'Descripción detallada: qué hacer, qué archivos tocar, qué resultado esperar' },
+            },
+            required: ['agent_type', 'title', 'description'],
           },
-          required: ['agent_type', 'title', 'description'],
-        },
-        async run(input: { agent_type: string; title: string; description: string }) {
-          const { error } = await supabase.from('agent_tasks').insert({
-            agent_type: input.agent_type,
-            title: input.title,
-            description: input.description,
-            status: 'pending',
-            priority: 5,
-          });
-          if (error) throw new Error(error.message);
-          console.log(`  ✅ Tarea creada: [${input.agent_type}] ${input.title}`);
-          return { ok: true };
-        },
-      }],
-      maxTurns: 10,
+        }],
+        tool_choice: { type: 'any' },
+        messages: [{ role: 'user', content: prompt }],
+      }),
     });
+
+    const data = await res.json() as { content?: Array<{ type: string; name?: string; input?: Record<string, unknown> }> };
+    const toolUses = (data.content ?? []).filter(b => b.type === 'tool_use' && b.name === 'add_task');
+
+    for (const tu of toolUses) {
+      const input = tu.input as { agent_type: string; title: string; description: string };
+      const { error } = await supabase.from('agent_tasks').insert({
+        agent_type: input.agent_type,
+        title: input.title,
+        description: input.description,
+        status: 'pending',
+        priority: 5,
+      });
+      if (error) console.error('  Error creando tarea:', error.message);
+      else console.log(`  ✅ Tarea creada: [${input.agent_type}] ${input.title}`);
+    }
+
+    if (toolUses.length === 0) {
+      console.log('  ⚠️ No se generaron tareas nuevas');
+    }
   } catch (e: any) {
     console.error('  ❌ Error auto-generando tareas:', e.message);
   }
