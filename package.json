@@ -26,7 +26,8 @@
     "db:backup": "dotenvx run -f .env.local -- node scripts/backup-db.mjs",
     "db:restore": "dotenvx run -f .env.local -- node scripts/restore-db.mjs",
     "db:migrate": "dotenvx run -f .env.local -- node scripts/run-migration.js",
-    "titulos": "dotenvx run -f .env.local -- node scripts/generate-titulos-comerciales.mjs"
+    "titulos": "dotenvx run -f .env.local -- node scripts/generate-titulos-comerciales.mjs",
+    "prospectar": "node scripts/prospectar.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.41",
