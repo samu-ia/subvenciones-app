@@ -391,7 +391,7 @@ IMPORTANTE:
 
 // ─── Gemini: análisis del PDF ─────────────────────────────────────────────────
 
-async function analizarPdfConGemini(pdfBuffer, apiKey, bdnsId) {
+async function analizarPdfConGemini(pdfBuffer, apiKey, bdnsId, intentos = 3) {
   const base64 = Buffer.from(pdfBuffer).toString('base64');
 
   const body = {
@@ -410,32 +410,52 @@ async function analizarPdfConGemini(pdfBuffer, apiKey, bdnsId) {
     },
   };
 
-  const res = await fetch(`${GEMINI_BASE}/models/${MODELO}:generateContent?key=${apiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(120_000),
-  });
+  let lastErr;
+  for (let intento = 1; intento <= intentos; intento++) {
+    try {
+      const res = await fetch(`${GEMINI_BASE}/models/${MODELO}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(120_000),
+      });
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(`Gemini ${res.status}: ${err?.error?.message ?? 'error desconocido'}`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const msg = `Gemini ${res.status}: ${err?.error?.message ?? 'error desconocido'}`;
+        if (res.status === 429 || res.status >= 500) {
+          lastErr = new Error(msg);
+          const wait = intento * 3000;
+          console.warn(`  ⚠️ [${bdnsId}] Gemini intento ${intento}/${intentos}: ${msg} — reintentando en ${wait/1000}s`);
+          await new Promise(r => setTimeout(r, wait));
+          continue;
+        }
+        throw new Error(msg);
+      }
+
+      const data = await res.json();
+      const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      if (!raw) throw new Error('Gemini devolvió respuesta vacía');
+
+      const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+      const candidate = (fenceMatch ? fenceMatch[1] : raw).trim();
+      const jsonMatch = candidate.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error(`Sin JSON en respuesta Gemini: ${raw.slice(0, 200)}`);
+
+      const parsed = JSON.parse(jsonMatch[0]);
+      return normalizarCampos(parsed);
+    } catch (err) {
+      lastErr = err;
+      if (intento < intentos && (err.name === 'TimeoutError' || err.message?.includes('fetch'))) {
+        const wait = intento * 3000;
+        console.warn(`  ⚠️ [${bdnsId}] Gemini intento ${intento}/${intentos}: ${err.message} — reintentando en ${wait/1000}s`);
+        await new Promise(r => setTimeout(r, wait));
+        continue;
+      }
+      throw err;
+    }
   }
-
-  const data = await res.json();
-  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-  if (!raw) throw new Error('Gemini devolvió respuesta vacía');
-
-  // Parsear JSON (con o sin fences de markdown)
-  const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const candidate = (fenceMatch ? fenceMatch[1] : raw).trim();
-  const jsonMatch = candidate.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error(`Sin JSON en respuesta Gemini: ${raw.slice(0, 200)}`);
-
-  const parsed = JSON.parse(jsonMatch[0]);
-
-  // Validar y normalizar los 15 campos
-  return normalizarCampos(parsed);
+  throw lastErr;
 }
 
 function normalizarCampos(p) {
