@@ -9,13 +9,14 @@ type Mode = 'login' | 'register' | 'forgot';
 
 interface AuthModalProps {
   onClose: () => void;
+  initialMode?: Mode;
 }
 
-export default function AuthModal({ onClose }: AuthModalProps) {
+export default function AuthModal({ onClose, initialMode = 'login' }: AuthModalProps) {
   const router = useRouter();
   const supabase = createClient();
 
-  const [mode, setMode] = useState<Mode>('login');
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);

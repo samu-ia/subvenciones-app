@@ -18,6 +18,10 @@ import FinalCTA from '@/components/landing/FinalCTA';
 
 export default function LandingClient() {
   const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+
+  function openLogin() { setAuthMode('login'); setAuthOpen(true); }
+  function openRegister() { setAuthMode('register'); setAuthOpen(true); }
   const [checking, setChecking] = useState(true);
   const router = useRouter();
   const supabase = createClient();
@@ -53,20 +57,20 @@ export default function LandingClient() {
 
   return (
     <div className="landing min-h-screen bg-background overflow-x-hidden" style={{ overflowX: 'hidden' }}>
-      <LandingHeader onAuthClick={() => setAuthOpen(true)} />
+      <LandingHeader onAuthClick={openLogin} />
       <main>
-        <Hero onAuthClick={() => setAuthOpen(true)} />
+        <Hero onAuthClick={openRegister} />
         <BenefitsTicker />
         <AboutUs />
         <HowItWorks />
-        <Testimonials onAuthClick={() => setAuthOpen(true)} />
-        <Pricing onAuthClick={() => setAuthOpen(true)} />
+        <Testimonials onAuthClick={openRegister} />
+        <Pricing onAuthClick={openRegister} />
         <FAQ />
-        <FinalCTA onAuthClick={() => setAuthOpen(true)} />
+        <FinalCTA onAuthClick={openRegister} />
         <ContactSection />
       </main>
       <LandingFooter />
-      {authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}
+      {authOpen && <AuthModal onClose={() => setAuthOpen(false)} initialMode={authMode} />}
     </div>
   );
 }
