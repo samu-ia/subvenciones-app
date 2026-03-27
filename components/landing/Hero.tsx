@@ -38,9 +38,9 @@ export default function Hero({ onAuthClick }: { onAuthClick?: () => void }) {
               padding: '6px 18px',
             }}
           >
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ade80', display: 'inline-block', boxShadow: '0 0 10px #4ade80' }} />
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ade80', display: 'inline-block', boxShadow: '0 0 10px #4ade80', flexShrink: 0 }} />
             <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.82rem', fontWeight: 600 }}>
-              🔴 EN VIVO — 47 convocatorias abiertas ahora mismo
+              EN VIVO — 47 convocatorias abiertas ahora mismo
             </span>
           </div>
 

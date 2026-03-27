@@ -9,7 +9,7 @@ export async function GET() {
   const sb = createServiceClient();
   const { data, error } = await sb
     .from('cliente')
-    .select('nif, nombre_empresa, nombre_normalizado, email_normalizado, telefono, actividad, tamano_empresa, ciudad, comunidad_autonoma, cnae_codigo, num_empleados, facturacion_anual, created_at')
+    .select('nif, nombre_empresa, nombre_normalizado, email_normalizado, telefono, actividad, tamano_empresa, ciudad, comunidad_autonoma, cnae_codigo, cnae_descripcion, num_empleados, facturacion_anual, created_at')
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

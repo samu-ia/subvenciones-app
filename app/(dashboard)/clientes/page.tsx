@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { Search } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
 
 interface Cliente {
   nif: string;
@@ -10,6 +10,8 @@ interface Cliente {
   nombre_normalizado: string | null;
   email_normalizado: string | null;
   actividad: string | null;
+  cnae_codigo: string | null;
+  cnae_descripcion: string | null;
   tamano_empresa: string | null;
   ciudad: string | null;
   comunidad_autonoma: string | null;
@@ -26,7 +28,7 @@ export default function ClientesPage() {
   useEffect(() => {
     fetch('/api/clientes')
       .then(r => r.json())
-      .then(data => {
+      .then((data: Cliente[]) => {
         const lista = Array.isArray(data) ? data : [];
         setClientes(lista);
         setFilteredClientes(lista);
@@ -40,202 +42,178 @@ export default function ClientesPage() {
       setFilteredClientes(clientes);
     } else {
       const q = searchTerm.toLowerCase();
-      const filtered = clientes.filter(cliente =>
-        cliente.nombre_empresa?.toLowerCase().includes(q) ||
-        cliente.nombre_normalizado?.toLowerCase().includes(q) ||
-        cliente.nif?.toLowerCase().includes(q) ||
-        cliente.actividad?.toLowerCase().includes(q) ||
-        cliente.ciudad?.toLowerCase().includes(q) ||
-        cliente.comunidad_autonoma?.toLowerCase().includes(q)
+      const filtered = clientes.filter(c =>
+        c.nombre_empresa?.toLowerCase().includes(q) ||
+        c.nombre_normalizado?.toLowerCase().includes(q) ||
+        c.nif?.toLowerCase().includes(q) ||
+        c.actividad?.toLowerCase().includes(q) ||
+        c.cnae_descripcion?.toLowerCase().includes(q) ||
+        c.ciudad?.toLowerCase().includes(q) ||
+        c.comunidad_autonoma?.toLowerCase().includes(q)
       );
       setFilteredClientes(filtered);
     }
   }, [searchTerm, clientes]);
 
+  const tamanoBadge = (t: string | null) => {
+    const map: Record<string, { color: string; bg: string; label: string }> = {
+      micro:   { color: '#6366f1', bg: '#eef2ff', label: 'Micro' },
+      pequena: { color: '#0891b2', bg: '#e0f2fe', label: 'Pequeña' },
+      mediana: { color: '#0d9488', bg: '#ccfbf1', label: 'Mediana' },
+      grande:  { color: '#7c3aed', bg: '#f5f3ff', label: 'Grande' },
+    };
+    const s = map[t ?? ''];
+    if (!s) return null;
+    return (
+      <span style={{
+        display: 'inline-block', padding: '3px 10px', borderRadius: 20,
+        fontSize: 11, fontWeight: 600, color: s.color, background: s.bg,
+      }}>{s.label}</span>
+    );
+  };
+
   if (loading) {
-    return <div style={{ padding: '32px', textAlign: 'center' }}>Cargando...</div>;
+    return (
+      <div style={{ padding: 40, display: 'flex', alignItems: 'center', gap: 12, color: '#64748b' }}>
+        <div style={{ width: 20, height: 20, border: '2px solid #e2e8f0', borderTopColor: '#0d9488', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        Cargando clientes...
+      </div>
+    );
   }
 
   return (
-    <div style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{ padding: '40px', maxWidth: 1200, margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        marginBottom: '32px'
-      }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
         <div>
-          <h1 style={{ 
-            fontSize: '28px', 
-            fontWeight: '700', 
-            color: 'var(--ink)',
-            marginBottom: '8px'
-          }}>
+          <h1 style={{ fontSize: 26, fontWeight: 800, color: '#0d1f3c', marginBottom: 4 }}>
             Clientes
           </h1>
-          <p style={{ color: 'var(--ink2)', fontSize: '15px' }}>
-            Gestiona la cartera de clientes
+          <p style={{ color: '#64748b', fontSize: 14 }}>
+            {clientes.length} empresa{clientes.length !== 1 ? 's' : ''} en cartera
           </p>
         </div>
-        
         <Link href="/clientes/nuevo">
           <button style={{
-            backgroundColor: 'var(--teal)',
-            color: 'white',
-            padding: '12px 24px',
-            borderRadius: '8px',
-            border: 'none',
-            fontSize: '15px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            boxShadow: 'var(--s1)',
-            transition: 'transform 0.2s'
+            display: 'flex', alignItems: 'center', gap: 8,
+            backgroundColor: '#0d9488', color: 'white',
+            padding: '10px 20px', borderRadius: 8, border: 'none',
+            fontSize: 14, fontWeight: 600, cursor: 'pointer',
           }}>
-            + Nuevo cliente
+            <Plus size={16} /> Nuevo cliente
           </button>
         </Link>
       </div>
 
-      {/* Search Bar */}
-      <div style={{ marginBottom: '24px' }}>
-        <div style={{
-          position: 'relative',
-          maxWidth: '500px'
-        }}>
-          <Search size={20} style={{
-            position: 'absolute',
-            left: '16px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            color: 'var(--muted)'
-          }} />
-          <input
-            type="text"
-            placeholder="Buscar clientes por nombre, NIF, actividad o ciudad..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '12px 16px 12px 48px',
-              fontSize: '15px',
-              border: '1px solid var(--border)',
-              borderRadius: '8px',
-              backgroundColor: 'var(--surface)',
-              color: 'var(--ink)',
-              outline: 'none'
-            }}
-          />
-        </div>
+      {/* Search */}
+      <div style={{ position: 'relative', maxWidth: 460, marginBottom: 24 }}>
+        <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
+        <input
+          type="text"
+          placeholder="Buscar por nombre, NIF, sector, ciudad..."
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          style={{
+            width: '100%', padding: '10px 14px 10px 40px',
+            fontSize: 14, border: '1px solid #e2e8f0', borderRadius: 8,
+            background: '#fff', color: '#1e293b', outline: 'none',
+            boxSizing: 'border-box',
+          }}
+        />
       </div>
 
-      {/* Lista de clientes */}
+      {/* Table */}
       {filteredClientes.length === 0 ? (
         <div style={{
-          backgroundColor: 'var(--surface)',
-          borderRadius: '12px',
-          padding: '64px 32px',
-          textAlign: 'center',
-          boxShadow: 'var(--s1)',
-          border: '1px solid var(--border)'
+          background: '#fff', borderRadius: 12, padding: '64px 32px',
+          textAlign: 'center', border: '1px solid #e2e8f0',
         }}>
-          <div style={{
-            fontSize: '48px',
-            marginBottom: '16px',
-            opacity: 0.3
-          }}>📋</div>
-          <h3 style={{ 
-            fontSize: '18px', 
-            fontWeight: '600', 
-            color: 'var(--ink)',
-            marginBottom: '8px'
-          }}>
-            {searchTerm ? 'No se encontraron clientes' : 'No hay clientes registrados'}
+          <div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>📋</div>
+          <h3 style={{ fontSize: 16, fontWeight: 600, color: '#0d1f3c', marginBottom: 6 }}>
+            {searchTerm ? 'Sin resultados' : 'Sin clientes registrados'}
           </h3>
-          <p style={{ color: 'var(--muted)', fontSize: '15px' }}>
-            {searchTerm ? 'Intenta con otro término de búsqueda' : 'Comienza agregando tu primer cliente'}
+          <p style={{ color: '#94a3b8', fontSize: 14 }}>
+            {searchTerm ? 'Prueba otro término' : 'Añade tu primer cliente para empezar'}
           </p>
         </div>
       ) : (
-        <div style={{
-          backgroundColor: 'var(--surface)',
-          borderRadius: '12px',
-          boxShadow: 'var(--s1)',
-          border: '1px solid var(--border)',
-          overflow: 'hidden'
-        }}>
-          {/* Table Header */}
+        <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+          {/* Header row */}
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: '2.5fr 1fr 1.5fr 1fr 1.5fr',
-            gap: '16px',
-            padding: '14px 24px',
-            backgroundColor: 'var(--bg)',
-            borderBottom: '1px solid var(--border)',
-            fontSize: '12px',
-            fontWeight: '700',
-            color: 'var(--ink2)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px'
+            display: 'grid', gridTemplateColumns: '2fr 0.8fr 1.5fr 0.8fr 1.2fr',
+            padding: '10px 20px', background: '#f8fafc',
+            borderBottom: '1px solid #e2e8f0',
+            fontSize: 11, fontWeight: 700, color: '#94a3b8',
+            textTransform: 'uppercase', letterSpacing: '0.5px',
+            gap: 16,
           }}>
-            <div>Cliente</div>
+            <div>Empresa</div>
             <div>NIF</div>
-            <div>Actividad</div>
+            <div>Sector / CNAE</div>
             <div>Tamaño</div>
             <div>Ubicación</div>
           </div>
 
-          {/* Table Body */}
-          {filteredClientes.map((cliente: Cliente) => (
-            <Link
-              key={cliente.nif}
-              href={`/clientes/${cliente.nif}`}
-              style={{ textDecoration: 'none' }}
-            >
-              <div className="table-row" style={{
-                display: 'grid',
-                gridTemplateColumns: '2.5fr 1fr 1.5fr 1fr 1.5fr',
-                gap: '16px',
-                padding: '18px 24px',
-                borderBottom: '1px solid var(--border)',
-                cursor: 'pointer',
-                alignItems: 'center',
-              }}>
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--navy)' }}>
-                    {cliente.nombre_empresa || cliente.nombre_normalizado || cliente.nif}
-                  </div>
-                  {cliente.email_normalizado && (
-                    <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>
-                      {cliente.email_normalizado}
-                    </div>
-                  )}
-                </div>
-                <div style={{ fontSize: '13px', color: 'var(--ink2)', fontFamily: 'monospace' }}>
-                  {cliente.nif}
-                </div>
-                <div style={{ fontSize: '13px', color: 'var(--ink2)' }}>
-                  {cliente.actividad || '—'}
-                </div>
-                <div>
-                  {cliente.tamano_empresa ? (
-                    <span style={{
-                      display: 'inline-block', padding: '3px 9px', borderRadius: '6px',
-                      fontSize: '12px', fontWeight: '500',
-                      backgroundColor: 'var(--blue-bg)', color: 'var(--blue)'
+          {filteredClientes.map((c, i) => {
+            const sector = c.cnae_descripcion || c.actividad;
+            const loc = c.ciudad
+              ? `${c.ciudad}${c.comunidad_autonoma ? ` · ${c.comunidad_autonoma}` : ''}`
+              : c.comunidad_autonoma || '—';
+
+            return (
+              <Link key={c.nif} href={`/clientes/${c.nif}`} style={{ textDecoration: 'none' }}>
+                <div style={{
+                  display: 'grid', gridTemplateColumns: '2fr 0.8fr 1.5fr 0.8fr 1.2fr',
+                  padding: '16px 20px', gap: 16, alignItems: 'center',
+                  borderBottom: i < filteredClientes.length - 1 ? '1px solid #f1f5f9' : 'none',
+                  cursor: 'pointer', transition: 'background 0.15s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  {/* Empresa */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+                      background: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 14, fontWeight: 800, color: '#0891b2',
                     }}>
-                      {cliente.tamano_empresa}
-                    </span>
-                  ) : <span style={{ color: 'var(--muted)', fontSize: '13px' }}>—</span>}
+                      {(c.nombre_empresa || c.nif)[0].toUpperCase()}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#0d1f3c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {c.nombre_empresa || c.nombre_normalizado || c.nif}
+                      </div>
+                      {c.email_normalizado && (
+                        <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 1 }}>{c.email_normalizado}</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* NIF */}
+                  <div style={{ fontSize: 12, color: '#64748b', fontFamily: 'monospace' }}>{c.nif}</div>
+
+                  {/* Sector */}
+                  <div style={{ minWidth: 0 }}>
+                    {sector ? (
+                      <div style={{ fontSize: 13, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {c.cnae_codigo ? <span style={{ color: '#0891b2', fontWeight: 600 }}>{c.cnae_codigo} · </span> : null}
+                        {sector}
+                      </div>
+                    ) : <span style={{ color: '#cbd5e1', fontSize: 13 }}>—</span>}
+                  </div>
+
+                  {/* Tamaño */}
+                  <div>{tamanoBadge(c.tamano_empresa)}</div>
+
+                  {/* Ubicación */}
+                  <div style={{ fontSize: 13, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {loc}
+                  </div>
                 </div>
-                <div style={{ fontSize: '13px', color: 'var(--ink2)' }}>
-                  {cliente.ciudad
-                    ? `${cliente.ciudad}${cliente.comunidad_autonoma ? ` · ${cliente.comunidad_autonoma}` : ''}`
-                    : cliente.comunidad_autonoma || '—'}
-                </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
