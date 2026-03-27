@@ -70,9 +70,20 @@ export async function POST(request: NextRequest) {
       textoExtraido = await fileData.text();
     }
 
+    // Verificar si se extrajo algo de texto (PDFs escaneados pueden dar resultado vacío)
+    const textoLimpio = textoExtraido.trim();
+    if (!textoLimpio) {
+      return NextResponse.json({
+        error: 'No se pudo extraer texto del archivo. Es posible que sea un PDF escaneado sin capa de texto (imagen). Prueba a subir el documento en formato Word o texto plano.',
+        vacio: true,
+      }, { status: 422 });
+    }
+
     // Truncar a 50.000 chars para no saturar el contexto
-    if (textoExtraido.length > 50000) {
-      textoExtraido = textoExtraido.substring(0, 50000) + '\n[... texto truncado ...]';
+    if (textoLimpio.length > 50000) {
+      textoExtraido = textoLimpio.substring(0, 50000) + '\n[... texto truncado ...]';
+    } else {
+      textoExtraido = textoLimpio;
     }
 
     // Guardar en la BD

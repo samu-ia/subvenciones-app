@@ -259,9 +259,15 @@ npm run agents:add -- --agent programmer --title "Título" --desc "Descripción"
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-DATABASE_URL=                  # para scripts de BD y backups
-ANTHROPIC_API_KEY=
-GEMINI_API_KEY=
+DATABASE_URL=                  # para scripts de BD y backups (pg directo)
+ANTHROPIC_API_KEY=             # Claude (títulos comerciales, chat, auto-tareas)
+GEMINI_API_KEY=                # Gemini 2.5 Flash (extracción PDF de subvenciones)
+
+# Opcionales pero recomendadas:
+NEXT_PUBLIC_SITE_URL=          # URL pública del portal (ej: https://ayudapyme.es). Usada en emails y notificaciones. Default: https://ayudapyme.es
+INGEST_SECRET=                 # Token Bearer para proteger /api/expedientes/check-alertas y el pipeline de ingesta. Generar con openssl rand -hex 32
+GALICIA_FOCUS=                 # Si es "true", el matching solo considera subvenciones de Galicia. Útil para testing local. Default: false
+CLAUDE_CODE_PATH=              # Ruta al ejecutable claude para el orquestador de agentes. Default: C:\Users\ABC\.local\bin\claude.exe
 ```
 
 ---

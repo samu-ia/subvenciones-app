@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { sendTransactionalEmail } from '@/lib/email';
 
 const PROMPT_INFORME = `Eres un consultor experto en subvenciones públicas españolas.
 Genera un informe de viabilidad claro, práctico y profesional para una empresa que quiere solicitar una subvención.
@@ -175,6 +176,79 @@ export async function POST(request: NextRequest) {
   if (body.match_id) {
     await sb.from('cliente_subvencion_match').update({ estado: 'interesado' }).eq('id', body.match_id);
   }
+
+  // Enviar emails de confirmación al cliente y notificación al admin (en background, no bloquea)
+  (async () => {
+    try {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ayudapyme.es';
+      const [{ data: subv }, { data: cliente }, { data: perfilData }] = await Promise.all([
+        sb.from('subvenciones').select('titulo, titulo_comercial, organismo, importe_maximo').eq('id', body.subvencion_id).maybeSingle(),
+        sb.from('cliente').select('nombre_empresa').eq('nif', nif).maybeSingle(),
+        sb.from('perfiles').select('id').eq('nif', nif).eq('rol', 'cliente').maybeSingle(),
+      ]);
+
+      const tituloSub = (subv as Record<string,unknown> | null)?.titulo_comercial as string
+        ?? (subv as Record<string,unknown> | null)?.titulo as string
+        ?? 'tu subvención';
+      const nombreEmpresa = (cliente as Record<string,unknown> | null)?.nombre_empresa as string ?? nif;
+      const organismo = (subv as Record<string,unknown> | null)?.organismo as string | undefined;
+      const importe = (subv as Record<string,unknown> | null)?.importe_maximo as number | null;
+      const importeStr = importe ? (importe >= 1_000_000 ? `${(importe/1_000_000).toFixed(1)}M €` : `${(importe/1_000).toFixed(0)}K €`) : null;
+
+      // Email al cliente
+      if (perfilData?.id) {
+        const { data: { users } } = await sb.auth.admin.listUsers();
+        const emailCliente = users.find(u => u.id === perfilData.id)?.email;
+        if (emailCliente) {
+          await sendTransactionalEmail({
+            to: emailCliente,
+            subject: `✅ Solicitud confirmada: ${tituloSub}`,
+            html: `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f4f6fb;font-family:sans-serif">
+<div style="max-width:560px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden">
+<div style="background:#0d1f3c;padding:28px 32px"><span style="color:#fff;font-weight:800;font-size:17px">AyudaPyme</span></div>
+<div style="padding:32px">
+<h2 style="color:#059669;margin:0 0 16px">✅ ¡Solicitud confirmada!</h2>
+<p style="color:#475569;line-height:1.7">Hola <strong>${nombreEmpresa}</strong>,</p>
+<p style="color:#475569;line-height:1.7">Hemos registrado tu interés en la subvención:</p>
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px;margin:20px 0">
+  <div style="font-weight:700;color:#0d1f3c;margin-bottom:6px">${tituloSub}</div>
+  ${organismo ? `<div style="font-size:0.85rem;color:#64748b">${organismo}</div>` : ''}
+  ${importeStr ? `<div style="font-size:0.85rem;color:#059669;margin-top:8px">Hasta ${importeStr}</div>` : ''}
+</div>
+<p style="color:#475569;line-height:1.7"><strong>¿Qué pasa ahora?</strong><br>
+1. Nuestro gestor revisará tu caso en las próximas 24-48 horas.<br>
+2. Te contactaremos para preparar la documentación.<br>
+3. Presentamos la solicitud — tú no tienes que hacer nada.<br>
+4. Solo pagas si consigues la subvención (15% de lo concedido).</p>
+<a href="${siteUrl}/portal" style="display:inline-block;background:#0d9488;color:#fff;padding:12px 28px;border-radius:10px;font-weight:700;text-decoration:none;margin-top:8px">Ver estado de mi solicitud →</a>
+</div></div></body></html>`,
+          }).catch(() => {});
+        }
+      }
+
+      // Notificación al admin
+      const { data: admins } = await sb.from('perfiles').select('id').eq('rol', 'admin');
+      const { data: { users: allUsers } } = await sb.auth.admin.listUsers();
+      const adminEmails = (admins ?? []).map(a => allUsers.find(u => u.id === a.id)?.email).filter(Boolean) as string[];
+      for (const email of adminEmails) {
+        await sendTransactionalEmail({
+          to: email,
+          subject: `🆕 Nueva solicitud: ${nombreEmpresa} → ${tituloSub}`,
+          html: `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f4f6fb;font-family:sans-serif">
+<div style="max-width:560px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden">
+<div style="background:#0d1f3c;padding:28px 32px"><span style="color:#fff;font-weight:800;font-size:17px">AyudaPyme — Nueva solicitud</span></div>
+<div style="padding:32px">
+<p style="color:#475569"><strong>${nombreEmpresa}</strong> (${nif}) ha mostrado interés en:</p>
+<p style="font-size:1rem;font-weight:700;color:#0d1f3c">${tituloSub}</p>
+${organismo ? `<p style="color:#64748b;font-size:0.9rem">${organismo}${importeStr ? ` · hasta ${importeStr}` : ''}</p>` : ''}
+<a href="${siteUrl}/expedientes" style="display:inline-block;background:#0d1f3c;color:#fff;padding:12px 28px;border-radius:10px;font-weight:700;text-decoration:none;margin-top:16px">Gestionar solicitud →</a>
+</div></div></body></html>`,
+        }).catch(() => {});
+      }
+    } catch {
+      // Los emails no son críticos, no rompen el flujo
+    }
+  })();
 
   // Generar informe en background si hay respuestas
   if (body.respuestas_ia?.length) {
