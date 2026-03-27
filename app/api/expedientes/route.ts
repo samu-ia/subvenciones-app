@@ -9,7 +9,7 @@ export async function GET() {
   const sb = createServiceClient();
   const { data, error } = await sb
     .from('expediente')
-    .select('id, nif, numero_bdns, estado, titulo, fase, plazo_solicitud, plazo_aceptacion, plazo_justificacion, created_at, cliente:nif(nombre_empresa, nombre_normalizado)')
+    .select('id, nif, numero_bdns, estado, titulo, fase, plazo_solicitud, plazo_aceptacion, plazo_justificacion, created_at, subvencion_id, cliente:nif(nombre_empresa, nombre_normalizado), subvencion:subvencion_id(titulo_comercial, fecha_fin_solicitud)')
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
