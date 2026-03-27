@@ -2326,51 +2326,147 @@ export default function PortalPage() {
                     </div>
                   )}
 
-                  {/* Timeline de fases */}
-                  <div style={{ background: '#fff', borderRadius: 16, border: `1px solid ${C.border}`, padding: '20px 24px' }}>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: C.navy, marginBottom: 16 }}>Proceso de tramitación</div>
-                    {(() => {
-                      const FASE_A_PASO: Record<string, number> = {
-                        'preparacion': 0,
-                        'presentada': 1,
-                        'instruccion': 2,
-                        'resolucion_provisional': 2,
-                        'alegaciones': 2,
-                        'resolucion_definitiva': 3,
-                        'aceptacion': 3,
-                        'ejecucion': 3,
-                        'justificacion': 3,
-                        'cobro': 4,
-                        'denegada': -1,
-                        'desistida': -1,
-                      };
-                      const faseActualIdx = FASE_A_PASO[expedienteActivo.fase ?? ''] ?? 0;
-                      return [
-                        { key: 'solicitud',     label: 'Solicitud recibida',   desc: 'Has solicitado esta subvención' },
-                        { key: 'documentacion', label: 'Documentación',        desc: 'Recopilación de documentos necesarios' },
-                        { key: 'presentacion',  label: 'Presentación',         desc: 'Envío oficial a la administración' },
-                        { key: 'resolucion',    label: 'Resolución',           desc: 'Respuesta de la administración' },
-                        { key: 'cobro',         label: 'Cobro',                desc: 'Recepción del importe concedido' },
-                      ].map((fase, idx) => {
-                      const done    = idx < faseActualIdx;
-                      const current = idx === faseActualIdx;
-                      return (
-                        <div key={fase.key} style={{ display: 'flex', gap: 14, paddingBottom: idx < 4 ? 20 : 0 }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            <div style={{ width: 28, height: 28, borderRadius: '50%', background: done ? C.green : current ? C.teal : '#e2e8f0', border: `2px solid ${done ? C.green : current ? C.teal : '#cbd5e1'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              {done ? <Check size={14} color="#fff" /> : <span style={{ width: 8, height: 8, borderRadius: '50%', background: current ? '#fff' : 'transparent', display: 'block' }} />}
-                            </div>
-                            {idx < 4 && <div style={{ width: 2, flex: 1, background: done ? C.green : '#e2e8f0', marginTop: 4 }} />}
+                  {/* Timeline de fases — visual con datos reales */}
+                  {(() => {
+                    const TODAS_FASES = [
+                      { key: 'preparacion',             label: 'Documentación',           desc: 'Preparación de la memoria y documentos' },
+                      { key: 'presentada',              label: 'Presentación',            desc: 'Envío oficial a la administración' },
+                      { key: 'instruccion',             label: 'Instrucción',             desc: 'Revisión por la administración' },
+                      { key: 'resolucion_provisional',  label: 'Res. provisional',        desc: 'Resolución provisional emitida' },
+                      { key: 'alegaciones',             label: 'Alegaciones',             desc: 'Plazo de alegaciones' },
+                      { key: 'resolucion_definitiva',   label: 'Res. definitiva',         desc: 'Resolución definitiva emitida' },
+                      { key: 'ejecucion',               label: 'Ejecución',               desc: 'Ejecución del proyecto subvencionado' },
+                      { key: 'justificacion',           label: 'Justificación',           desc: 'Presentación de justificación de gastos' },
+                      { key: 'cobro',                   label: 'Cobro',                   desc: 'Recepción del importe concedido' },
+                    ];
+                    const fasesMap = new Map(fasesData.map(f => [f.fase, f]));
+                    const faseActual = expedienteActivo.fase ?? 'preparacion';
+                    const FASES_KEYS = TODAS_FASES.map(f => f.key);
+                    const idxActual = FASES_KEYS.indexOf(faseActual);
+
+                    // Fallback: si no hay datos en expediente_fases, usar la fase del expediente
+                    const isDone = (key: string, idx: number) => {
+                      const faseDb = fasesMap.get(key);
+                      if (faseDb) return faseDb.fecha_completada != null;
+                      return idx < idxActual; // fallback basado en fase actual
+                    };
+                    const isCurrent = (key: string, idx: number) => {
+                      if (key === faseActual) return true;
+                      if (fasesMap.size === 0) return idx === idxActual;
+                      return false;
+                    };
+                    const fmtFecha = (s: string) => new Date(s).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+                    const fmtFechaLong = (s: string) => new Date(s).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+
+                    return (
+                      <div style={{ background: '#fff', borderRadius: 16, border: `1px solid ${C.border}`, padding: '20px 24px' }}>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 700, color: C.navy, marginBottom: 16 }}>Proceso de tramitación</div>
+
+                        {/* Desktop: timeline horizontal */}
+                        {!isMobile ? (
+                          <div style={{ display: 'flex', alignItems: 'flex-start', overflowX: 'auto', paddingBottom: 8 }}>
+                            {TODAS_FASES.map((fase, idx) => {
+                              const faseDb = fasesMap.get(fase.key);
+                              const done = isDone(fase.key, idx);
+                              const current = isCurrent(fase.key, idx);
+                              const isLast = idx === TODAS_FASES.length - 1;
+                              const nextDone = !isLast && isDone(TODAS_FASES[idx + 1].key, idx + 1);
+                              const nextCurrent = !isLast && isCurrent(TODAS_FASES[idx + 1].key, idx + 1);
+
+                              return (
+                                <div key={fase.key} style={{ display: 'flex', alignItems: 'flex-start', flex: isLast ? '0 0 auto' : '1 1 0' }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 62 }}>
+                                    <div style={{
+                                      width: 32, height: 32, borderRadius: '50%',
+                                      background: done ? '#059669' : current ? '#f59e0b' : '#e2e8f0',
+                                      border: `2.5px solid ${done ? '#059669' : current ? '#f59e0b' : '#cbd5e1'}`,
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                      flexShrink: 0, transition: 'all 0.3s',
+                                      boxShadow: current ? '0 0 0 4px rgba(245,158,11,0.2)' : 'none',
+                                    }}>
+                                      {done
+                                        ? <Check size={15} color="#fff" strokeWidth={3} />
+                                        : <span style={{ width: current ? 10 : 6, height: current ? 10 : 6, borderRadius: '50%', background: current ? '#fff' : '#cbd5e1', display: 'block' }} />
+                                      }
+                                    </div>
+                                    <div style={{
+                                      fontSize: '0.65rem', fontWeight: current ? 800 : 600,
+                                      color: done ? '#059669' : current ? '#1a3561' : '#94a3b8',
+                                      textAlign: 'center', marginTop: 6, lineHeight: 1.2, maxWidth: 76,
+                                    }}>
+                                      {fase.label}
+                                    </div>
+                                    {done && faseDb?.fecha_completada && (
+                                      <div style={{ fontSize: '0.58rem', color: '#059669', marginTop: 2, fontWeight: 600 }}>
+                                        {fmtFecha(faseDb.fecha_completada)}
+                                      </div>
+                                    )}
+                                    {current && (
+                                      <div style={{ fontSize: '0.58rem', color: '#f59e0b', marginTop: 2, fontWeight: 700 }}>En curso</div>
+                                    )}
+                                  </div>
+                                  {!isLast && (
+                                    <div style={{
+                                      height: 3, flex: 1, marginTop: 14.5,
+                                      background: done && (nextDone || nextCurrent) ? '#059669' : '#e2e8f0',
+                                      borderRadius: 2, minWidth: 8, transition: 'background 0.3s',
+                                    }} />
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
-                          <div style={{ paddingBottom: 4 }}>
-                            <div style={{ fontSize: '0.85rem', fontWeight: current ? 800 : 600, color: current ? C.navy : done ? C.green : C.muted }}>{fase.label}</div>
-                            <div style={{ fontSize: '0.75rem', color: C.muted, marginTop: 1 }}>{fase.desc}</div>
+                        ) : (
+                          /* Mobile: timeline vertical */
+                          <div>
+                            {TODAS_FASES.map((fase, idx) => {
+                              const faseDb = fasesMap.get(fase.key);
+                              const done = isDone(fase.key, idx);
+                              const current = isCurrent(fase.key, idx);
+                              const isLast = idx === TODAS_FASES.length - 1;
+
+                              return (
+                                <div key={fase.key} style={{ display: 'flex', gap: 14, paddingBottom: isLast ? 0 : 16 }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                    <div style={{
+                                      width: 28, height: 28, borderRadius: '50%',
+                                      background: done ? '#059669' : current ? '#f59e0b' : '#e2e8f0',
+                                      border: `2.5px solid ${done ? '#059669' : current ? '#f59e0b' : '#cbd5e1'}`,
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                                      boxShadow: current ? '0 0 0 3px rgba(245,158,11,0.2)' : 'none',
+                                    }}>
+                                      {done
+                                        ? <Check size={13} color="#fff" strokeWidth={3} />
+                                        : <span style={{ width: current ? 8 : 5, height: current ? 8 : 5, borderRadius: '50%', background: current ? '#fff' : '#cbd5e1', display: 'block' }} />
+                                      }
+                                    </div>
+                                    {!isLast && (
+                                      <div style={{ width: 2, flex: 1, background: done ? '#059669' : '#e2e8f0', marginTop: 4, borderRadius: 1 }} />
+                                    )}
+                                  </div>
+                                  <div style={{ paddingBottom: 2, flex: 1 }}>
+                                    <div style={{
+                                      fontSize: '0.83rem', fontWeight: current ? 800 : 600,
+                                      color: done ? '#059669' : current ? '#1a3561' : '#94a3b8',
+                                    }}>
+                                      {fase.label}
+                                      {current && <span style={{ fontSize: '0.68rem', color: '#f59e0b', fontWeight: 700, marginLeft: 8 }}>En curso</span>}
+                                    </div>
+                                    <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: 1 }}>{fase.desc}</div>
+                                    {done && faseDb?.fecha_completada && (
+                                      <div style={{ fontSize: '0.68rem', color: '#059669', marginTop: 2, fontWeight: 600 }}>
+                                        Completada el {fmtFechaLong(faseDb.fecha_completada)}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
-                        </div>
-                      );
-                    });
-                    })()}
-                  </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             }

@@ -14,6 +14,76 @@ const FASES_VALIDAS = [
   'justificacion', 'cobro', 'denegada', 'desistida',
 ];
 
+// Orden lineal de fases (excluyendo estados terminales denegada/desistida)
+const FASES_ORDEN: string[] = [
+  'preparacion', 'presentada', 'instruccion', 'resolucion_provisional',
+  'alegaciones', 'resolucion_definitiva', 'aceptacion', 'ejecucion',
+  'justificacion', 'cobro',
+];
+
+/**
+ * Auto-transición de fases en expediente_fases:
+ * - Marca la fase anterior como completada (fecha_completada = now)
+ * - Crea registro de la nueva fase si no existe
+ * - Completa todas las fases anteriores a la nueva que no estén completadas
+ */
+async function transicionarFases(
+  sb: ReturnType<typeof createServiceClient>,
+  expedienteId: string,
+  faseAnterior: string | null,
+  faseNueva: string,
+) {
+  const now = new Date().toISOString();
+  const idxNueva = FASES_ORDEN.indexOf(faseNueva);
+
+  // Si la fase nueva no está en el orden lineal (denegada/desistida), no hacer nada
+  if (idxNueva < 0) return;
+
+  // 1. Marcar como completadas TODAS las fases anteriores a la nueva
+  for (let i = 0; i < idxNueva; i++) {
+    const fase = FASES_ORDEN[i];
+    // Upsert: crear si no existe, marcar como completada
+    await sb.from('expediente_fases').upsert(
+      {
+        expediente_id: expedienteId,
+        fase,
+        orden: i,
+        fecha_inicio: now,
+        fecha_completada: now,
+      },
+      { onConflict: 'expediente_id,fase' }
+    );
+    // Si ya existía, solo actualizar fecha_completada si aún no la tiene
+    await sb.from('expediente_fases')
+      .update({ fecha_completada: now })
+      .eq('expediente_id', expedienteId)
+      .eq('fase', fase)
+      .is('fecha_completada', null);
+  }
+
+  // 2. Crear registro de la fase nueva (en curso, sin fecha_completada)
+  const { data: existente } = await sb.from('expediente_fases')
+    .select('id, fecha_completada')
+    .eq('expediente_id', expedienteId)
+    .eq('fase', faseNueva)
+    .maybeSingle();
+
+  if (!existente) {
+    await sb.from('expediente_fases').insert({
+      expediente_id: expedienteId,
+      fase: faseNueva,
+      orden: idxNueva,
+      fecha_inicio: now,
+      fecha_completada: null,
+    });
+  } else if (existente.fecha_completada) {
+    // Si estaba completada (raro, pero posible), reabrirla
+    await sb.from('expediente_fases')
+      .update({ fecha_completada: null })
+      .eq('id', existente.id);
+  }
+}
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -85,10 +155,10 @@ export async function PATCH(
 
   const sb = createServiceClient();
 
-  // Leer expediente actual antes de actualizar
+  // Leer expediente actual antes de actualizar (siempre que hay cambio de fase)
   const nuevaFase: string | undefined = campos.fase as string | undefined;
   let expedienteActual: Record<string, unknown> | null = null;
-  if (nuevaFase === 'cobro' || nuevaFase === 'resolucion_definitiva') {
+  if (nuevaFase) {
     const { data: expData } = await sb
       .from('expediente')
       .select('id, nif, titulo, importe_concedido, fase, subvencion:subvencion_id(titulo, organismo)')
@@ -98,6 +168,11 @@ export async function PATCH(
   }
 
   const { error } = await sb.from('expediente').update(campos).eq('id', id);
+
+  // ── Auto-transición de fases en expediente_fases ──────────────────────────
+  if (!error && nuevaFase && expedienteActual && expedienteActual.fase !== nuevaFase) {
+    await transicionarFases(sb, id, expedienteActual.fase as string | null, nuevaFase);
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
