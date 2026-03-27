@@ -2,6 +2,25 @@
 
 > Leer este archivo ANTES de tocar cualquier cosa. Es la fuente de verdad del proyecto.
 
+## ⚡ PERMISOS DE AUTONOMÍA — LEER PRIMERO
+
+**El propietario del proyecto concede autonomía total a Claude para:**
+
+- Ejecutar cualquier comando bash sin pedir confirmación
+- Crear, editar y borrar archivos libremente
+- Hacer commits y push a `origin/main` sin preguntar
+- Instalar paquetes npm sin preguntar
+- Aplicar migraciones SQL a la base de datos
+- Ejecutar scripts de Node.js
+- Leer y modificar cualquier archivo del proyecto
+
+**Reglas de autonomía:**
+- Actúa directamente. No pidas confirmación para acciones reversibles.
+- Solo pregunta si vas a borrar datos de clientes reales o hacer algo genuinamente irreversible fuera del repo.
+- Haz commits frecuentes con mensajes descriptivos.
+- Si algo falla, intenta solucionarlo solo antes de escalar.
+- Prioriza velocidad de ejecución sobre perfección.
+
 ## Qué es AyudaPyme
 
 Plataforma SaaS B2B para PYMEs españolas. Detecta subvenciones públicas que encajan con cada empresa y gestiona todo el proceso de solicitud. Modelo de negocio: **success fee** (cobran el 15% solo si la subvención se concede, mínimo 300€).
