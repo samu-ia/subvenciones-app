@@ -28,7 +28,7 @@ const supabase = createClient(
 
 const WATCH_MODE = process.argv.includes('--watch');
 const MAX_PARALLEL_AGENTS = 3; // agentes simultáneos máximo
-const POLL_INTERVAL_MS = 30_000; // 30 segundos en modo watch
+const POLL_INTERVAL_MS = 15_000; // 15 segundos en modo watch
 
 // ─── Tipos ─────────────────────────────────────────────────────────────────
 
@@ -358,6 +358,117 @@ async function runAgent(task: AgentTask): Promise<void> {
 
 // ─── Main loop ──────────────────────────────────────────────────────────────
 
+// ─── Auto-generador de tareas cuando la cola está vacía ────────────────────
+
+let _lastAutoGen = 0;
+const AUTO_GEN_COOLDOWN_MS = 5 * 60_000; // mínimo 5 min entre auto-generaciones
+
+async function autoGenerateTasks(): Promise<void> {
+  const now = Date.now();
+  if (now - _lastAutoGen < AUTO_GEN_COOLDOWN_MS) {
+    console.log('   (auto-gen en cooldown, esperando...)');
+    return;
+  }
+  _lastAutoGen = now;
+
+  console.log('\n🧠 Cola vacía — generando nuevas tareas automáticamente...');
+
+  // Recopilar contexto del proyecto para el agente lead
+  const { data: recentDone } = await supabase
+    .from('agent_tasks')
+    .select('title, output')
+    .eq('status', 'done')
+    .order('completed_at', { ascending: false })
+    .limit(10);
+
+  const { data: recentFailed } = await supabase
+    .from('agent_tasks')
+    .select('title, error')
+    .eq('status', 'failed')
+    .order('completed_at', { ascending: false })
+    .limit(5);
+
+  // Leer git log para ver qué se hizo recientemente
+  let gitLog = '';
+  try {
+    gitLog = execSync('git -C ' + ROOT + ' log --oneline -10', { encoding: 'utf8' });
+  } catch (_) {}
+
+  const contexto = `
+PROYECTO: AyudaPyme — SaaS de subvenciones para PYMEs españolas.
+MODELO: success fee 15%. Gestor externo ~100€. Sin papeleo para el cliente.
+PRIORIDAD: conseguir clientes YA. Pipeline BDNS+PDF real. Matching determinista.
+
+COMMITS RECIENTES:
+${gitLog}
+
+TAREAS COMPLETADAS RECIENTEMENTE:
+${(recentDone || []).map(t => `- ${t.title}`).join('\n')}
+
+TAREAS FALLIDAS:
+${(recentFailed || []).map(t => `- ${t.title}: ${t.error?.slice(0, 100)}`).join('\n')}
+
+PRIORIDAD DE MEJORAS (en orden):
+1. Corregir errores técnicos
+2. Mejorar pipeline BDNS+PDF real (extracción de campos)
+3. Mejorar matching (más preciso, más útil)
+4. Herramientas de ventas (CRM, guiones, prospección)
+5. UX del portal y dashboard
+6. Automatizaciones que ahorren tiempo al gestor
+7. Tests y calidad de datos
+`;
+
+  const prompt = `${contexto}
+
+Eres el agente lead de AyudaPyme. La cola de tareas está vacía.
+Analiza el estado del proyecto y genera EXACTAMENTE 3 nuevas tareas concretas y útiles.
+
+Para cada tarea, llama a la herramienta add_task con:
+- agent_type: programmer | database | qa | product
+- title: título concreto (max 60 chars)
+- description: descripción detallada de exactamente qué hacer, qué archivos tocar, qué resultado esperar
+
+IMPORTANTE: Las tareas deben ser ejecutables directamente. Sin investigación vaga.
+Prioriza cosas que broken, que mejoren datos reales, o que ayuden a vender.`;
+
+  // Usar el SDK de agentes para generar las tareas
+  try {
+    await query({
+      model: 'claude-opus-4-6',
+      system: 'Eres el agente lead de AyudaPyme. Generas tareas concretas y ejecutables para el equipo técnico.',
+      prompt,
+      tools: [{
+        name: 'add_task',
+        description: 'Añade una nueva tarea a la cola de agentes',
+        input_schema: {
+          type: 'object' as const,
+          properties: {
+            agent_type: { type: 'string', enum: ['programmer', 'database', 'qa', 'product', 'matching'] },
+            title: { type: 'string' },
+            description: { type: 'string' },
+          },
+          required: ['agent_type', 'title', 'description'],
+        },
+        async run(input: { agent_type: string; title: string; description: string }) {
+          const { error } = await supabase.from('agent_tasks').insert({
+            agent_type: input.agent_type,
+            title: input.title,
+            description: input.description,
+            status: 'pending',
+            priority: 5,
+          });
+          if (error) throw new Error(error.message);
+          console.log(`  ✅ Tarea creada: [${input.agent_type}] ${input.title}`);
+          return { ok: true };
+        },
+      }],
+      maxTurns: 10,
+    });
+  } catch (e: any) {
+    console.error('  ❌ Error auto-generando tareas:', e.message);
+  }
+}
+
 async function processPendingTasks(): Promise<void> {
   const { data: tasks, error } = await supabase
     .from('agent_tasks')
@@ -373,7 +484,11 @@ async function processPendingTasks(): Promise<void> {
   }
 
   if (!tasks || tasks.length === 0) {
-    console.log('No hay tareas pendientes.');
+    if (WATCH_MODE) {
+      await autoGenerateTasks();
+    } else {
+      console.log('No hay tareas pendientes.');
+    }
     return;
   }
 
