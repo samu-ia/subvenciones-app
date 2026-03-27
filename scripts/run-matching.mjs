@@ -197,32 +197,102 @@ function evaluarHardExcludes(cliente, subvencion) {
     }
   }
 
-  const limiteEmpleados = extraerLimiteEmpleados(subvencion.requisitos);
+  // Límite empleados: desde requisitos (regex) o campos_extraidos (directo)
+  const ce = subvencion.campos_extraidos;
+  const limiteEmpleados = (ce?.tamano_max_empleados ?? null) ?? extraerLimiteEmpleados(subvencion.requisitos);
   if (limiteEmpleados !== null && cliente.num_empleados != null) {
     if (cliente.num_empleados > limiteEmpleados) {
       return `Tu empresa tiene ${cliente.num_empleados} empleados pero el máximo es ${limiteEmpleados}.`;
     }
   }
 
-  const antiguedadMin = extraerAntiguedadMinima(subvencion.requisitos);
+  // Antigüedad mínima: desde campos_extraidos (directo) o requisitos (regex)
+  const antiguedadMin = (ce?.antiguedad_min_anos ?? null) ?? extraerAntiguedadMinima(subvencion.requisitos);
   if (antiguedadMin !== null && cliente.anos_antiguedad != null) {
     if (cliente.anos_antiguedad < antiguedadMin) {
       return `Tu empresa tiene ${cliente.anos_antiguedad} años de antigüedad pero se requieren al menos ${antiguedadMin}.`;
     }
   }
 
+  // Localización desde campos_extraidos (si el pipeline PDF la extrajo)
+  if (ce?.localizacion && Array.isArray(ce.localizacion) && ce.localizacion.length > 0) {
+    const esNacional = ce.localizacion.some(l => /nacional|estatal/i.test(l));
+    if (!esNacional && clienteCA) {
+      const locNorm = ce.localizacion.map(l => normCA(l));
+      if (locNorm.some(l => l) && !locNorm.some(l => l === clienteCA)) {
+        return `Convocatoria para ${ce.localizacion.join(', ')}, tu empresa está en ${clienteCA}.`;
+      }
+    }
+  }
+
   return null;
 }
 
-// ─── Detect v2 data ──────────────────────────────────────────────────────────
+// ─── Enriquecer subvencion con datos de campos_extraidos (pipeline PDF) ──────
+// campos_extraidos es el JSONB de pipeline-pdf-real.mjs con los 15 campos clave.
+// Fusiona esos datos con los de las tablas normalizadas, sin duplicar.
 
-function tieneDataV2(subvencion) {
-  return !!(
-    (subvencion.requisitos && subvencion.requisitos.length > 0) ||
-    (subvencion.gastos && subvencion.gastos.length > 0) ||
-    (subvencion.beneficiarios_texto && subvencion.beneficiarios_texto.length > 0) ||
-    subvencion.para_quien
-  );
+function enriquecerConCamposExtraidos(subvencion) {
+  const ce = subvencion.campos_extraidos;
+  if (!ce || typeof ce !== 'object') return subvencion;
+
+  const enriq = { ...subvencion };
+
+  // Sectores desde cnae_incluidos / cnae_excluidos
+  const sectoresActuales = [...(enriq.sectores ?? [])];
+  if (ce.cnae_incluidos && ce.cnae_incluidos !== 'todos') {
+    const cnaesYa = new Set(sectoresActuales.map(s => s.cnae_codigo?.slice(0, 4)));
+    for (const cnae of (Array.isArray(ce.cnae_incluidos) ? ce.cnae_incluidos : [])) {
+      const c4 = String(cnae).slice(0, 4);
+      if (!cnaesYa.has(c4)) sectoresActuales.push({ cnae_codigo: c4, nombre_sector: null, excluido: false });
+    }
+  }
+  if (ce.cnae_incluidos === 'todos') {
+    // Convocatoria abierta a todos los sectores
+    enriq._sectores_todos = true;
+  }
+  if (Array.isArray(ce.cnae_excluidos)) {
+    const cnaesYaExcl = new Set(sectoresActuales.filter(s => s.excluido).map(s => s.cnae_codigo?.slice(0, 4)));
+    for (const cnae of ce.cnae_excluidos) {
+      const c4 = String(cnae).slice(0, 4);
+      if (!cnaesYaExcl.has(c4)) sectoresActuales.push({ cnae_codigo: c4, nombre_sector: null, excluido: true });
+    }
+  }
+  enriq.sectores = sectoresActuales;
+
+  // Tipo empresa desde beneficiarios_tipo
+  if (ce.beneficiarios_tipo && !(enriq.tipos_empresa?.length)) {
+    const TIPO_MAP = {
+      'autónomos': 'autonomo', 'autonomos': 'autonomo', 'autónomo': 'autonomo',
+      'micropyme': 'micropyme', 'microempresa': 'micropyme',
+      'pyme': 'pyme', 'pequeña': 'pyme', 'mediana': 'pyme',
+      'gran_empresa': 'grande', 'grande': 'grande',
+    };
+    const tipo = TIPO_MAP[ce.beneficiarios_tipo.toLowerCase()] ?? 'pyme';
+    enriq.tipos_empresa = [{ tipo, excluido: false }];
+  }
+
+  // Gastos subvencionables
+  if (Array.isArray(ce.gastos_subvencionables) && ce.gastos_subvencionables.length > 0 && !(enriq.gastos?.length)) {
+    enriq.gastos = ce.gastos_subvencionables.map(g => ({ categoria: g, descripcion: g, porcentaje_max: null }));
+  }
+
+  // Tamaño máximo / antigüedad mínima → requisitos
+  const requisitosExtra = [...(enriq.requisitos ?? [])];
+  if (ce.tamano_max_empleados && !requisitosExtra.some(r => r.descripcion.match(/empleados?/i))) {
+    requisitosExtra.push({ tipo: 'empresa', descripcion: `Máximo ${ce.tamano_max_empleados} empleados`, obligatorio: true });
+  }
+  if (ce.antiguedad_min_anos && !requisitosExtra.some(r => r.descripcion.match(/antigüedad|antiguedad/i))) {
+    requisitosExtra.push({ tipo: 'empresa', descripcion: `Antigüedad mínima de ${ce.antiguedad_min_anos} años`, obligatorio: true });
+  }
+  enriq.requisitos = requisitosExtra;
+
+  // Localización desde campos_extraidos.localizacion
+  if (Array.isArray(ce.localizacion) && ce.localizacion.length > 0) {
+    enriq._localizacion_ce = ce.localizacion; // array de CCAA/provincias, o ["Nacional"]
+  }
+
+  return enriq;
 }
 
 // ─── Gastos matching ─────────────────────────────────────────────────────────
@@ -325,6 +395,26 @@ function calcularMatchV2(cliente, subvencion) {
     if (diasCierre <= 15 && diasCierre >= 0) alertas.push(`Quedan solo ${diasCierre} días para el cierre`);
   }
 
+  // Geografía bonus (0-15) — complemento a los hard excludes geográficos
+  let geoBonus = 0;
+  const ambitoGeo = subvencion.ambito_geografico ?? 'desconocido';
+  const clienteCA = normCA(cliente.comunidad_autonoma);
+  const subvCA = normCA(subvencion.comunidad_autonoma);
+  const locCE = subvencion._localizacion_ce ?? [];
+  const esNacional = ambitoGeo === 'nacional' || locCE.some(l => /nacional|estatal/i.test(l));
+  const esAutonomico = ambitoGeo === 'autonomico' || (locCE.length > 0 && !esNacional);
+
+  if (esNacional || ambitoGeo === 'desconocido') {
+    geoBonus = 0; // nacional = aplica a todos, no discrimina
+  } else if (esAutonomico) {
+    const locNorm = locCE.map(l => normCA(l));
+    const coincide = (subvCA && clienteCA && subvCA === clienteCA) || locNorm.some(l => l === clienteCA);
+    if (coincide) { geoBonus = 15; motivos.push(`Convocatoria de tu comunidad (${clienteCA})`); }
+    else { geoBonus = 0; } // ya está hard-excluida si hay mismatch
+  } else if (ambitoGeo === 'local') {
+    geoBonus = 5; // si llegó aquí, ya pasó el hard exclude de provincia
+  }
+
   // CNAE (0-40)
   let cnae = 0;
   const clienteCnae = (cliente.cnae_codigo ?? '').slice(0, 4);
@@ -333,9 +423,12 @@ function calcularMatchV2(cliente, subvencion) {
   let sectorMismatch = false;
   let confirmedCnaeMismatch = false;
 
-  if (!subvencion.sectores?.length) {
+  if (subvencion._sectores_todos) {
     cnae = 25;
     motivos.push('Convocatoria abierta a todos los sectores');
+  } else if (!subvencion.sectores?.length) {
+    cnae = 25;
+    motivos.push('Sin restricción de sector');
   } else {
     const permitidos = subvencion.sectores.filter(s => !s.excluido);
     if (!permitidos.length) { cnae = 25; }
@@ -405,131 +498,20 @@ function calcularMatchV2(cliente, subvencion) {
   else if (subvencion.estado_convocatoria === 'proxima') motivos.push('Próxima convocatoria');
   else if (subvencion.estado_convocatoria === 'resuelta') alertas.push('Convocatoria resuelta');
 
-  const detalle = { cnae, tipo_empresa, importe, gastos, geografia: 0, sector: 0, estado: 0 };
-  let score_raw = cnae + tipo_empresa + importe + gastos;
+  const detalle = { cnae, tipo_empresa, importe, gastos, geo_bonus: geoBonus, sector: 0, estado: 0 };
+  let score_raw = cnae + tipo_empresa + importe + gastos + geoBonus;
   if (confirmedCnaeMismatch) score_raw = Math.min(score_raw, 25);
   else if (sectorMismatch) score_raw = Math.min(score_raw, 39);
-  const score = Math.min(1, score_raw / 100);
-  return { score: Math.round(score * 100) / 100, score_raw, hard_exclude: false, detalle, motivos, alertas, version: 'v2' };
-}
-
-// ─── Motor v1 legacy ─────────────────────────────────────────────────────────
-
-function calcularMatchV1(cliente, subvencion) {
-  const motivos = [];
-  const alertas = [];
-
-  const hardRazon = evaluarHardExcludes(cliente, subvencion);
-  if (hardRazon) return hard(hardRazon, 'v1');
-
-  // Geografía (0-30)
-  let geo = 0;
-  const ambito = subvencion.ambito_geografico ?? 'desconocido';
-  const clienteCA = normCA(cliente.comunidad_autonoma);
-  const subvCA = normCA(subvencion.comunidad_autonoma);
-  const subvProv = (subvencion.provincia ?? '').toLowerCase();
-  const clienteProv = (cliente.provincia ?? '').toLowerCase();
-
-  if (ambito === 'nacional') { geo = 30; motivos.push('Convocatoria nacional'); }
-  else if (ambito === 'autonomico') {
-    if (!clienteCA) { geo = 10; }
-    else if (subvCA && clienteCA === subvCA) { geo = 28; motivos.push(`Tu empresa está en ${clienteCA}`); }
-    else { geo = 15; }
-  } else if (ambito === 'local') {
-    if (subvProv && clienteProv && subvProv.includes(clienteProv.slice(0, 5))) { geo = 20; }
-    else { geo = 8; }
-  } else { geo = 15; }
-
-  // Tipo empresa (0-25)
-  let tipo = 0;
-  const tiposClienteList = tiposCliente(cliente);
-  if (!subvencion.tipos_empresa?.length) { tipo = 18; }
-  else {
-    const permitidos = subvencion.tipos_empresa.filter(t => !t.excluido);
-    const match = permitidos.filter(t => tiposClienteList.includes(t.tipo));
-    if (match.length > 0) { tipo = 25; motivos.push(`Tipo de empresa encaja`); }
-    else if (permitidos.length === 0) { tipo = 18; }
-    else { tipo = 5; alertas.push(`Orientada a: ${permitidos.map(t => t.tipo).join(', ')}`); }
-  }
-
-  // Sector CNAE (0-20)
-  let sector = 0;
-  let sectorMismatch = false;
-  let confirmedCnaeMismatch = false;
-  const clienteCnae = (cliente.cnae_codigo ?? '').slice(0, 4);
-  const clienteCnae2 = clienteCnae.slice(0, 2);
-  if (!subvencion.sectores?.length) { sector = 12; }
-  else {
-    const permitidos = subvencion.sectores.filter(s => !s.excluido);
-    if (!permitidos.length) { sector = 12; }
-    else {
-      const exactMatch = permitidos.some(s => s.cnae_codigo?.slice(0, 4) === clienteCnae && clienteCnae);
-      const divMatch = permitidos.some(s => s.cnae_codigo?.slice(0, 2) === clienteCnae2 && clienteCnae2);
-      const permitidosConCnae = permitidos.filter(s => s.cnae_codigo);
-      const clienteDesc = (cliente.cnae_descripcion ?? '').toLowerCase();
-      const STOP = new Set(['actividades', 'actividad', 'empresa', 'empresas', 'servicio', 'servicios', 'sector', 'sectores']);
-      const keyword = permitidosConCnae.length === 0 && permitidos.some(s => {
-        if (!s.nombre_sector) return false;
-        const sl = s.nombre_sector.toLowerCase();
-        return sl.split(/\s+/).some(w => w.length > 5 && !STOP.has(w) && clienteDesc.includes(w))
-          || clienteDesc.split(/\s+/).some(w => w.length > 5 && !STOP.has(w) && sl.includes(w));
-      });
-      if (exactMatch) { sector = 20; motivos.push(`CNAE ${clienteCnae} encaja`); }
-      else if (divMatch) { sector = 14; motivos.push('Sector dentro del ámbito'); }
-      else if (keyword) { sector = 14; motivos.push('Sector dentro del ámbito'); }
-      else {
-        sector = 0; sectorMismatch = true;
-        const EXCLUSIVE = ['agricultur', 'ganadería', 'ganaderia', 'silvicultur', 'forestal', 'pesca', 'acuicultur', 'minería', 'mineria', 'alimentación', 'alimentacion', 'agroaliment'];
-        const CNAE_PRIMARIO = ['01', '02', '03', '05', '06', '07', '08', '09', '10', '11', '12'];
-        const esExclusivo = permitidos.some(s => EXCLUSIVE.some(ex => (s.nombre_sector ?? '').toLowerCase().includes(ex)));
-        const clienteEsPrimario = clienteCnae2 && CNAE_PRIMARIO.includes(clienteCnae2);
-        if (permitidosConCnae.length > 0 || (esExclusivo && !clienteEsPrimario)) confirmedCnaeMismatch = true;
-        alertas.push('Sectores específicos distintos al tuyo');
-      }
-    }
-  }
-
-  // Estado (0-15)
-  let estado = 0;
-  const diasCierre = subvencion.plazo_fin
-    ? Math.ceil((new Date(subvencion.plazo_fin).getTime() - Date.now()) / 86_400_000)
-    : null;
-  switch (subvencion.estado_convocatoria) {
-    case 'abierta':
-      estado = diasCierre !== null && diasCierre <= 15 ? 12 : 15;
-      if (diasCierre !== null && diasCierre <= 15) alertas.push(`Solo ${diasCierre} días para el cierre`);
-      else motivos.push('Convocatoria abierta');
-      break;
-    case 'proxima': estado = 11; motivos.push('Próxima convocatoria'); break;
-    case 'resuelta': estado = 3; break;
-    default: estado = 7;
-  }
-
-  // Importe (0-10)
-  let importe = 0;
-  const maxSubv = subvencion.importe_maximo ?? subvencion.presupuesto_total;
-  const fac = cliente.facturacion_anual ?? 0;
-  if (!maxSubv || fac <= 0) { importe = 5; }
-  else {
-    const ratio = maxSubv / fac;
-    if (ratio >= 0.02 && ratio <= 2) { importe = 10; if (maxSubv >= 50_000) motivos.push(`Hasta ${fmtImporte(maxSubv)}`); }
-    else if (ratio < 0.02) { importe = 4; }
-    else { importe = 7; }
-  }
-
-  const detalle = { geografia: geo, tipo_empresa: tipo, sector, estado, importe, cnae: 0, gastos: 0 };
-  let score_raw = geo + tipo + sector + estado + importe;
-  if (confirmedCnaeMismatch) score_raw = Math.min(score_raw, 25);
-  else if (sectorMismatch) score_raw = Math.min(score_raw, 39);
-  const score = Math.min(1, score_raw / 100);
-  return { score: Math.round(score * 100) / 100, score_raw, hard_exclude: false, detalle, motivos, alertas, version: 'v1' };
+  // Base máxima 115 (100 + 15 geo bonus); normalizar sobre 100
+  const score = Math.min(1, score_raw / 115);
+  return { score: Math.round(score * 100) / 100, score_raw, hard_exclude: false, detalle, motivos, alertas, version: 'v3' };
 }
 
 // ─── Entry point ─────────────────────────────────────────────────────────────
 
+// Motor unificado v3: geoBonus + campos_extraidos para todos
 function calcularMatch(cliente, subvencion) {
-  if (tieneDataV2(subvencion)) return calcularMatchV2(cliente, subvencion);
-  return calcularMatchV1(cliente, subvencion);
+  return calcularMatchV2(cliente, enriquecerConCamposExtraidos(subvencion));
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -547,10 +529,10 @@ async function main() {
   if (errC) { console.error('Error cargando clientes:', errC.message); process.exit(1); }
   console.log(`Clientes cargados: ${clientes.length}`);
 
-  // Cargar subvenciones activas
+  // Cargar subvenciones activas (incluyendo campos_extraidos del pipeline PDF)
   const { data: subvenciones, error: errS } = await sb
     .from('subvenciones')
-    .select('id,bdns_id,titulo,organismo,ambito_geografico,comunidad_autonoma,provincia,estado_convocatoria,importe_maximo,importe_minimo,presupuesto_total,plazo_fin,para_quien')
+    .select('id,bdns_id,titulo,organismo,ambito_geografico,comunidad_autonoma,provincia,estado_convocatoria,importe_maximo,importe_minimo,presupuesto_total,plazo_fin,para_quien,campos_extraidos')
     .not('estado_convocatoria', 'in', '("cerrada","suspendida")');
   if (errS) { console.error('Error cargando subvenciones:', errS.message); process.exit(1); }
 
@@ -613,9 +595,11 @@ async function main() {
     para_quien: paraQuienMap[s.id] ?? s.para_quien,
   }));
 
-  // Stats de v2 data
-  const conV2 = subvProfiles.filter(s => tieneDataV2(s)).length;
-  console.log(`Subvenciones con datos v2: ${conV2}/${subvProfiles.length} (${Math.round(conV2 / subvProfiles.length * 100)}%)`);
+  // Stats de datos disponibles
+  const conCamposExtraidos = subvProfiles.filter(s => s.campos_extraidos).length;
+  const conTablasSectores = subvProfiles.filter(s => s.sectores?.length > 0).length;
+  console.log(`Subvenciones con campos_extraidos (PDF): ${conCamposExtraidos}/${subvProfiles.length}`);
+  console.log(`Subvenciones con sectores normalizados:  ${conTablasSectores}/${subvProfiles.length}`);
 
   // ─── Modo --all: pizarra limpia ────────────────────────────────────────────
   const estadoMap = {};
@@ -642,7 +626,6 @@ async function main() {
 
   // ─── Calcular matches ──────────────────────────────────────────────────────
   let guardados = 0, excluidos = 0, bajos = 0;
-  let v1Count = 0, v2Count = 0;
   const MIN_SCORE = 0.35;
 
   for (const cliente of clientes) {
@@ -650,9 +633,6 @@ async function main() {
 
     for (const subv of subvProfiles) {
       const result = calcularMatch(cliente, subv);
-
-      if (result.version === 'v2') v2Count++;
-      else v1Count++;
 
       if (result.hard_exclude) {
         toSave.push({
@@ -715,9 +695,7 @@ async function main() {
   console.log(`  Matches relevantes:   ${guardados}`);
   console.log(`  Hard excludes:        ${excluidos}`);
   console.log(`  Score bajo (< ${MIN_SCORE * 100}%): ${bajos}`);
-  console.log(`\n🔄 Motor usado:`);
-  console.log(`  v2 (campos_extraidos): ${v2Count} evaluaciones`);
-  console.log(`  v1 (legacy):           ${v1Count} evaluaciones`);
+  console.log(`  Motor:               v3 (unificado, con geoBonus + campos_extraidos)`);
 
   // Top 10
   const { data: top } = await sb
