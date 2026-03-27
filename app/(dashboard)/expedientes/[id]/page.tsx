@@ -206,6 +206,8 @@ interface Expediente {
   fecha_resolucion_definitiva?: string | null;
   fecha_fin_ejecucion?: string | null;
   importe_concedido?: number | null;
+  fee_amount?: number | null;
+  fee_estado?: string | null;
   cliente: { nombre_normalizado: string | null }[];
 }
 
@@ -282,6 +284,24 @@ function PanelFicha({
 }) {
   const [faseSaving, setFaseSaving] = useState(false);
   const [currentFase, setCurrentFase] = useState(expediente.fase || 'preparacion');
+  const [feeEstado, setFeeEstado] = useState(expediente.fee_estado || 'no_aplica');
+  const [feeSaving, setFeeSaving] = useState(false);
+
+  async function cambiarFeeEstado(nuevoEstado: string) {
+    setFeeSaving(true);
+    try {
+      const res = await fetch(`/api/expedientes/${expediente.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fee_estado: nuevoEstado }),
+      });
+      if (res.ok) {
+        setFeeEstado(nuevoEstado);
+      }
+    } finally {
+      setFeeSaving(false);
+    }
+  }
 
   async function cambiarFase(nuevaFase: string) {
     setFaseSaving(true);
@@ -382,6 +402,73 @@ function PanelFicha({
           )}
         </div>
       </div>
+
+      {/* Gestión de fee */}
+      {feeEstado && feeEstado !== 'no_aplica' && (
+        <div>
+          <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.muted, marginBottom: 8 }}>Comisión (Fee)</div>
+          <div style={{ background: '#fff', borderRadius: 10, border: `1px solid ${C.border}`, padding: '12px 14px' }}>
+            {expediente.fee_amount && (
+              <div style={{ display: 'flex', gap: 8, marginBottom: 10, fontSize: '0.8rem' }}>
+                <span style={{ color: C.muted, width: 130, flexShrink: 0 }}>Importe fee</span>
+                <span style={{ fontWeight: 700, color: C.navy }}>{fmtE(expediente.fee_amount)}</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <span style={{
+                display: 'inline-block', padding: '3px 10px', borderRadius: 6, fontSize: '0.72rem', fontWeight: 700,
+                background: feeEstado === 'cobrado' ? '#ecfdf5' : feeEstado === 'facturado' ? '#eff6ff' : '#fff7ed',
+                color: feeEstado === 'cobrado' ? C.green : feeEstado === 'facturado' ? '#2563eb' : C.amber,
+                border: `1px solid ${feeEstado === 'cobrado' ? '#bbf7d0' : feeEstado === 'facturado' ? '#bfdbfe' : '#fed7aa'}`,
+              }}>
+                {feeEstado === 'pendiente' && '⏳ Pendiente de facturar'}
+                {feeEstado === 'facturado' && '📄 Factura emitida'}
+                {feeEstado === 'cobrado' && '✅ Cobrado'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {feeEstado === 'pendiente' && (
+                <button
+                  onClick={() => cambiarFeeEstado('facturado')}
+                  disabled={feeSaving}
+                  style={{
+                    flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid #bfdbfe',
+                    background: '#eff6ff', color: '#1d4ed8', fontSize: '0.78rem', fontWeight: 700,
+                    cursor: feeSaving ? 'wait' : 'pointer', fontFamily: 'inherit',
+                    opacity: feeSaving ? 0.6 : 1,
+                  }}
+                  onMouseEnter={e => { if (!feeSaving) { e.currentTarget.style.background = '#dbeafe'; } }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#eff6ff'; }}
+                >
+                  📄 Marcar factura emitida
+                </button>
+              )}
+              {feeEstado === 'facturado' && (
+                <button
+                  onClick={() => cambiarFeeEstado('cobrado')}
+                  disabled={feeSaving}
+                  style={{
+                    flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid #bbf7d0',
+                    background: '#ecfdf5', color: '#059669', fontSize: '0.78rem', fontWeight: 700,
+                    cursor: feeSaving ? 'wait' : 'pointer', fontFamily: 'inherit',
+                    opacity: feeSaving ? 0.6 : 1,
+                  }}
+                  onMouseEnter={e => { if (!feeSaving) { e.currentTarget.style.background = '#d1fae5'; } }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#ecfdf5'; }}
+                >
+                  ✅ Confirmar cobro
+                </button>
+              )}
+              {feeEstado === 'cobrado' && (
+                <span style={{ fontSize: '0.78rem', color: C.green, fontWeight: 600 }}>
+                  Fee completamente liquidado
+                </span>
+              )}
+            </div>
+            {feeSaving && <span style={{ fontSize: '0.72rem', color: C.muted, marginTop: 6, display: 'block' }}>Guardando...</span>}
+          </div>
+        </div>
+      )}
 
       {/* Acciones rápidas */}
       <div>
