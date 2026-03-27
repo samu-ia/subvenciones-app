@@ -1522,22 +1522,10 @@ export default function PortalPage() {
           .eq('nif', perfil.nif).maybeSingle();
         setCliente(cli);
 
-        // Cargar matches con subvenciones
-        const { data: matchData } = await supabase
-          .from('cliente_subvencion_match')
-          .select(`
-            id, score, motivos, estado, es_hard_exclude, detalle_scoring,
-            subvenciones!inner(
-              id, bdns_id, titulo, titulo_comercial, organismo, objeto, resumen_ia, para_quien,
-              importe_maximo, presupuesto_total, porcentaje_financiacion, plazo_fin, plazo_inicio,
-              estado_convocatoria, ambito_geografico, url_oficial
-            )
-          `)
-          .eq('nif', perfil.nif)
-          .eq('es_hard_exclude', false)
-          .gte('score', 0.1)
-          .order('score', { ascending: false })
-          .limit(30);
+        // Cargar matches via API (service client, sin problemas de RLS)
+        const matchRes = await fetch('/api/portal/matches');
+        const matchJson = matchRes.ok ? await matchRes.json() : { matches: [] };
+        const matchData: Record<string, unknown>[] = matchJson.matches ?? [];
 
         // Cargar solicitudes existentes
         const { data: solis } = await supabase
@@ -1547,7 +1535,7 @@ export default function PortalPage() {
 
         const soliMap = Object.fromEntries((solis ?? []).map(s => [s.subvencion_id, s]));
 
-        const matchItems: MatchItem[] = (matchData ?? []).map((m: Record<string, unknown>) => {
+        const matchItems: MatchItem[] = matchData.map((m: Record<string, unknown>) => {
           const subv = (m.subvenciones as Record<string, unknown>);
           return {
             id: m.id as string,
@@ -1560,6 +1548,7 @@ export default function PortalPage() {
               id: subv.id as string,
               bdns_id: subv.bdns_id as string,
               titulo: subv.titulo as string,
+              titulo_comercial: subv.titulo_comercial as string,
               organismo: subv.organismo as string,
               objeto: subv.objeto as string,
               resumen_ia: subv.resumen_ia as string,
