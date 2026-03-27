@@ -18,6 +18,9 @@
     "pipeline:extraccion": "node scripts/pipeline-magistral.mjs --fase extraccion_ia --all",
     "pipeline:normalizar": "node scripts/pipeline-magistral.mjs --fase normalizacion --all",
     "pipeline:validar": "node scripts/pipeline-magistral.mjs --fase validacion --all",
+    "pdf": "node scripts/pipeline-pdf-real.mjs",
+    "pdf:all": "node scripts/pipeline-pdf-real.mjs --all",
+    "pdf:id": "node scripts/pipeline-pdf-real.mjs --id",
     "enrich": "node scripts/enrich-with-gemini.mjs",
     "matching": "node scripts/run-matching.mjs --all",
     "team": "npx tsx scripts/agents/langgraph/run.ts",
@@ -26,7 +29,8 @@
     "db:backup": "dotenvx run -f .env.local -- node scripts/backup-db.mjs",
     "db:restore": "dotenvx run -f .env.local -- node scripts/restore-db.mjs",
     "db:migrate": "dotenvx run -f .env.local -- node scripts/run-migration.js",
-    "titulos": "dotenvx run -f .env.local -- node scripts/generate-titulos-comerciales.mjs"
+    "titulos": "dotenvx run -f .env.local -- node scripts/generate-titulos-comerciales.mjs",
+    "prospectar": "node scripts/prospectar.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.41",

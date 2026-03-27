@@ -48,6 +48,9 @@ logs/
 # backups de base de datos (nunca al repo — pueden tener datos de clientes)
 /backups/
 
+# CSVs de prospección (datos internos, no al repo)
+/prospection/*.csv
+
 # archivos de QA/test temporales
 test-screenshots*/
 qa-screenshots/
