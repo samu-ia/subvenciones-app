@@ -2489,28 +2489,41 @@ export default function PortalPage() {
                     {expedientes.map(exp => {
                       const est = estadoMap[exp.estado] ?? { bg: '#f1f5f9', color: C.muted, label: exp.estado, desc: '' };
                       return (
-                        <button key={exp.id} onClick={() => abrirExpediente(exp)}
-                          style={{ background: '#fff', borderRadius: 14, border: `1px solid ${C.border}`, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'box-shadow 0.15s' }}>
-                          <div style={{ width: 42, height: 42, borderRadius: 10, background: exp.contrato_firmado ? '#dcfce7' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <FileText size={18} color={exp.contrato_firmado ? C.green : C.muted} />
-                          </div>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.navy }}>
-                              {exp.titulo ?? (exp.numero_bdns ? `Subvención BDNS #${exp.numero_bdns}` : 'Expediente en gestión')}
+                        <div key={exp.id} style={{ background: '#fff', borderRadius: 14, border: `1px solid ${C.border}`, padding: '16px 20px', transition: 'box-shadow 0.15s' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', textAlign: 'left', width: '100%' }} onClick={() => abrirExpediente(exp)}>
+                            <div style={{ width: 42, height: 42, borderRadius: 10, background: exp.contrato_firmado ? '#dcfce7' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <FileText size={18} color={exp.contrato_firmado ? C.green : C.muted} />
                             </div>
-                            {exp.organismo && <div style={{ fontSize: '0.74rem', color: C.muted, marginTop: 1 }}>{exp.organismo}</div>}
-                            <div style={{ fontSize: '0.74rem', color: C.muted, marginTop: 2 }}>
-                              Abierto el {fmt(exp.created_at)}
-                              {exp.plazo_solicitud && (() => { const d = diasRestantes(exp.plazo_solicitud); return d !== null && d > 0 ? <span style={{ color: d <= 7 ? C.red : C.amber, marginLeft: 8, fontWeight: 700 }}> · {d}d para plazo</span> : null; })()}
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.navy }}>
+                                {exp.titulo ?? (exp.numero_bdns ? `Subvención BDNS #${exp.numero_bdns}` : 'Expediente en gestión')}
+                              </div>
+                              {exp.organismo && <div style={{ fontSize: '0.74rem', color: C.muted, marginTop: 1 }}>{exp.organismo}</div>}
+                              <div style={{ fontSize: '0.74rem', color: C.muted, marginTop: 2 }}>
+                                Abierto el {fmt(exp.created_at)}
+                                {exp.plazo_solicitud && (() => { const d = diasRestantes(exp.plazo_solicitud); return d !== null && d > 0 ? <span style={{ color: d <= 7 ? C.red : C.amber, marginLeft: 8, fontWeight: 700 }}> · {d}d para plazo</span> : null; })()}
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ background: est.bg, color: est.color, borderRadius: 20, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
+                                {est.label}
+                              </span>
+                              <ChevronRight size={16} color={C.muted} />
                             </div>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ background: est.bg, color: est.color, borderRadius: 20, padding: '3px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
-                              {est.label}
-                            </span>
-                            <ChevronRight size={16} color={C.muted} />
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10, borderTop: `1px solid ${C.border}`, paddingTop: 10 }}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); router.push(`/portal/expediente/${exp.id}`); }}
+                              style={{
+                                background: 'none', border: `1px solid ${C.teal}`, color: C.teal,
+                                borderRadius: 8, padding: '5px 14px', fontSize: '0.76rem', fontWeight: 700,
+                                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4,
+                              }}
+                            >
+                              <ExternalLink size={12} /> Ver detalle
+                            </button>
                           </div>
-                        </button>
+                        </div>
                       );
                     })}
                   </div>
