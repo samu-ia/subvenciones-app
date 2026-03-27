@@ -137,7 +137,7 @@ interface PreguntaIA {
   obligatoria: boolean;
 }
 
-type ModalPaso = 1 | 2 | 3;
+type ModalPaso = 1 | 2 | 3 | 4;
 
 function ModalSolicitud({
   match,
@@ -243,7 +243,8 @@ function ModalSolicitud({
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? 'Error al guardar');
       }
-      onCompletado();
+      setPaso(4); // Mostrar confirmación antes de cerrar
+      setTimeout(() => onCompletado(), 3000);
     } catch (err) {
       setError((err as Error).message ?? 'Error al guardar');
     } finally {
@@ -292,7 +293,7 @@ function ModalSolicitud({
           </div>
 
           {/* Pasos */}
-          <div style={{ display: 'flex', gap: 4, marginTop: 16 }}>
+          {paso < 4 && <div style={{ display: 'flex', gap: 4, marginTop: 16 }}>
             {[{ n: 1, label: 'Verificar encaje' }, { n: 2, label: 'Contrato' }, { n: 3, label: 'Método de pago' }].map(p => (
               <div key={p.n} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{
@@ -310,7 +311,7 @@ function ModalSolicitud({
                 {p.n < 3 && <div style={{ flex: 1, height: 1, background: paso > p.n ? C.teal : '#e2e8f0' }} />}
               </div>
             ))}
-          </div>
+          </div>}
         </div>
 
         {/* Contenido */}
@@ -503,16 +504,16 @@ function ModalSolicitud({
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
                 {[
                   {
-                    key: 'tarjeta',
-                    icon: <CreditCard size={20} color={C.navy} />,
-                    titulo: 'Tarjeta de crédito / débito',
-                    desc: 'Visa, Mastercard, American Express — cargo automático al cobrar',
-                  },
-                  {
                     key: 'transferencia',
                     icon: <Landmark size={20} color={C.navy} />,
                     titulo: 'Transferencia bancaria',
                     desc: 'Te enviaremos la factura cuando corresponda — 30 días para pagar',
+                  },
+                  {
+                    key: 'acuerdo',
+                    icon: <FileText size={20} color={C.navy} />,
+                    titulo: 'Acordar con el gestor',
+                    desc: 'Tu gestor te contactará para acordar la forma de pago más cómoda',
                   },
                 ].map(opt => (
                   <button
@@ -521,8 +522,8 @@ function ModalSolicitud({
                     style={{
                       display: 'flex', alignItems: 'center', gap: 14,
                       padding: '16px 18px', borderRadius: 12, cursor: 'pointer',
-                      background: metodoPago === opt.key || (opt.key === 'tarjeta' && metodoPago?.startsWith('card:')) ? '#eff6ff' : '#f8fafc',
-                      border: `2px solid ${metodoPago === opt.key || (opt.key === 'tarjeta' && metodoPago?.startsWith('card:')) ? '#3b82f6' : '#e2e8f0'}`,
+                      background: metodoPago === opt.key ? '#eff6ff' : '#f8fafc',
+                      border: `2px solid ${metodoPago === opt.key ? '#3b82f6' : '#e2e8f0'}`,
                       textAlign: 'left',
                     }}
                   >
@@ -533,73 +534,46 @@ function ModalSolicitud({
                       <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.navy }}>{opt.titulo}</div>
                       <div style={{ fontSize: '0.75rem', color: C.ink2, marginTop: 2 }}>{opt.desc}</div>
                     </div>
-                    {(metodoPago === opt.key || (opt.key === 'tarjeta' && metodoPago?.startsWith('card:'))) && <Check size={18} color="#3b82f6" style={{ flexShrink: 0 }} />}
+                    {metodoPago === opt.key && <Check size={18} color="#3b82f6" style={{ flexShrink: 0 }} />}
                   </button>
                 ))}
               </div>
 
-              {/* Formulario de tarjeta real */}
-              {(metodoPago === 'tarjeta' || metodoPago?.startsWith('card:')) && (
-                <div style={{ background: '#f8fafc', borderRadius: 14, padding: '18px', border: '1.5px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <CreditCard size={16} color={C.ink2} />
-                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: C.ink2 }}>Datos de tarjeta</span>
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569', display: 'block', marginBottom: 5 }}>NÚMERO DE TARJETA</label>
-                    <input
-                      type="text"
-                      placeholder="1234 5678 9012 3456"
-                      maxLength={19}
-                      style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '12px 16px', fontSize: '1rem', fontFamily: 'monospace', boxSizing: 'border-box', outline: 'none', background: '#fff', color: C.ink }}
-                      onChange={e => {
-                        // Formatear con espacios cada 4 dígitos
-                        const v = e.target.value.replace(/\D/g, '').slice(0, 16);
-                        e.target.value = v.replace(/(.{4})/g, '$1 ').trim();
-                        setMetodoPago(`card:${v}`);
-                      }}
-                    />
-                  </div>
-                  <div style={{ display: 'flex', gap: 12 }}>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569', display: 'block', marginBottom: 5 }}>CADUCIDAD</label>
-                      <input
-                        type="text"
-                        placeholder="MM/AA"
-                        maxLength={5}
-                        style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '12px 16px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', background: '#fff', color: C.ink, fontFamily: 'inherit' }}
-                        onChange={e => {
-                          let v = e.target.value.replace(/\D/g, '').slice(0, 4);
-                          if (v.length >= 3) v = v.slice(0, 2) + '/' + v.slice(2);
-                          e.target.value = v;
-                        }}
-                      />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569', display: 'block', marginBottom: 5 }}>CVV</label>
-                      <input
-                        type="password"
-                        placeholder="•••"
-                        maxLength={3}
-                        style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '12px 16px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', background: '#fff', color: C.ink, fontFamily: 'inherit' }}
-                      />
-                    </div>
-                  </div>
-                  <p style={{ fontSize: '0.72rem', color: '#94a3b8', margin: 0 }}>
-                    🔒 Datos encriptados. Solo se cargarán cuando recibas la subvención.
-                    {/* TODO: Reemplazar por Stripe Elements cuando se configure NEXT_PUBLIC_STRIPE_KEY */}
-                  </p>
-                </div>
-              )}
-
               {error && <p style={{ color: C.red, fontSize: '0.78rem', marginTop: 10 }}>{error}</p>}
+            </div>
+          )}
+
+          {/* PASO 4: Confirmación / Próximos pasos */}
+          {paso === 4 && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '16px 0 8px' }}>
+              <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+                <CheckCircle size={32} color="#16a34a" />
+              </div>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: C.navy, margin: '0 0 8px' }}>¡Solicitud confirmada!</h3>
+              <p style={{ fontSize: '0.88rem', color: C.ink2, lineHeight: 1.6, marginBottom: 24 }}>
+                Hemos registrado tu solicitud. Nuestro equipo revisará tu caso y te contactará en <strong>24-48 horas</strong>.
+              </p>
+              <div style={{ background: '#f8fafc', borderRadius: 14, padding: '18px 20px', width: '100%', textAlign: 'left' }}>
+                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: C.ink2, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Próximos pasos</p>
+                {[
+                  { icon: '📞', texto: 'El gestor te llama para revisar los documentos necesarios' },
+                  { icon: '📋', texto: 'Preparamos y presentamos la solicitud ante la administración' },
+                  { icon: '⏳', texto: 'Seguimiento continuo hasta la resolución' },
+                  { icon: '💰', texto: 'Solo pagas si la subvención se concede (éxito fee 15%)' },
+                ].map((paso, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: i < 3 ? 10 : 0 }}>
+                    <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>{paso.icon}</span>
+                    <span style={{ fontSize: '0.82rem', color: C.ink, lineHeight: 1.4 }}>{paso.texto}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
 
         {/* Footer con botones */}
         <div style={{ padding: '16px 28px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-          {paso > 1 ? (
+          {paso > 1 && paso < 4 ? (
             <button
               onClick={() => { setPaso(paso === 3 ? 2 : 1); setError(''); }}
               style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f1f5f9', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', color: C.ink2 }}
@@ -646,6 +620,14 @@ function ModalSolicitud({
             >
               {guardando ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckCircle size={14} />}
               {guardando ? 'Guardando…' : 'Confirmar solicitud'}
+            </button>
+          )}
+          {paso === 4 && (
+            <button
+              onClick={onCompletado}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: C.teal, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer' }}
+            >
+              Ver mis expedientes <ArrowRight size={14} />
             </button>
           )}
         </div>

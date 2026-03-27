@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { requireRole, requireAdminOrTramitador } from '@/lib/auth/helpers';
 import { sendTransactionalEmail } from '@/lib/email';
+import { generateInvoice } from '@/lib/billing/generate-invoice';
 
 const FASES_VALIDAS = [
   'preparacion', 'presentada', 'instruccion', 'resolucion_provisional',
@@ -114,7 +115,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authPatch = await requireRole('admin');
+  const authPatch = await requireAdminOrTramitador();
   if (authPatch instanceof NextResponse) return authPatch;
 
   const { id } = await params;
@@ -127,6 +128,21 @@ export async function PATCH(
   if (body.fase !== undefined) {
     if (!FASES_VALIDAS.includes(body.fase)) {
       return NextResponse.json({ error: `Fase inválida: ${body.fase}` }, { status: 400 });
+    }
+    // Validar importe_concedido antes de pasar a cobro
+    if (body.fase === 'cobro') {
+      const importe = body.importe_concedido ?? null;
+      if (!importe || Number(importe) <= 0) {
+        // Verificar si ya tiene importe en BD
+        const sbCheck2 = createServiceClient();
+        const { data: expCheck } = await sbCheck2.from('expediente').select('importe_concedido').eq('id', id).maybeSingle();
+        if (!expCheck?.importe_concedido || Number(expCheck.importe_concedido) <= 0) {
+          return NextResponse.json(
+            { error: 'Debes indicar el importe_concedido antes de marcar como cobrado' },
+            { status: 400 },
+          );
+        }
+      }
     }
     campos.fase = body.fase;
     campos.fase_updated_at = new Date().toISOString();
@@ -188,7 +204,7 @@ export async function PATCH(
   if (nuevaFase) {
     const { data: expData } = await sb
       .from('expediente')
-      .select('id, nif, titulo, importe_concedido, fase, subvencion:subvencion_id(titulo, organismo)')
+      .select('id, nif, titulo, importe_concedido, fase, subvencion:subvencion_id(titulo, organismo), cliente:nif(nombre_empresa, domicilio_fiscal, codigo_postal, ciudad)')
       .eq('id', id)
       .maybeSingle();
     expedienteActual = expData as Record<string, unknown> | null;

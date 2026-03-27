@@ -205,15 +205,36 @@ export default function ExpedienteDetallePage() {
 
   async function subirDocumento(item: ChecklistItem, file: File) {
     if (!expediente) return;
+
+    // Validación backend: tipo y tamaño
+    const MAX_SIZE_MB = 20;
+    const TIPOS_PERMITIDOS = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+      showToast(`El archivo supera el máximo permitido (${MAX_SIZE_MB} MB)`);
+      return;
+    }
+    if (!TIPOS_PERMITIDOS.includes(file.type)) {
+      showToast('Tipo de archivo no permitido. Sube PDF, imagen, Word o Excel.');
+      return;
+    }
+
     setSubiendoDoc(item.id);
     try {
-      const ext = file.name.split('.').pop();
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin';
       const path = `${expediente.nif}/${expediente.id}/${item.id}.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from('archivos')
-        .upload(path, file, { upsert: true });
+        .upload(path, file, { upsert: true, contentType: file.type });
       if (uploadError) throw uploadError;
-      await supabase.from('checklist_items').update({ completado: true }).eq('id', item.id);
+
+      // Marcar como completado via API (service role, evita RLS)
+      const res = await fetch(`/api/portal/expediente/${expediente.id}/checklist`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: item.id, completado: true, storage_path: path }),
+      });
+      if (!res.ok) throw new Error('Error al marcar documento como completado');
+
       setChecklist(prev => prev.map(i => i.id === item.id ? { ...i, completado: true } : i));
       showToast('Documento subido correctamente');
     } catch {

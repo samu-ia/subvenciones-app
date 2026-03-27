@@ -81,10 +81,11 @@ export async function GET(
       .eq('expediente_id', id)
       .order('orden', { ascending: true }),
 
-    // Últimos mensajes del chat con gestor
+    // Últimos mensajes del chat con gestor para este expediente
     sb.from('mensajes_gestor')
-      .select('id, remitente, contenido, leido, created_at')
+      .select('id, remitente, contenido, leido, expediente_id, created_at')
       .eq('nif', perfil.nif)
+      .eq('expediente_id', id)
       .order('created_at', { ascending: true })
       .limit(50),
   ]);

@@ -123,27 +123,38 @@ INSTRUCCIONES:
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const auth = await getClienteNif();
   if (!auth) return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
 
+  const { searchParams } = new URL(request.url);
+  const expedienteId = searchParams.get('expediente_id');
+
   const sb = createServiceClient();
-  const { data: mensajes, error } = await sb
+  let q = sb
     .from('mensajes_gestor')
-    .select('id, remitente, contenido, leido, created_at')
+    .select('id, remitente, contenido, leido, expediente_id, created_at')
     .eq('nif', auth.nif)
     .order('created_at', { ascending: true })
     .limit(100);
+
+  if (expedienteId) {
+    q = q.eq('expediente_id', expedienteId);
+  }
+
+  const { data: mensajes, error } = await q;
 
   // Si la tabla no existe aún, devolvemos array vacío (no crash)
   if (error) return NextResponse.json({ mensajes: [] });
 
   // Marcar como leídos los mensajes del gestor/IA que el cliente no ha visto
-  await sb.from('mensajes_gestor')
+  let markQ = sb.from('mensajes_gestor')
     .update({ leido: true })
     .eq('nif', auth.nif)
     .in('remitente', ['gestor', 'ia'])
     .eq('leido', false);
+  if (expedienteId) markQ = markQ.eq('expediente_id', expedienteId);
+  await markQ;
 
   return NextResponse.json({ mensajes: mensajes ?? [] });
 }
@@ -156,15 +167,19 @@ export async function POST(request: NextRequest) {
   let contenido = '';
   let adjuntoNombre: string | null = null;
 
+  let expedienteId: string | null = null;
+
   if (contentType.includes('multipart/form-data')) {
     const fd = await request.formData().catch(() => null);
     contenido = (fd?.get('contenido') as string | null)?.trim() ?? '';
+    expedienteId = (fd?.get('expediente_id') as string | null) ?? null;
     const adjunto = fd?.get('adjunto') as File | null;
     if (adjunto) adjuntoNombre = adjunto.name;
     if (!contenido && adjuntoNombre) contenido = `[Archivo adjunto: ${adjuntoNombre}]`;
   } else {
     const body = await request.json().catch(() => null);
     contenido = body?.contenido?.trim() ?? '';
+    expedienteId = body?.expediente_id ?? null;
   }
 
   if (!contenido) {
@@ -179,6 +194,7 @@ export async function POST(request: NextRequest) {
     remitente: 'cliente',
     contenido,
     leido: false,
+    ...(expedienteId ? { expediente_id: expedienteId } : {}),
     ...(adjuntoNombre ? { metadata: { adjunto_nombre: adjuntoNombre } } : {}),
   });
 
@@ -213,17 +229,20 @@ export async function POST(request: NextRequest) {
         remitente: 'ia',
         contenido: respuesta,
         leido: false,
+        ...(expedienteId ? { expediente_id: expedienteId } : {}),
       });
     }
   }
 
-  // Devolver todos los mensajes actualizados
-  const { data: mensajes } = await sb
+  // Devolver todos los mensajes actualizados (del mismo contexto: global o expediente)
+  let finalQ = sb
     .from('mensajes_gestor')
-    .select('id, remitente, contenido, leido, created_at')
+    .select('id, remitente, contenido, leido, expediente_id, created_at')
     .eq('nif', auth.nif)
     .order('created_at', { ascending: true })
     .limit(100);
+  if (expedienteId) finalQ = finalQ.eq('expediente_id', expedienteId);
+  const { data: mensajes } = await finalQ;
 
   return NextResponse.json({ mensajes: mensajes ?? [] });
 }

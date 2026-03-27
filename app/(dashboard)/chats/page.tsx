@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   MessageCircle, Send, Paperclip, Search, X,
   Loader2, Bot, User, Building2, RefreshCw,
+  FileText, Zap, Clock, CreditCard, ChevronRight,
+  AlertTriangle, CheckCircle, Info,
 } from 'lucide-react';
 
 interface Conversacion {
@@ -29,6 +31,46 @@ interface Mensaje {
   adjunto_nombre?: string;
 }
 
+interface ContextoCliente {
+  empresa: {
+    nombre: string;
+    actividad: string | null;
+    tamano: string | null;
+    empleados: number | null;
+    facturacion: number | null;
+    ccaa: string | null;
+    ciudad: string | null;
+    provincia: string | null;
+    forma_juridica: string | null;
+  } | null;
+  matches: Array<{
+    id: string;
+    titulo: string;
+    score: number;
+    estado: string;
+    organismo: string;
+    importe_maximo: number | null;
+    plazo_fin: string | null;
+    dias_restantes: number | null;
+  }>;
+  expedientes: Array<{
+    id: string;
+    titulo: string;
+    fase: string;
+    fase_label: string;
+    estado: string;
+    plazo_solicitud: string | null;
+    dias_restantes: number | null;
+    fee_amount: number | null;
+    fee_estado: string | null;
+  }>;
+  solicitudes: Array<{
+    id: string;
+    titulo: string;
+    estado: string;
+  }>;
+}
+
 function fmtHora(s: string) {
   const d = new Date(s);
   const hoy = new Date();
@@ -48,10 +90,228 @@ function fmtFechaCompleta(s: string) {
   });
 }
 
+function fmtImporte(n: number) {
+  return n.toLocaleString('es-ES', { maximumFractionDigits: 0 }) + ' \u20ac';
+}
+
+/* ── Panel lateral de contexto del cliente ─────────────────────────────── */
+function PanelContexto({ contexto, nif }: { contexto: ContextoCliente | null; nif: string }) {
+  const [expandido, setExpandido] = useState(true);
+
+  if (!contexto) {
+    return (
+      <div style={{ width: 300, flexShrink: 0, borderLeft: '1px solid var(--border)', background: '#fafbfc', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <Loader2 size={18} color="var(--muted)" style={{ animation: 'spin 1s linear infinite' }} />
+      </div>
+    );
+  }
+
+  const { empresa, matches, expedientes, solicitudes } = contexto;
+
+  const estadoColors: Record<string, { bg: string; fg: string }> = {
+    pendiente: { bg: '#fef3c7', fg: '#92400e' },
+    interesado: { bg: '#e0f2fe', fg: '#1e40af' },
+    solicitando: { bg: '#ede9fe', fg: '#5b21b6' },
+    concedida: { bg: '#dcfce7', fg: '#166534' },
+    descartado: { bg: '#fee2e2', fg: '#991b1b' },
+  };
+
+  return (
+    <div style={{
+      width: expandido ? 300 : 40, flexShrink: 0, borderLeft: '1px solid var(--border)',
+      background: '#fafbfc', display: 'flex', flexDirection: 'column', transition: 'width 0.2s',
+      overflow: 'hidden',
+    }}>
+      {/* Toggle */}
+      <button
+        onClick={() => setExpandido(!expandido)}
+        style={{
+          background: 'none', border: 'none', cursor: 'pointer', padding: '12px 10px',
+          display: 'flex', alignItems: 'center', justifyContent: expandido ? 'space-between' : 'center',
+          borderBottom: '1px solid var(--border)', color: 'var(--ink)', fontFamily: 'inherit',
+        }}
+      >
+        {expandido && <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>Contexto del cliente</span>}
+        <Info size={15} color="var(--muted)" />
+      </button>
+
+      {expandido && (
+        <div style={{ flex: 1, overflow: 'auto', padding: '12px 14px' }}>
+
+          {/* Datos de empresa */}
+          {empresa && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>
+                Empresa
+              </div>
+              <div style={{ background: '#fff', borderRadius: 10, border: '1px solid var(--border)', padding: '10px 12px', fontSize: '0.8rem', lineHeight: 1.7 }}>
+                <div style={{ fontWeight: 700, color: 'var(--ink)', marginBottom: 4 }}>{empresa.nombre}</div>
+                {empresa.actividad && <div style={{ color: 'var(--muted)' }}>{empresa.actividad}</div>}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 10px', marginTop: 6 }}>
+                  {empresa.tamano && <span style={{ fontSize: '0.72rem', color: 'var(--ink)', background: '#f0f0f0', padding: '1px 6px', borderRadius: 4 }}>{empresa.tamano}</span>}
+                  {empresa.empleados && <span style={{ fontSize: '0.72rem', color: 'var(--ink)', background: '#f0f0f0', padding: '1px 6px', borderRadius: 4 }}>{empresa.empleados} emp.</span>}
+                  {empresa.ccaa && <span style={{ fontSize: '0.72rem', color: 'var(--ink)', background: '#f0f0f0', padding: '1px 6px', borderRadius: 4 }}>{empresa.ccaa}</span>}
+                  {empresa.forma_juridica && <span style={{ fontSize: '0.72rem', color: 'var(--ink)', background: '#f0f0f0', padding: '1px 6px', borderRadius: 4 }}>{empresa.forma_juridica}</span>}
+                </div>
+                {empresa.facturacion && (
+                  <div style={{ fontSize: '0.72rem', color: 'var(--muted)', marginTop: 4 }}>
+                    Fact.: {fmtImporte(empresa.facturacion)}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Expedientes */}
+          {expedientes.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <FileText size={11} /> Expedientes ({expedientes.length})
+              </div>
+              {expedientes.map(exp => (
+                <div key={exp.id} style={{
+                  background: '#fff', borderRadius: 8, border: '1px solid var(--border)',
+                  padding: '8px 10px', marginBottom: 6, fontSize: '0.78rem',
+                }}>
+                  <div style={{ fontWeight: 600, color: 'var(--ink)', marginBottom: 4, lineHeight: 1.4 }}>
+                    {exp.titulo}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <span style={{
+                      background: exp.fase === 'cobro' ? '#dcfce7' : exp.fase === 'presentacion' ? '#fef3c7' : '#e0f2fe',
+                      color: exp.fase === 'cobro' ? '#166534' : exp.fase === 'presentacion' ? '#92400e' : '#1e40af',
+                      padding: '1px 8px', borderRadius: 10, fontSize: '0.7rem', fontWeight: 700,
+                    }}>
+                      {exp.fase_label}
+                    </span>
+                    {exp.dias_restantes !== null && exp.dias_restantes <= 14 && (
+                      <span style={{
+                        display: 'flex', alignItems: 'center', gap: 3,
+                        background: exp.dias_restantes <= 3 ? '#fef2f2' : '#fffbeb',
+                        color: exp.dias_restantes <= 3 ? '#991b1b' : '#92400e',
+                        padding: '1px 6px', borderRadius: 8, fontSize: '0.68rem', fontWeight: 700,
+                      }}>
+                        <AlertTriangle size={9} />
+                        {exp.dias_restantes <= 0 ? 'Vencido' : `${exp.dias_restantes}d`}
+                      </span>
+                    )}
+                    {exp.fee_amount && (
+                      <span style={{
+                        display: 'flex', alignItems: 'center', gap: 3,
+                        fontSize: '0.68rem', color: 'var(--muted)',
+                      }}>
+                        <CreditCard size={9} />
+                        Fee: {fmtImporte(exp.fee_amount)} ({exp.fee_estado ?? 'pendiente'})
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Matches */}
+          {matches.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Zap size={11} /> Matches ({matches.length})
+              </div>
+              {matches.map(match => {
+                const colores = estadoColors[match.estado] ?? { bg: '#f0f0f0', fg: '#555' };
+                return (
+                  <div key={match.id} style={{
+                    background: '#fff', borderRadius: 8, border: '1px solid var(--border)',
+                    padding: '8px 10px', marginBottom: 6, fontSize: '0.78rem',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 }}>
+                      <span style={{ fontWeight: 600, color: 'var(--ink)', lineHeight: 1.3, flex: 1 }}>
+                        {match.titulo}
+                      </span>
+                      <span style={{
+                        flexShrink: 0, fontSize: '0.7rem', fontWeight: 800,
+                        color: match.score >= 70 ? '#166534' : match.score >= 50 ? '#92400e' : 'var(--muted)',
+                      }}>
+                        {match.score}%
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                      <span style={{
+                        background: colores.bg, color: colores.fg,
+                        padding: '1px 7px', borderRadius: 8, fontSize: '0.68rem', fontWeight: 600,
+                      }}>
+                        {match.estado}
+                      </span>
+                      {match.importe_maximo && (
+                        <span style={{ fontSize: '0.68rem', color: 'var(--muted)' }}>
+                          Hasta {fmtImporte(match.importe_maximo)}
+                        </span>
+                      )}
+                      {match.dias_restantes !== null && match.dias_restantes <= 14 && (
+                        <span style={{
+                          display: 'flex', alignItems: 'center', gap: 3,
+                          color: match.dias_restantes <= 7 ? '#991b1b' : '#92400e',
+                          fontSize: '0.68rem', fontWeight: 600,
+                        }}>
+                          <Clock size={9} />
+                          {match.dias_restantes <= 0 ? 'Vencido' : `${match.dias_restantes}d`}
+                        </span>
+                      )}
+                    </div>
+                    {match.organismo && (
+                      <div style={{ fontSize: '0.68rem', color: 'var(--muted)', marginTop: 3 }}>
+                        {match.organismo}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Solicitudes */}
+          {solicitudes.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <CheckCircle size={11} /> Solicitudes ({solicitudes.length})
+              </div>
+              {solicitudes.map(sol => (
+                <div key={sol.id} style={{
+                  background: '#fff', borderRadius: 8, border: '1px solid var(--border)',
+                  padding: '7px 10px', marginBottom: 4, fontSize: '0.76rem',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6,
+                }}>
+                  <span style={{ color: 'var(--ink)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {sol.titulo}
+                  </span>
+                  <span style={{
+                    fontSize: '0.68rem', fontWeight: 600,
+                    color: sol.estado === 'completada' ? '#166534' : '#92400e',
+                  }}>
+                    {sol.estado}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Sin datos */}
+          {!empresa && matches.length === 0 && expedientes.length === 0 && (
+            <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '0.82rem', padding: '30px 10px' }}>
+              Sin datos de contexto para este cliente
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Página principal ──────────────────────────────────────────────────── */
 export default function ChatsPage() {
   const [conversaciones, setConversaciones] = useState<Conversacion[]>([]);
   const [nifActivo, setNifActivo] = useState<string | null>(null);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
+  const [contextoCliente, setContextoCliente] = useState<ContextoCliente | null>(null);
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(true);
@@ -80,6 +340,7 @@ export default function ChatsPage() {
       if (res.ok) {
         const data = await res.json();
         setMensajes(data.mensajes ?? []);
+        if (data.contexto_cliente) setContextoCliente(data.contexto_cliente);
         // Actualizar no_leidos a 0 en la lista
         setConversaciones(prev =>
           prev.map(c => c.nif === nif ? { ...c, no_leidos: 0 } : c)
@@ -98,6 +359,7 @@ export default function ChatsPage() {
 
   useEffect(() => {
     if (nifActivo) {
+      setContextoCliente(null); // Reset al cambiar de conversación
       cargarMensajes(nifActivo);
       const interval = setInterval(() => cargarMensajes(nifActivo), 15_000);
       return () => clearInterval(interval);
@@ -275,7 +537,7 @@ export default function ChatsPage() {
         </div>
       </div>
 
-      {/* ── Panel derecho: chat activo ── */}
+      {/* ── Panel central: chat activo ── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#f8fafc', minWidth: 0 }}>
         {!nifActivo ? (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, color: 'var(--muted)' }}>
@@ -365,7 +627,7 @@ export default function ChatsPage() {
                               rel="noopener noreferrer"
                               style={{ display: 'block', marginTop: 6, fontSize: '0.78rem', color: esGestor ? 'rgba(255,255,255,0.85)' : '#0d9488', textDecoration: 'underline' }}
                             >
-                              📎 {m.adjunto_nombre ?? 'Adjunto'}
+                              {m.adjunto_nombre ?? 'Adjunto'}
                             </a>
                           )}
                         </div>
@@ -469,6 +731,11 @@ export default function ChatsPage() {
           </>
         )}
       </div>
+
+      {/* ── Panel derecho: contexto del cliente ── */}
+      {nifActivo && (
+        <PanelContexto contexto={contextoCliente} nif={nifActivo} />
+      )}
     </div>
   );
 }
