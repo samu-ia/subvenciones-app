@@ -38,14 +38,14 @@ export async function runMatchingForClient(nif: string): Promise<MatchRunResult>
 
   if (!clienteRaw) throw new Error(`Cliente no encontrado: ${nif}`);
 
-  // Cargar subvenciones activas
+  // Cargar subvenciones activas (incluyendo campos_extraidos del pipeline PDF)
   const { data: subvenciones } = await sb
     .from('subvenciones')
     .select(`
       id, bdns_id, titulo, organismo,
       ambito_geografico, comunidad_autonoma, provincia,
       estado_convocatoria, importe_maximo, importe_minimo,
-      presupuesto_total, plazo_fin, para_quien
+      presupuesto_total, plazo_fin, para_quien, campos_extraidos
     `)
     .not('estado_convocatoria', 'in', '("cerrada","suspendida")');
 

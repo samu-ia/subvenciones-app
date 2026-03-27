@@ -67,6 +67,11 @@ export interface SubvencionMatchProfile {
   beneficiarios_texto?: string[];      // array de textos libres tipo ["Pymes", "Autónomos"]
   para_quien?: string;                 // frase resumen de beneficiarios
   ia_confidence?: number;              // 0-1 confianza de la extracción IA
+  // JSONB del pipeline PDF real (15 campos estructurados)
+  campos_extraidos?: Record<string, unknown> | null;
+  // Internos calculados por enriquecerConCamposExtraidos
+  _sectores_todos?: boolean;
+  _localizacion_ce?: string[];
 }
 
 export interface MatchScoreDetalle {
@@ -86,11 +91,11 @@ export interface MatchScore {
   score_raw: number;                   // 0-100 puntos brutos
   hard_exclude: boolean;
   hard_exclude_razon?: string;
-  razon_exclusion?: string;            // v2: razón legible cuando score=0
+  razon_exclusion?: string;            // razón legible cuando score=0
   detalle: MatchScoreDetalle;
   motivos: string[];                   // frases positivas para mostrar al cliente
   alertas: string[];                   // posibles incompatibilidades
-  version: 'v1' | 'v2';               // qué motor se usó
+  version: 'v1' | 'v2' | 'v3';        // v3 = motor unificado con geoBonus + campos_extraidos
 }
 
 // ─── Mapas de normalización ───────────────────────────────────────────────────
@@ -200,14 +205,79 @@ function hardExclude(razon: string, version: 'v1' | 'v2'): MatchScore {
 // ─── Detectar si la subvención tiene datos v2 ────────────────────────────────
 
 function tieneDataV2(subvencion: SubvencionMatchProfile): boolean {
-  // Tiene datos v2 si hay requisitos, gastos, beneficiarios_texto, o para_quien
-  // (estos campos solo vienen de la extracción IA del PDF)
   return !!(
     (subvencion.requisitos && subvencion.requisitos.length > 0) ||
     (subvencion.gastos && subvencion.gastos.length > 0) ||
     (subvencion.beneficiarios_texto && subvencion.beneficiarios_texto.length > 0) ||
-    subvencion.para_quien
+    subvencion.para_quien ||
+    subvencion.campos_extraidos
   );
+}
+
+/**
+ * Enriquece el perfil de la subvención con datos de campos_extraidos (pipeline PDF).
+ * Fusiona cnae_incluidos/excluidos → sectores, beneficiarios_tipo → tipos_empresa,
+ * gastos_subvencionables → gastos, y extrae localizacion para geo checks.
+ */
+function enriquecerConCamposExtraidos(subvencion: SubvencionMatchProfile): SubvencionMatchProfile {
+  const ce = subvencion.campos_extraidos;
+  if (!ce) return subvencion;
+
+  const enriq = { ...subvencion };
+
+  // Sectores desde cnae_incluidos / cnae_excluidos
+  const sectoresActuales = [...(enriq.sectores ?? [])];
+  if (ce.cnae_incluidos === 'todos') {
+    enriq._sectores_todos = true;
+  } else if (Array.isArray(ce.cnae_incluidos)) {
+    const cnaesYa = new Set(sectoresActuales.filter(s => !s.excluido).map(s => (s.cnae_codigo ?? '').slice(0, 4)));
+    for (const cnae of ce.cnae_incluidos as string[]) {
+      const c4 = String(cnae).slice(0, 4);
+      if (!cnaesYa.has(c4)) sectoresActuales.push({ cnae_codigo: c4, nombre_sector: '', excluido: false });
+    }
+  }
+  if (Array.isArray(ce.cnae_excluidos)) {
+    const cnaesExclYa = new Set(sectoresActuales.filter(s => s.excluido).map(s => (s.cnae_codigo ?? '').slice(0, 4)));
+    for (const cnae of ce.cnae_excluidos as string[]) {
+      const c4 = String(cnae).slice(0, 4);
+      if (!cnaesExclYa.has(c4)) sectoresActuales.push({ cnae_codigo: c4, nombre_sector: '', excluido: true });
+    }
+  }
+  enriq.sectores = sectoresActuales;
+
+  // Tipo empresa desde beneficiarios_tipo (si no hay tipos_empresa normalizados)
+  if (ce.beneficiarios_tipo && !(enriq.tipos_empresa?.length)) {
+    const TIPO_MAP: Record<string, string> = {
+      'autónomos': 'autonomo', 'autonomos': 'autonomo', 'autónomo': 'autonomo',
+      'micropyme': 'micropyme', 'microempresa': 'micropyme',
+      'pyme': 'pyme', 'pequeña': 'pyme', 'mediana': 'pyme',
+      'gran_empresa': 'grande', 'grande': 'grande',
+    };
+    const tipo = TIPO_MAP[(ce.beneficiarios_tipo as string).toLowerCase()] ?? 'pyme';
+    enriq.tipos_empresa = [{ tipo, excluido: false }];
+  }
+
+  // Gastos subvencionables
+  if (Array.isArray(ce.gastos_subvencionables) && (ce.gastos_subvencionables as unknown[]).length > 0 && !(enriq.gastos?.length)) {
+    enriq.gastos = (ce.gastos_subvencionables as string[]).map(g => ({ categoria: g, descripcion: g, porcentaje_max: undefined }));
+  }
+
+  // Requisitos de tamaño / antigüedad (añade si no ya presentes)
+  const requisitosExtra = [...(enriq.requisitos ?? [])];
+  if (ce.tamano_max_empleados && !requisitosExtra.some(r => /empleados?/i.test(r.descripcion))) {
+    requisitosExtra.push({ tipo: 'empresa', descripcion: `Máximo ${ce.tamano_max_empleados} empleados`, obligatorio: true });
+  }
+  if (ce.antiguedad_min_anos && !requisitosExtra.some(r => /antigüedad|antiguedad/i.test(r.descripcion))) {
+    requisitosExtra.push({ tipo: 'empresa', descripcion: `Antigüedad mínima de ${ce.antiguedad_min_anos} años`, obligatorio: true });
+  }
+  enriq.requisitos = requisitosExtra;
+
+  // Localización desde campos_extraidos
+  if (Array.isArray(ce.localizacion) && (ce.localizacion as unknown[]).length > 0) {
+    enriq._localizacion_ce = ce.localizacion as string[];
+  }
+
+  return enriq;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -283,19 +353,35 @@ function evaluarHardExcludes(
     }
   }
 
-  // 6. Tamaño máximo de empleados (extraído de requisitos)
-  const limiteEmpleados = extraerLimiteEmpleados(subvencion.requisitos);
+  // 6. Tamaño máximo de empleados (directo de campos_extraidos o regex de requisitos)
+  const ce = subvencion.campos_extraidos;
+  const limiteEmpleados =
+    (ce?.tamano_max_empleados as number | null | undefined) ??
+    extraerLimiteEmpleados(subvencion.requisitos);
   if (limiteEmpleados !== null && cliente.num_empleados != null) {
     if (cliente.num_empleados > limiteEmpleados) {
       return `Tu empresa tiene ${cliente.num_empleados} empleados pero el máximo es ${limiteEmpleados}.`;
     }
   }
 
-  // 7. Antigüedad mínima (extraída de requisitos)
-  const antiguedadMin = extraerAntiguedadMinima(subvencion.requisitos);
+  // 7. Antigüedad mínima (directo de campos_extraidos o regex de requisitos)
+  const antiguedadMin =
+    (ce?.antiguedad_min_anos as number | null | undefined) ??
+    extraerAntiguedadMinima(subvencion.requisitos);
   if (antiguedadMin !== null && cliente.anos_antiguedad != null) {
     if (cliente.anos_antiguedad < antiguedadMin) {
       return `Tu empresa tiene ${cliente.anos_antiguedad} años de antigüedad pero se requieren al menos ${antiguedadMin}.`;
+    }
+  }
+
+  // 8. Localización de campos_extraidos (si hay y no es nacional)
+  if (subvencion._localizacion_ce?.length) {
+    const esNacional = subvencion._localizacion_ce.some(l => /nacional|estatal/i.test(l));
+    if (!esNacional && clienteCA) {
+      const locNorm = subvencion._localizacion_ce.map(l => normCA(l));
+      if (locNorm.some(l => l) && !locNorm.some(l => l === clienteCA)) {
+        return `Convocatoria para ${subvencion._localizacion_ce.join(', ')}, tu empresa está en ${clienteCA}.`;
+      }
     }
   }
 
@@ -390,6 +476,24 @@ function calcularMatchV2(
     );
     if (diasCierre <= 15 && diasCierre >= 0) {
       alertas.push(`Quedan solo ${diasCierre} días para el cierre del plazo`);
+    }
+  }
+
+  // ── GEO BONUS (0-15 pts) — bonus por coincidencia CA cuando supera hard exclude ─
+  let geoBonus = 0;
+  const ambitoGeo = subvencion.ambito_geografico ?? 'desconocido';
+  const clienteCA = normCA(cliente.comunidad_autonoma);
+  const subvCA = normCA(subvencion.comunidad_autonoma);
+  const locCE = subvencion._localizacion_ce ?? [];
+  const esNacionalGeo = ambitoGeo === 'nacional' || locCE.some(l => /nacional|estatal/i.test(l));
+
+  if (!esNacionalGeo && clienteCA) {
+    if (ambitoGeo === 'autonomico') {
+      const locNorm = locCE.map(l => normCA(l));
+      const coincide = (subvCA && subvCA === clienteCA) || locNorm.some(l => l === clienteCA);
+      if (coincide) { geoBonus = 15; motivos.push(`Convocatoria de tu comunidad (${clienteCA})`); }
+    } else if (ambitoGeo === 'local') {
+      geoBonus = 5; // pasó el hard exclude de provincia, bonus pequeño
     }
   }
 
@@ -543,22 +647,22 @@ function calcularMatchV2(
     tipo_empresa,
     importe,
     gastos,
-    // Legacy fields a 0 (v2 no los usa)
-    geografia: 0,
+    geografia: geoBonus, // geo bonus ahora en campo geografia
     sector: 0,
     estado: 0,
   };
 
-  let score_raw = cnae + tipo_empresa + importe + gastos;
+  let score_raw = cnae + tipo_empresa + importe + gastos + geoBonus;
 
-  // Cap por sector mismatch (mismo logic que v1 para coherencia)
+  // Cap por sector mismatch
   if (confirmedCnaeMismatch) {
     score_raw = Math.min(score_raw, 25);
   } else if (sectorMismatch) {
     score_raw = Math.min(score_raw, 39);
   }
 
-  const score = Math.min(1, score_raw / 100);
+  // Normalizar sobre 115 (100 base + 15 geo bonus máximo)
+  const score = Math.min(1, score_raw / 115);
 
   return {
     score: Math.round(score * 100) / 100,
@@ -567,7 +671,7 @@ function calcularMatchV2(
     detalle,
     motivos,
     alertas,
-    version: 'v2',
+    version: 'v3',
   };
 }
 
@@ -903,17 +1007,13 @@ function calcularMatchV1(
 
 /**
  * Calcula el match entre un cliente y una subvención.
- * Usa v2 (campos_extraidos del PDF) cuando hay datos enriquecidos disponibles.
- * Fallback a v1 (legacy) cuando no hay requisitos/gastos/beneficiarios.
+ * v3: Motor unificado — enriquece con campos_extraidos (PDF) y aplica geoBonus.
  */
 export function calcularMatch(
   cliente: ClienteMatchProfile,
   subvencion: SubvencionMatchProfile,
 ): MatchScore {
-  if (tieneDataV2(subvencion)) {
-    return calcularMatchV2(cliente, subvencion);
-  }
-  return calcularMatchV1(cliente, subvencion);
+  return calcularMatchV2(cliente, enriquecerConCamposExtraidos(subvencion));
 }
 
 // ─── Motor masivo ────────────────────────────────────────────────────────────
