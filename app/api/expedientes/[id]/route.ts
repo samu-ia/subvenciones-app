@@ -147,6 +147,33 @@ export async function PATCH(
   if (body.importe_solicitado !== undefined) campos.importe_solicitado = body.importe_solicitado;
   if (body.importe_concedido !== undefined) campos.importe_concedido = body.importe_concedido;
 
+  // ── Transición de fee_estado ──────────────────────────────────────────────
+  if (body.fee_estado !== undefined) {
+    const TRANSICIONES_FEE: Record<string, string[]> = {
+      pendiente: ['facturado'],
+      facturado: ['cobrado'],
+    };
+    const sbCheck = createServiceClient();
+    const { data: expFee } = await sbCheck
+      .from('expediente')
+      .select('fee_estado, fee_amount, nif, titulo')
+      .eq('id', id)
+      .maybeSingle();
+
+    const estadoActual = expFee?.fee_estado;
+    if (!estadoActual || estadoActual === 'no_aplica') {
+      return NextResponse.json({ error: 'El expediente no tiene fee pendiente' }, { status: 400 });
+    }
+    const permitidos = TRANSICIONES_FEE[estadoActual] ?? [];
+    if (!permitidos.includes(body.fee_estado)) {
+      return NextResponse.json(
+        { error: `Transición inválida: ${estadoActual} → ${body.fee_estado}. Permitidas: ${permitidos.join(', ')}` },
+        { status: 400 },
+      );
+    }
+    campos.fee_estado = body.fee_estado;
+  }
+
   if (Object.keys(campos).length === 0) {
     return NextResponse.json({ error: 'Nada que actualizar' }, { status: 400 });
   }
@@ -300,6 +327,29 @@ export async function PATCH(
         }).catch(() => {});
       }
     }
+  }
+
+  // ── Fee cobrado: crear alerta de confirmación de cierre ───────────────────
+  if (campos.fee_estado === 'cobrado') {
+    const { data: expCobrado } = await sb
+      .from('expediente')
+      .select('fee_amount, nif, titulo')
+      .eq('id', id)
+      .maybeSingle();
+
+    const feeAmt = expCobrado?.fee_amount;
+    const tituloExp = expCobrado?.titulo || `Expediente ${id.slice(0, 8)}`;
+
+    await sb.from('alertas').insert({
+      tipo: 'custom',
+      titulo: `✅ Fee cobrado — ${tituloExp}`,
+      descripcion: `Se ha confirmado el cobro del fee${feeAmt ? ` de ${feeAmt.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}` : ''}. Expediente cerrado económicamente.`,
+      prioridad: 'normal',
+      expediente_id: id,
+      nif: expCobrado?.nif ?? null,
+      resuelta: false,
+      auto_generada: true,
+    });
   }
 
   return NextResponse.json({ ok: true });
