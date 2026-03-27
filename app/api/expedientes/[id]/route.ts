@@ -129,6 +129,26 @@ export async function PATCH(
     if (!FASES_VALIDAS.includes(body.fase)) {
       return NextResponse.json({ error: `Fase inválida: ${body.fase}` }, { status: 400 });
     }
+    // Validar que no se salten fases del orden lineal (salvo estados terminales)
+    const TERMINALES = ['denegada', 'desistida'];
+    if (!TERMINALES.includes(body.fase)) {
+      const sbFaseCheck = createServiceClient();
+      const { data: expActual } = await sbFaseCheck.from('expediente').select('fase').eq('id', id).maybeSingle();
+      if (expActual?.fase) {
+        const idxActual = FASES_ORDEN.indexOf(expActual.fase);
+        const idxNueva = FASES_ORDEN.indexOf(body.fase);
+        if (idxActual >= 0 && idxNueva >= 0 && idxNueva > idxActual + 1) {
+          // Permitir salto solo si el cuerpo incluye una justificación o flag forzar
+          if (!body.forzar) {
+            const fasesSaltadas = FASES_ORDEN.slice(idxActual + 1, idxNueva).join(', ');
+            return NextResponse.json(
+              { error: `No puedes saltar de "${expActual.fase}" a "${body.fase}" sin pasar por: ${fasesSaltadas}. Usa forzar: true para saltarlas.` },
+              { status: 400 },
+            );
+          }
+        }
+      }
+    }
     // Validar importe_concedido antes de pasar a cobro
     if (body.fase === 'cobro') {
       const importe = body.importe_concedido ?? null;
@@ -254,6 +274,22 @@ export async function PATCH(
         fee_amount: feeAmount,
         fee_estado: 'pendiente',
       }).eq('id', id);
+
+      // Generar factura PDF en background (no bloquea)
+      if (nif) {
+        const clienteData = expedienteActual.cliente as Record<string, unknown> | null;
+        generateInvoice({
+          expedienteId: id,
+          nif,
+          nombreEmpresa: (clienteData?.nombre_empresa as string) ?? nif,
+          direccion: (clienteData?.domicilio_fiscal as string) ?? undefined,
+          ciudad: (clienteData?.ciudad as string) ?? undefined,
+          codigoPostal: (clienteData?.codigo_postal as string) ?? undefined,
+          tituloSubvencion: titulo,
+          importeConcedido,
+          feeAmount,
+        }).catch(err => console.error('[cobro] Error generando factura:', err));
+      }
 
       // Alerta en bandeja gestor
       await sb.from('alertas').insert({
