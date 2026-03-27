@@ -76,6 +76,14 @@ interface Expediente {
   contrato_firmado: boolean;
 }
 
+interface FaseData {
+  id: string;
+  fase: string;
+  orden: number;
+  fecha_inicio: string;
+  fecha_completada: string | null;
+}
+
 interface ChecklistItem {
   id: string;
   nombre: string;
@@ -1497,6 +1505,7 @@ export default function PortalPage() {
   const [expedienteActivo, setExpedienteActivo] = useState<Expediente | null>(null);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [cargandoChecklist, setCargandoChecklist] = useState(false);
+  const [fasesData, setFasesData] = useState<FaseData[]>([]);
   const [subiendoDoc, setSubiendoDoc] = useState<string | null>(null);
   const [vista, setVista] = useState<Vista>('dashboard');
   const [matchSolicitando, setMatchSolicitando] = useState<MatchItem | null>(null);
@@ -1514,9 +1523,15 @@ export default function PortalPage() {
       if (!user) { router.replace('/'); return; }
 
       const { data: perfil } = await supabase
-        .from('perfiles').select('rol, nif').eq('id', user.id).maybeSingle();
+        .from('perfiles').select('rol, nif, onboarding_data').eq('id', user.id).maybeSingle();
 
       if (perfil?.rol === 'admin') { router.replace('/clientes'); return; }
+
+      // Si tiene NIF pero no completó onboarding → redirigir al wizard
+      if (perfil?.nif && !perfil?.onboarding_data) {
+        router.replace('/portal/onboarding');
+        return;
+      }
 
       if (perfil?.nif) {
         // Cargar datos del cliente
@@ -1670,13 +1685,9 @@ export default function PortalPage() {
   }
 
   if (setupPendiente) {
-    return <SetupEmpresa onComplete={async (nif) => {
-      // Recargar datos tras setup
-      const { data: cli } = await supabase.from('cliente')
-        .select('nif,nombre_empresa,nombre_normalizado,ciudad,comunidad_autonoma,cnae_codigo,cnae_descripcion,tamano_empresa,num_empleados,facturacion_anual,provincia,forma_juridica,anos_antiguedad,descripcion_actividad')
-        .eq('nif', nif).maybeSingle();
-      setCliente(cli);
-      setSetupPendiente(false);
+    return <SetupEmpresa onComplete={async () => {
+      // Tras vincular empresa, redirigir al wizard de onboarding
+      router.replace('/portal/onboarding');
     }} />;
   }
 

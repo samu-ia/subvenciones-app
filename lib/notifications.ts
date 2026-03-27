@@ -303,3 +303,165 @@ export async function sendWelcomeEmail(
     html: buildWelcomeEmailHtml(clienteNombre, portalUrl),
   });
 }
+
+// ─── Email de notificación de matches ───────────────────────────────────────
+
+export interface MatchSummaryItem {
+  titulo_comercial: string;
+  importe_maximo: number | null;
+  score: number;
+}
+
+/**
+ * Formatea un importe numérico a texto legible (ej. 120K €, 1.5M €).
+ */
+function formatImporte(importe: number | null | undefined): string | null {
+  if (!importe) return null;
+  if (importe >= 1_000_000) return `${(importe / 1_000_000).toFixed(1)}M €`;
+  if (importe >= 1_000) return `${(importe / 1_000).toFixed(0)}K €`;
+  return `${importe.toLocaleString('es-ES')} €`;
+}
+
+/**
+ * Construye el HTML del email de notificación de nuevos matches.
+ */
+export function buildMatchNotificationHtml(
+  clienteNombre: string,
+  totalMatches: number,
+  topMatches: MatchSummaryItem[],
+  portalUrl: string,
+): string {
+  const matchRows = topMatches.map((m, i) => {
+    const importe = formatImporte(m.importe_maximo);
+    const scorePct = Math.round(m.score * 100);
+    return `
+        <tr>
+          <td style="padding:12px 0;border-bottom:1px solid #f1f5f9;vertical-align:top">
+            <div style="display:flex;align-items:flex-start;gap:12px">
+              <div style="flex-shrink:0;width:28px;height:28px;background:#fff7ed;border:1px solid #fed7aa;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#f97316">${i + 1}</div>
+              <div style="flex:1;min-width:0">
+                <p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#0d1f3c;line-height:1.3">${m.titulo_comercial}</p>
+                <div style="display:flex;gap:12px;flex-wrap:wrap">
+                  <span style="font-size:13px;color:#f97316;font-weight:600">${scorePct}% encaje</span>
+                  ${importe ? `<span style="font-size:13px;color:#059669;font-weight:600">Hasta ${importe}</span>` : ''}
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>`;
+  }).join('');
+
+  const masMatches = totalMatches > 3
+    ? `<p style="margin:0 0 24px;font-size:13px;color:#64748b;text-align:center">…y ${totalMatches - 3} subvenciones más en tu portal</p>`
+    : '';
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f6fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <div style="max-width:560px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
+    <!-- Header -->
+    <div style="background:#0d1f3c;padding:28px 32px">
+      <div style="display:inline-flex;align-items:center;gap:10px">
+        <div style="width:36px;height:36px;background:#f97316;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px">AP</div>
+        <span style="color:#fff;font-weight:700;font-size:17px">AyudaPyme</span>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:32px">
+      <p style="margin:0 0 8px;font-size:14px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Nuevas oportunidades</p>
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:800;color:#0d1f3c;line-height:1.3">
+        ${totalMatches === 1 ? 'Hemos encontrado 1 subvención' : `Hemos encontrado ${totalMatches} subvenciones`} para ti
+      </h1>
+
+      <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6">
+        Hola <strong>${clienteNombre}</strong>, nuestro motor de matching ha identificado nuevas subvenciones que encajan con el perfil de tu empresa.
+      </p>
+
+      <!-- Top matches -->
+      <div style="background:#f8fafc;border-radius:12px;padding:20px;margin-bottom:20px">
+        <p style="margin:0 0 12px;font-size:13px;font-weight:700;color:#0d1f3c;text-transform:uppercase;letter-spacing:0.05em">
+          ${topMatches.length === 1 ? 'Tu mejor match' : `Tus ${topMatches.length} mejores matches`}
+        </p>
+        <table style="width:100%;border-collapse:collapse">
+          ${matchRows}
+        </table>
+      </div>
+
+      ${masMatches}
+
+      <!-- CTA -->
+      <a href="${portalUrl}" style="display:block;text-align:center;background:#0d1f3c;color:#fff;text-decoration:none;padding:14px 24px;border-radius:10px;font-size:15px;font-weight:700;margin-bottom:24px">
+        Ver todas mis subvenciones →
+      </a>
+
+      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center">
+        AyudaPyme · Solo cobramos si consigues la subvención
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+/**
+ * Envía email notificando al cliente que tiene nuevos matches.
+ * Consulta la BD para obtener el top 3 y el total de matches.
+ */
+export async function sendMatchNotificationEmail(
+  toEmail: string,
+  clienteNombre: string,
+  nif: string,
+  portalUrl: string,
+): Promise<{ ok: boolean; error?: string; totalMatches?: number }> {
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const sb = createServiceClient();
+
+  // Obtener matches no excluidos, ordenados por score desc
+  const { data: matches, error } = await sb
+    .from('cliente_subvencion_match')
+    .select('score, subvencion_id, es_hard_exclude')
+    .eq('nif', nif)
+    .eq('es_hard_exclude', false)
+    .gte('score', 0.35)
+    .order('score', { ascending: false });
+
+  if (error || !matches?.length) {
+    return { ok: false, error: error?.message ?? 'Sin matches para notificar', totalMatches: 0 };
+  }
+
+  // Obtener datos de las top 3 subvenciones
+  const top3Ids = matches.slice(0, 3).map(m => m.subvencion_id);
+  const { data: subvenciones } = await sb
+    .from('subvenciones')
+    .select('id, titulo_comercial, titulo, importe_maximo')
+    .in('id', top3Ids);
+
+  if (!subvenciones?.length) {
+    return { ok: false, error: 'No se pudieron cargar subvenciones del match' };
+  }
+
+  // Mapear top 3 preservando el orden por score
+  const topMatches: MatchSummaryItem[] = matches.slice(0, 3).map(m => {
+    const subv = subvenciones.find(s => s.id === m.subvencion_id);
+    return {
+      titulo_comercial: subv?.titulo_comercial || subv?.titulo || 'Subvención disponible',
+      importe_maximo: subv?.importe_maximo ?? null,
+      score: m.score,
+    };
+  });
+
+  const html = buildMatchNotificationHtml(clienteNombre, matches.length, topMatches, portalUrl);
+
+  const { sendTransactionalEmail } = await import('@/lib/email');
+  const result = await sendTransactionalEmail({
+    to: toEmail,
+    subject: matches.length === 1
+      ? `${clienteNombre}, tienes 1 nueva subvención disponible`
+      : `${clienteNombre}, tienes ${matches.length} subvenciones disponibles`,
+    html,
+  });
+
+  return { ...result, totalMatches: matches.length };
+}

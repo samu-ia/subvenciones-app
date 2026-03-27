@@ -13,6 +13,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { calcularMatch } from '@/lib/matching/engine';
 import type { ClienteMatchProfile, SubvencionMatchProfile } from '@/lib/matching/engine';
 import { requireRole } from '@/lib/auth/helpers';
+import { sendMatchNotificationEmail } from '@/lib/notifications';
 
 // Foco geográfico: false = toda España (por defecto)
 // true solo si GALICIA_FOCUS=true está explícitamente en .env
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
   // Cargar clientes
   const clientesQuery = sb
     .from('cliente')
-    .select('nif,nombre_empresa,cnae_codigo,cnae_descripcion,comunidad_autonoma,provincia,ciudad,tamano_empresa,forma_juridica,num_empleados,facturacion_anual,anos_antiguedad');
+    .select('nif,nombre_empresa,cnae_codigo,cnae_descripcion,comunidad_autonoma,provincia,ciudad,tamano_empresa,forma_juridica,num_empleados,facturacion_anual,anos_antiguedad,email_normalizado');
   if (filtroNif) clientesQuery.eq('nif', filtroNif);
   const { data: clientes, error: errC } = await clientesQuery;
   if (errC) return NextResponse.json({ error: errC.message }, { status: 500 });
@@ -89,6 +90,8 @@ export async function POST(request: NextRequest) {
   // Calcular matches
   let nuevos = 0, actualizados = 0, excluidos = 0;
   const erroresDetalle: string[] = [];
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ayudapyme.es';
+  let emailsEnviados = 0;
 
   for (const clienteRaw of (clientes ?? [])) {
     const cliente: ClienteMatchProfile = {
@@ -105,6 +108,8 @@ export async function POST(request: NextRequest) {
       facturacion_anual: clienteRaw.facturacion_anual,
       anos_antiguedad: clienteRaw.anos_antiguedad,
     };
+
+    let nuevosCliente = 0;
 
     for (const subv of subvProfiles) {
       const scoreResult = calcularMatch(cliente, subv);
@@ -144,8 +149,24 @@ export async function POST(request: NextRequest) {
           const { error } = await sb.from('cliente_subvencion_match').insert(row);
           if (error) erroresDetalle.push(`${cliente.nif}/${subv.bdns_id}: ${error.message}`);
           else if (scoreResult.hard_exclude) excluidos++;
-          else nuevos++;
+          else { nuevos++; nuevosCliente++; }
         }
+      }
+    }
+
+    // Enviar email de notificación si se encontraron nuevos matches
+    if (nuevosCliente > 0 && clienteRaw.email_normalizado) {
+      try {
+        const res = await sendMatchNotificationEmail(
+          clienteRaw.email_normalizado,
+          clienteRaw.nombre_empresa || clienteRaw.nif,
+          clienteRaw.nif,
+          `${siteUrl}/portal`,
+        );
+        if (res.ok) emailsEnviados++;
+        else console.warn(`[matching/run] Email no enviado a ${clienteRaw.nif}: ${res.error}`);
+      } catch (err) {
+        console.error(`[matching/run] Error enviando email a ${clienteRaw.nif}:`, (err as Error).message);
       }
     }
   }
@@ -157,6 +178,7 @@ export async function POST(request: NextRequest) {
     nuevos,
     actualizados,
     excluidos,
+    emails_enviados: emailsEnviados,
     errores: erroresDetalle.slice(0, 10),
   });
 }
