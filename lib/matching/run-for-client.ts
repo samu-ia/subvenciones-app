@@ -138,7 +138,7 @@ export async function runMatchingForClient(nif: string): Promise<MatchRunResult>
     if (scoreResult.version === 'v2') v2Count++;
     else v1Count++;
 
-    if (scoreResult.score < 0.35 && !scoreResult.hard_exclude) continue;
+    if (scoreResult.score < 0.28 && !scoreResult.hard_exclude) continue;
 
     const row = {
       nif:             cliente.nif,

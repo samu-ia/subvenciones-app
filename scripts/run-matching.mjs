@@ -214,10 +214,12 @@ function evaluarHardExcludes(cliente, subvencion) {
     }
   }
 
-  // Localización desde campos_extraidos (si el pipeline PDF la extrajo)
-  if (ce?.localizacion && Array.isArray(ce.localizacion) && ce.localizacion.length > 0) {
+  // Localización desde campos_extraidos — solo hard-exclude si TAMBIÉN ambito_geografico='autonomico'
+  // (los datos de PDF son IA y pueden tener errores, no usarlos como única fuente de exclusión)
+  if (ce?.localizacion && Array.isArray(ce.localizacion) && ce.localizacion.length > 0
+      && ambito === 'autonomico' && clienteCA) {
     const esNacional = ce.localizacion.some(l => /nacional|estatal/i.test(l));
-    if (!esNacional && clienteCA) {
+    if (!esNacional) {
       const locNorm = ce.localizacion.map(l => normCA(l));
       if (locNorm.some(l => l) && !locNorm.some(l => l === clienteCA)) {
         return `Convocatoria para ${ce.localizacion.join(', ')}, tu empresa está en ${clienteCA}.`;
@@ -500,9 +502,9 @@ function calcularMatchV2(cliente, subvencion) {
 
   const detalle = { cnae, tipo_empresa, importe, gastos, geo_bonus: geoBonus, sector: 0, estado: 0 };
   let score_raw = cnae + tipo_empresa + importe + gastos + geoBonus;
-  if (confirmedCnaeMismatch) score_raw = Math.min(score_raw, 25);
-  else if (sectorMismatch) score_raw = Math.min(score_raw, 39);
-  // Base máxima 115 (100 + 15 geo bonus); normalizar sobre 100
+  if (confirmedCnaeMismatch) score_raw = Math.min(score_raw, 35);
+  else if (sectorMismatch) score_raw = Math.min(score_raw, 50);
+  // Base máxima 115 (100 + 15 geo bonus); normalizar
   const score = Math.min(1, score_raw / 115);
   return { score: Math.round(score * 100) / 100, score_raw, hard_exclude: false, detalle, motivos, alertas, version: 'v3' };
 }
@@ -626,7 +628,7 @@ async function main() {
 
   // ─── Calcular matches ──────────────────────────────────────────────────────
   let guardados = 0, excluidos = 0, bajos = 0;
-  const MIN_SCORE = 0.35;
+  const MIN_SCORE = 0.28;
 
   for (const cliente of clientes) {
     const toSave = [];

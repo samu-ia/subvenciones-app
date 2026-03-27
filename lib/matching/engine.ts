@@ -374,10 +374,11 @@ function evaluarHardExcludes(
     }
   }
 
-  // 8. Localización de campos_extraidos (si hay y no es nacional)
-  if (subvencion._localizacion_ce?.length) {
+  // 8. Localización de campos_extraidos — solo si TAMBIÉN ambito='autonomico'
+  // (datos IA del PDF pueden tener errores; no excluir solo por este campo)
+  if (subvencion._localizacion_ce?.length && ambito === 'autonomico' && clienteCA) {
     const esNacional = subvencion._localizacion_ce.some(l => /nacional|estatal/i.test(l));
-    if (!esNacional && clienteCA) {
+    if (!esNacional) {
       const locNorm = subvencion._localizacion_ce.map(l => normCA(l));
       if (locNorm.some(l => l) && !locNorm.some(l => l === clienteCA)) {
         return `Convocatoria para ${subvencion._localizacion_ce.join(', ')}, tu empresa está en ${clienteCA}.`;
@@ -656,9 +657,9 @@ function calcularMatchV2(
 
   // Cap por sector mismatch
   if (confirmedCnaeMismatch) {
-    score_raw = Math.min(score_raw, 25);
+    score_raw = Math.min(score_raw, 35);
   } else if (sectorMismatch) {
-    score_raw = Math.min(score_raw, 39);
+    score_raw = Math.min(score_raw, 50);
   }
 
   // Normalizar sobre 115 (100 base + 15 geo bonus máximo)
@@ -983,9 +984,9 @@ function calcularMatchV1(
   let score_raw = geo + tipo + sector + estado + importe;
 
   if (confirmedCnaeMismatch) {
-    score_raw = Math.min(score_raw, 25);
+    score_raw = Math.min(score_raw, 35);
   } else if (sectorMismatch) {
-    score_raw = Math.min(score_raw, 39);
+    score_raw = Math.min(score_raw, 50);
   }
 
   const score = Math.min(1, score_raw / 100);
