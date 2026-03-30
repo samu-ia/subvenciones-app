@@ -401,90 +401,69 @@ export default function ExpedientesPage() {
   }
 
   return (
-    <div style={{ padding: '40px', maxWidth: '1600px', margin: '0 auto' }}>
+    <div style={{ padding: '32px 40px', maxWidth: '1600px', margin: '0 auto' }}>
       {/* Header */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '24px',
-        flexWrap: 'wrap',
         gap: '16px',
       }}>
         <div>
-          <h1 style={{
-            fontSize: '28px',
-            fontWeight: '700',
-            color: 'var(--ink)',
-            marginBottom: '8px',
-          }}>
+          <h1 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--ink)', marginBottom: '2px', letterSpacing: '-0.02em' }}>
             Expedientes
           </h1>
-          <p style={{ color: 'var(--ink2)', fontSize: '15px' }}>
-            Seguimiento de expedientes de subvenciones
+          <p style={{ color: 'var(--muted)', fontSize: '13px' }}>
+            {expedientes.length} expediente{expedientes.length !== 1 ? 's' : ''} en seguimiento
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* View toggle tabs */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* View toggle */}
           <div style={{
-            display: 'flex',
-            borderRadius: '8px',
-            border: '1px solid var(--border)',
-            overflow: 'hidden',
+            display: 'flex', borderRadius: '8px',
+            border: '1px solid var(--border)', overflow: 'hidden',
+            background: 'var(--surface)',
           }}>
             <button
               onClick={() => setView('lista')}
               style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '8px 16px',
-                border: 'none',
-                fontSize: '13px', fontWeight: '600',
-                cursor: 'pointer',
-                backgroundColor: view === 'lista' ? 'var(--teal)' : 'var(--surface)',
+                display: 'flex', alignItems: 'center', gap: '5px',
+                padding: '7px 14px', border: 'none',
+                fontSize: '12px', fontWeight: '600', cursor: 'pointer',
+                background: view === 'lista' ? '#0d9488' : 'transparent',
                 color: view === 'lista' ? '#fff' : 'var(--ink2)',
                 transition: 'all 0.15s',
               }}
             >
-              <List size={15} />
-              Lista
+              <List size={13} /> Lista
             </button>
             <button
               onClick={() => setView('kanban')}
               style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '8px 16px',
-                border: 'none',
+                display: 'flex', alignItems: 'center', gap: '5px',
+                padding: '7px 14px', border: 'none',
                 borderLeft: '1px solid var(--border)',
-                fontSize: '13px', fontWeight: '600',
-                cursor: 'pointer',
-                backgroundColor: view === 'kanban' ? 'var(--teal)' : 'var(--surface)',
+                fontSize: '12px', fontWeight: '600', cursor: 'pointer',
+                background: view === 'kanban' ? '#0d9488' : 'transparent',
                 color: view === 'kanban' ? '#fff' : 'var(--ink2)',
                 transition: 'all 0.15s',
               }}
             >
-              <LayoutGrid size={15} />
-              Kanban
+              <LayoutGrid size={13} /> Kanban
             </button>
           </div>
 
           <Link href="/expedientes/nuevo">
             <button style={{
-              backgroundColor: 'var(--teal)',
-              color: 'white',
-              padding: '10px 20px',
-              borderRadius: '8px',
-              border: 'none',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              boxShadow: 'var(--s1)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
+              background: '#0d9488', color: 'white',
+              padding: '8px 16px', borderRadius: '8px', border: 'none',
+              fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '6px',
             }}>
-              <FolderOpen size={16} />
-              Crear expediente
+              <FolderOpen size={14} />
+              Nuevo expediente
             </button>
           </Link>
         </div>

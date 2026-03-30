@@ -34,36 +34,59 @@ export default function DashboardShell({
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
       {/* NAV TOP */}
       <nav style={{
-        background: "var(--surface)",
-        borderBottom: "1px solid var(--border)",
+        background: "#0d1f3c",
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
         height: 60,
         display: "flex", alignItems: "center",
-        padding: "0 32px",
+        padding: "0 20px 0 0",
         justifyContent: "space-between",
         position: "sticky", top: 0, zIndex: 50,
-        boxShadow: "var(--s1)",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+        {/* Logo area — same width as sidebar */}
+        <div style={{
+          width: 232, flexShrink: 0,
+          display: "flex", alignItems: "center", gap: 9,
+          padding: "0 20px",
+          borderRight: "1px solid rgba(255,255,255,0.06)",
+          height: "100%",
+        }}>
           <div style={{
-            width: 32, height: 32, background: "var(--navy)",
-            borderRadius: 8, display: "flex", alignItems: "center",
+            width: 30, height: 30, background: "#0d9488",
+            borderRadius: 7, display: "flex", alignItems: "center",
             justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: "0.78rem",
+            letterSpacing: "-0.02em",
           }}>AP</div>
-          <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "var(--navy)" }}>
+          <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "#fff", letterSpacing: "-0.01em" }}>
             AyudaPyme
           </span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+
+        {/* Right side */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, paddingRight: 8 }}>
           {rol === 'tramitador' && (
             <span style={{
-              fontSize: "0.7rem", fontWeight: 600, color: "#7c3aed",
-              background: "#f5f3ff", padding: "2px 8px", borderRadius: 20,
+              fontSize: "0.68rem", fontWeight: 600, color: "#a78bfa",
+              background: "rgba(139,92,246,0.15)", padding: "2px 9px", borderRadius: 20,
+              border: "1px solid rgba(139,92,246,0.25)",
             }}>
               Tramitador
             </span>
           )}
-          <div style={{ fontSize: "0.78rem", color: "var(--muted)" }}>
-            {userEmail}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            background: "rgba(255,255,255,0.06)", borderRadius: 8,
+            padding: "5px 12px", border: "1px solid rgba(255,255,255,0.08)",
+          }}>
+            <div style={{
+              width: 22, height: 22, borderRadius: "50%",
+              background: "#0d9488", display: "flex", alignItems: "center",
+              justifyContent: "center", color: "#fff", fontSize: "0.65rem", fontWeight: 700,
+            }}>
+              {userEmail.charAt(0).toUpperCase()}
+            </div>
+            <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.6)" }}>
+              {userEmail}
+            </div>
           </div>
         </div>
       </nav>
@@ -71,7 +94,7 @@ export default function DashboardShell({
       {/* BODY */}
       <div style={{ display: "flex", minHeight: "calc(100vh - 60px)" }}>
         <Sidebar rol={rol} />
-        <main style={{ flex: 1, padding: "32px 36px 60px", overflowY: "auto" }}>
+        <main style={{ flex: 1, overflowY: "auto", background: "var(--bg)" }}>
           {children}
         </main>
       </div>

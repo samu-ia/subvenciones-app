@@ -82,25 +82,25 @@ export default function ClientesPage() {
   }
 
   return (
-    <div style={{ padding: '40px', maxWidth: 1200, margin: '0 auto' }}>
+    <div style={{ padding: '32px 40px', maxWidth: 1200, margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: '#0d1f3c', marginBottom: 4 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)', marginBottom: 2, letterSpacing: '-0.02em' }}>
             Clientes
           </h1>
-          <p style={{ color: '#64748b', fontSize: 14 }}>
+          <p style={{ color: 'var(--muted)', fontSize: 13 }}>
             {clientes.length} empresa{clientes.length !== 1 ? 's' : ''} en cartera
           </p>
         </div>
         <Link href="/clientes/nuevo">
           <button style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            backgroundColor: '#0d9488', color: 'white',
-            padding: '10px 20px', borderRadius: 8, border: 'none',
-            fontSize: 14, fontWeight: 600, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 6,
+            background: '#0d9488', color: 'white',
+            padding: '8px 16px', borderRadius: 8, border: 'none',
+            fontSize: 13, fontWeight: 600, cursor: 'pointer',
           }}>
-            <Plus size={16} /> Nuevo cliente
+            <Plus size={14} /> Nuevo cliente
           </button>
         </Link>
       </div>
