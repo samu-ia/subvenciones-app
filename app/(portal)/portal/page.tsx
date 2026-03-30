@@ -47,6 +47,7 @@ interface MatchItem {
     objeto?: string;
     resumen_ia?: string;
     para_quien?: string;
+    puntos_clave?: string[];
     importe_maximo?: number;
     presupuesto_total?: number;
     porcentaje_financiacion?: number;
@@ -705,6 +706,12 @@ function MatchCard({
               })()}
             </h3>
             {subv.organismo && <p style={{ fontSize: '0.75rem', color: C.muted, marginTop: 3, wordBreak: 'break-word' }}>{subv.organismo}</p>}
+            {/* Para quién — hace la relevancia obvia de un vistazo */}
+            {subv.para_quien && (
+              <p style={{ fontSize: '0.78rem', color: '#1e40af', fontStyle: 'italic', marginTop: 5, lineHeight: 1.5, wordBreak: 'break-word' }}>
+                👤 {subv.para_quien}
+              </p>
+            )}
           </div>
           {!isMobile && (
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -731,22 +738,29 @@ function MatchCard({
           </div>
         )}
 
-        {/* Importe */}
+        {/* Importe + fee estimado */}
         {(subv.importe_maximo || subv.presupuesto_total) && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <span style={{ fontSize: '0.72rem', color: C.muted }}>
-              {subv.importe_maximo ? 'Hasta:' : 'Presupuesto del programa:'}
-            </span>
-            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: C.teal }}>
-              {fmtE(subv.importe_maximo ?? subv.presupuesto_total)}
-            </span>
-            {subv.porcentaje_financiacion && (
-              <span style={{ fontSize: '0.72rem', color: C.muted }}>({subv.porcentaje_financiacion}% cofinanciación)</span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: '0.72rem', color: C.muted }}>
+                {subv.importe_maximo ? 'Hasta:' : 'Presupuesto:'}
+              </span>
+              <span style={{ fontSize: '1.1rem', fontWeight: 800, color: C.teal }}>
+                {fmtE(subv.importe_maximo ?? subv.presupuesto_total)}
+              </span>
+              {subv.porcentaje_financiacion && (
+                <span style={{ fontSize: '0.72rem', color: C.muted }}>({subv.porcentaje_financiacion}% cofinanciado)</span>
+              )}
+            </div>
+            {subv.importe_maximo && subv.importe_maximo >= 5000 && (
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '3px 10px', fontSize: '0.72rem', color: '#065f46', fontWeight: 600 }}>
+                Solo pagas ~{fmtE(Math.max(300, subv.importe_maximo * 0.15))} si lo conseguimos
+              </div>
             )}
           </div>
         )}
 
-        {/* Resumen expandible */}
+        {/* Resumen expandible + puntos clave */}
         {expanded && (
           <div style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
             {subv.resumen_ia && (
@@ -755,10 +769,26 @@ function MatchCard({
                 <p style={{ fontSize: '0.8rem', color: C.ink2, lineHeight: 1.6, margin: 0, wordBreak: 'break-word' }}>{subv.resumen_ia}</p>
               </div>
             )}
+            {subv.puntos_clave && subv.puntos_clave.length > 0 && (
+              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 14px' }}>
+                <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#92400e', marginBottom: 6 }}>LO QUE NECESITAS SABER</p>
+                <ul style={{ margin: 0, paddingLeft: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {subv.puntos_clave.slice(0, 4).map((punto, i) => (
+                    <li key={i} style={{ fontSize: '0.78rem', color: '#78350f', display: 'flex', alignItems: 'flex-start', gap: 6, wordBreak: 'break-word' }}>
+                      <span style={{ color: '#f59e0b', flexShrink: 0, marginTop: 1 }}>▸</span>
+                      {punto}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {subv.plazo_fin && (
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <Clock size={12} color={C.muted} />
-                <span style={{ fontSize: '0.78rem', color: C.ink2 }}>Cierre: <strong>{fmt(subv.plazo_fin)}</strong></span>
+                <Clock size={12} color={dias !== null && dias <= 7 ? C.red : C.muted} />
+                <span style={{ fontSize: '0.78rem', color: dias !== null && dias <= 7 ? C.red : C.ink2, fontWeight: dias !== null && dias <= 7 ? 700 : 400 }}>
+                  Cierre: <strong>{fmt(subv.plazo_fin)}</strong>
+                  {dias !== null && dias >= 0 && dias <= 30 && ` · ${dias} días`}
+                </span>
               </div>
             )}
           </div>
@@ -1775,6 +1805,16 @@ export default function PortalPage() {
             </button>
           )}
 
+          {/* Trust bar */}
+          <div style={{ margin: '0 12px 12px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 12px' }}>
+            <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#065f46', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Shield size={11} /> Modelo sin riesgo
+            </p>
+            <p style={{ fontSize: '0.66rem', color: '#047857', margin: 0, lineHeight: 1.5 }}>
+              0€ si no se consigue.<br />Solo el <strong>15%</strong> al éxito.
+            </p>
+          </div>
+
           <div style={{ padding: '12px 20px', borderTop: `1px solid ${C.border}` }}>
             <p style={{ fontSize: '0.72rem', fontWeight: 700, color: C.muted, marginBottom: 2 }}>
               {nombre.length > 22 ? nombre.slice(0, 22) + '…' : nombre}
@@ -1888,6 +1928,41 @@ export default function PortalPage() {
                   </span>
                 </div>
               )}
+
+              {/* Alerta de plazos inminentes */}
+              {(() => {
+                const urgentes = matches.filter(m => {
+                  const d = diasRestantes(m.subvencion.plazo_fin);
+                  return d !== null && d >= 0 && d <= 7 && m.subvencion.estado_convocatoria === 'abierta' && !m.solicitud;
+                });
+                if (urgentes.length === 0) return null;
+                return (
+                  <div style={{
+                    background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+                    borderRadius: 14, padding: '14px 18px', marginBottom: 20,
+                    display: 'flex', alignItems: 'center', gap: 14, color: '#fff',
+                    boxShadow: '0 4px 16px rgba(220,38,38,0.3)',
+                  }}>
+                    <div style={{ fontSize: '1.5rem', flexShrink: 0 }}>⏰</div>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontWeight: 800, fontSize: '0.9rem', margin: 0 }}>
+                        {urgentes.length === 1
+                          ? `Una subvención cierra en ${diasRestantes(urgentes[0].subvencion.plazo_fin)} días`
+                          : `${urgentes.length} subvenciones cierran esta semana`}
+                      </p>
+                      <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.85)', margin: '3px 0 0' }}>
+                        {urgentes[0] && (() => { const s = urgentes[0].subvencion; const t = s.titulo_comercial || s.titulo; return t.length > 60 ? t.slice(0, 57) + '…' : t; })()}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setVista('ayudas')}
+                      style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 8, padding: '7px 14px', color: '#fff', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                    >
+                      Actuar ahora
+                    </button>
+                  </div>
+                );
+              })()}
 
               {/* Top 3 matches */}
               <h2 style={{ fontSize: '1rem', fontWeight: 800, color: C.navy, marginBottom: 14 }}>

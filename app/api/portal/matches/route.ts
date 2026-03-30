@@ -51,7 +51,7 @@ export async function GET() {
     .select(`
       id, score, motivos, estado, es_hard_exclude, detalle_scoring,
       subvenciones!inner(
-        id, bdns_id, titulo, titulo_comercial, organismo, objeto, resumen_ia, para_quien,
+        id, bdns_id, titulo, titulo_comercial, organismo, objeto, resumen_ia, para_quien, puntos_clave,
         importe_maximo, presupuesto_total, porcentaje_financiacion, plazo_fin, plazo_inicio,
         estado_convocatoria, ambito_geografico, url_oficial
       )
