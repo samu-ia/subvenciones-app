@@ -176,7 +176,11 @@ export function PortalProveedor() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {pendientes.map((pres) => {
+              {[...pendientes].sort((a, b) => {
+                const deadlineA = new Date(a.fechaSolicitud); deadlineA.setDate(deadlineA.getDate() + 5)
+                const deadlineB = new Date(b.fechaSolicitud); deadlineB.setDate(deadlineB.getDate() + 5)
+                return diasHasta(deadlineA) - diasHasta(deadlineB)
+              }).map((pres, index) => {
                 const expediente = expedientes.find((e) => e.id === pres.expedienteId)
                 if (!expediente) return null
                 const convocatoria = convocatorias.find((c) => c.idBdns === expediente.convocatoriaId)
@@ -197,6 +201,12 @@ export function PortalProveedor() {
                           <Bell size={11} />
                           NUEVA SOLICITUD
                         </span>
+                        {/* C1 — badge MAS URGENTE en la primera */}
+                        {index === 0 && pendientes.length > 1 && (
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full animate-pulse">
+                            🔴 MÁS URGENTE
+                          </span>
+                        )}
                         <AlertTriangle size={13} className={clsx(dias <= 2 ? 'text-red-500' : 'text-amber-500')} />
                         <span className={clsx('text-xs font-medium', dias <= 2 ? 'text-red-600' : 'text-amber-700')}>
                           Vence {dias <= 0 ? 'hoy' : `en ${dias} día${dias !== 1 ? 's' : ''}`}
@@ -408,10 +418,29 @@ export function PortalProveedor() {
                 )
               })
             )}
-            <div className="px-5 py-3 border-t border-slate-100 bg-slate-50">
-              <div className="flex gap-6 text-xs text-slate-600">
-                <span>Expedientes completados: <strong>{mockProveedor.expedientesCompletados}</strong></span>
-                <span>Tasa de éxito: <strong className="text-emerald-600">{mockProveedor.tasaExito}%</strong></span>
+            <div className="px-5 py-4 border-t border-slate-100 bg-gradient-to-r from-emerald-50 to-white">
+              <div className="flex flex-wrap items-center gap-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                    <Star size={18} className="text-emerald-600 fill-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Tu tasa de éxito</p>
+                    <p className="text-2xl font-bold text-emerald-600">{mockProveedor.tasaExito}%</p>
+                  </div>
+                </div>
+                <div className="h-10 w-px bg-slate-200 hidden sm:block" />
+                <div>
+                  <p className="text-xs text-slate-500">Proyectos completados</p>
+                  <p className="text-xl font-bold text-slate-800">{mockProveedor.expedientesCompletados}</p>
+                </div>
+                <div className="h-10 w-px bg-slate-200 hidden sm:block" />
+                <div>
+                  <p className="text-xs text-slate-500">Seleccionados de enviados</p>
+                  <p className="text-sm font-semibold text-slate-700">
+                    {enCurso.length} de {enCurso.length + enviados.length + misSolicitudes.filter((p) => p.estado === 'rechazado').length} solicitudes
+                  </p>
+                </div>
               </div>
             </div>
           </Card>

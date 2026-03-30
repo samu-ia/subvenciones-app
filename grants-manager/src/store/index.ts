@@ -11,6 +11,7 @@ interface AppState {
   presupuestos: Presupuesto[]
   sidebarCollapsed: boolean
   urgentPinnedIds: string[]
+  toastMessage: string | null
   setSidebarCollapsed: (v: boolean) => void
   updateExpedienteEstado: (id: string, estado: EstadoExpediente, usuario?: string) => void
   marcarAlertaVista: (id: string) => void
@@ -21,6 +22,9 @@ interface AppState {
   addPresupuesto: (presupuesto: Presupuesto) => void
   updatePresupuestoEstado: (id: string, estado: Presupuesto['estado']) => void
   submitPresupuestoProveedor: (id: string, importe: number, plazo: number, notas: string) => void
+  addCliente: (cliente: Cliente) => void
+  showToast: (message: string) => void
+  clearToast: () => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -32,7 +36,11 @@ export const useAppStore = create<AppState>((set) => ({
   presupuestos: initialPresupuestos,
   sidebarCollapsed: false,
   urgentPinnedIds: [],
+  toastMessage: null,
   setSidebarCollapsed: (v) => set({ sidebarCollapsed: v }),
+  showToast: (message) => set({ toastMessage: message }),
+  clearToast: () => set({ toastMessage: null }),
+  addCliente: (cliente) => set((s) => ({ clientes: [...s.clientes, cliente] })),
   updateExpedienteEstado: (id, estado, usuario = 'Gestor') =>
     set((s) => ({
       expedientes: s.expedientes.map((e) =>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAppStore } from '../../store'
 import { Card } from '../../components/ui/Card'
@@ -125,6 +125,13 @@ export function SolicitudDetalle() {
     return acc + u * p
   }, 0)
 
+  // C2 — auto-populate importe field when table total changes
+  useEffect(() => {
+    if (totalLines > 0) {
+      setImporte(totalLines.toString())
+    }
+  }, [totalLines])
+
   if (!pres || !expediente || !convocatoria || !cliente || !ctx) {
     return (
       <div className="min-h-screen bg-indigo-50/40 flex items-center justify-center">
@@ -199,8 +206,9 @@ export function SolicitudDetalle() {
             <CheckCircle size={32} className="text-emerald-600" />
           </div>
           <h2 className="text-xl font-bold text-slate-800">Presupuesto enviado correctamente</h2>
-          <p className="text-slate-500 text-sm">
-            El gestor lo revisará en las próximas 24–48 horas.
+          <p className="text-slate-600 text-sm font-medium">
+            Tu presupuesto de <span className="text-emerald-600 font-bold">{fmt(parseFloat(importe))}</span> ha sido enviado.
+            El gestor lo recibirá en su panel de expedientes y lo revisará en las próximas 24–48 horas.
           </p>
 
           <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-left space-y-2 text-sm">

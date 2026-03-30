@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Navbar } from '../../components/layout/Navbar'
 import { Card } from '../../components/ui/Card'
@@ -8,7 +8,7 @@ import { useAppStore } from '../../store'
 import {
   ArrowLeft, FileText, MessageSquare, Clock, Upload,
   CheckCircle, XCircle, AlertTriangle, ChevronRight, ChevronDown,
-  Plus, DollarSign
+  Plus, DollarSign, Printer, Info
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { ESTADO_COLORS, ESTADO_LABELS, type EstadoExpediente, type Presupuesto } from '../../types'
@@ -108,17 +108,27 @@ export function ExpedienteDetalle() {
     expedientes, clientes, convocatorias, gestores,
     addHistorialEntry, updateExpedienteEstado, addNota,
     presupuestos, addPresupuesto, updatePresupuestoEstado,
+    showToast, toastMessage, clearToast,
   } = useAppStore()
   const [tab, setTab] = useState<typeof TABS[number]>('Datos generales')
   const [nota, setNota] = useState('')
   const [docFiltro, setDocFiltro] = useState<DocFiltro>('Todos') // D16
   const [showEstadoMenu, setShowEstadoMenu] = useState(false)
   const [showAddPresupuesto, setShowAddPresupuesto] = useState(false)
+  const [showComplianceTooltip, setShowComplianceTooltip] = useState(false)
   const [newPresupuesto, setNewPresupuesto] = useState({
     proveedorNombre: '',
     proveedorCif: '',
     descripcion: '',
   })
+
+  // Auto-dismiss toast after 3 seconds
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => clearToast(), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [toastMessage, clearToast])
 
   const exp = expedientes.find((e) => e.id === id)
   if (!exp) return (
@@ -168,12 +178,27 @@ export function ExpedienteDetalle() {
   // D24 — registrar revisión
   const handleRegistrarRevision = () => {
     addHistorialEntry(exp.id, 'Revisado por Gestor', 'Gestor')
+    showToast('Revisión registrada en el historial')
+  }
+
+  // E2 — registrar revisión externa (funcionario)
+  const handleRegistrarRevisionExterna = () => {
+    const now = new Date()
+    const texto = `Revisión por administración — ${now.toLocaleDateString('es-ES')} ${now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`
+    addHistorialEntry(exp.id, texto, 'Administración')
+    showToast('Revisión externa registrada')
+  }
+
+  // E1 — imprimir vista funcionario
+  const handlePrintFuncionario = () => {
+    window.print()
   }
 
   // Estado change
   const handleCambioEstado = (nuevoEstado: EstadoExpediente) => {
     if (nuevoEstado !== exp.estado) {
       updateExpedienteEstado(exp.id, nuevoEstado, 'Laura Martínez')
+      showToast(`Estado actualizado a "${ESTADO_LABELS[nuevoEstado]}"`)
     }
     setShowEstadoMenu(false)
   }
@@ -214,13 +239,30 @@ export function ExpedienteDetalle() {
 
   return (
     <>
+      {/* Toast notification */}
+      {toastMessage && (
+        <div className="fixed top-4 right-4 z-50 bg-slate-900 text-white text-sm px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-fade-in">
+          <CheckCircle size={15} className="text-emerald-400 flex-shrink-0" />
+          {toastMessage}
+        </div>
+      )}
       <Navbar
         title={conv?.nombre ?? 'Expediente'}
         subtitle={cliente?.nombre}
         actions={
-          <Button variant="secondary" size="sm" icon={<ArrowLeft size={14} />} onClick={() => navigate('/expedientes')}>
-            Volver
-          </Button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrintFuncionario}
+              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-900 border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 transition-colors print:hidden"
+              title="Vista funcionario — imprimir resumen limpio"
+            >
+              <Printer size={13} />
+              Vista funcionario
+            </button>
+            <Button variant="secondary" size="sm" icon={<ArrowLeft size={14} />} onClick={() => navigate('/expedientes')}>
+              Volver
+            </Button>
+          </div>
         }
       />
       <div className="flex-1 overflow-y-auto">
@@ -329,19 +371,88 @@ export function ExpedienteDetalle() {
                 Concedido: {formatEur(exp.importeConcedido)}
               </span>
             )}
-            {/* D — Compliance pill */}
+            {/* D — Compliance pill with tooltip */}
             {cliente && (
-              <span className={clsx(
-                'text-xs px-2 py-1 rounded font-medium flex items-center gap-1',
-                haciendaOk && ssOk
-                  ? 'text-emerald-700 bg-emerald-50'
-                  : 'text-orange-700 bg-orange-50'
-              )}>
-                {haciendaOk ? '✓ Hacienda OK' : '⚠️ Revisar Hacienda'}
-                {' · '}
-                {ssOk ? '✓ SS OK' : '⚠️ Revisar SS'}
-              </span>
+              <div className="relative">
+                <button
+                  onClick={() => setShowComplianceTooltip((v) => !v)}
+                  className={clsx(
+                    'text-xs px-2 py-1 rounded font-medium flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity',
+                    haciendaOk && ssOk
+                      ? 'text-emerald-700 bg-emerald-50'
+                      : 'text-orange-700 bg-orange-50'
+                  )}
+                >
+                  {haciendaOk ? '✓ Hacienda OK' : '⚠️ Revisar Hacienda'}
+                  {' · '}
+                  {ssOk ? '✓ SS OK' : '⚠️ Revisar SS'}
+                  <Info size={11} className="ml-0.5" />
+                </button>
+                {showComplianceTooltip && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowComplianceTooltip(false)} />
+                    <div className="absolute left-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 p-3 min-w-64 text-xs space-y-2">
+                      <p className="font-semibold text-slate-800 text-xs">Cumplimiento fiscal</p>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-slate-600">Hacienda (AEAT)</span>
+                          <span className={clsx('font-medium', haciendaOk ? 'text-emerald-600' : 'text-orange-600')}>
+                            {haciendaOk ? 'Verificado ✓' : 'Revisar ⚠️'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-slate-600">Seguridad Social</span>
+                          <span className={clsx('font-medium', ssOk ? 'text-emerald-600' : 'text-orange-600')}>
+                            {ssOk ? 'Verificado ✓' : 'Revisar ⚠️'}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-slate-400 text-xs border-t border-slate-100 pt-2">
+                        Verificado el {new Date().toLocaleDateString('es-ES')} · Válido hasta {new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toLocaleDateString('es-ES')}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
             )}
+          </div>
+
+          {/* A2 — Financial summary strip (always visible above tabs) */}
+          <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-slate-100">
+            <div className="flex items-center gap-1.5">
+              <DollarSign size={13} className="text-slate-400" />
+              <span className="text-xs text-slate-500">Solicitado:</span>
+              <span className="text-xs font-bold text-slate-900">{formatEur(exp.importeSolicitado)}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <DollarSign size={13} className={exp.importeConcedido > 0 ? 'text-emerald-500' : 'text-slate-300'} />
+              <span className="text-xs text-slate-500">Concedido:</span>
+              <span className={clsx('text-xs font-bold', exp.importeConcedido > 0 ? 'text-emerald-600' : 'text-slate-400')}>
+                {exp.importeConcedido > 0 ? formatEur(exp.importeConcedido) : 'Pendiente de resolución'}
+              </span>
+            </div>
+            {exp.importeConcedido > 0 && (
+              <div className="flex items-center gap-1.5">
+                <DollarSign size={13} className="text-blue-400" />
+                <span className="text-xs text-slate-500">Comisión gestión (15%):</span>
+                <span className="text-xs font-bold text-blue-600">{formatEur(Math.max(300, exp.importeConcedido * 0.15))}</span>
+              </div>
+            )}
+            {/* A3 — Next action indicator */}
+            <div className="ml-auto flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-1.5">
+              <ChevronRight size={13} className="text-blue-500 flex-shrink-0" />
+              <span className="text-xs text-blue-700 font-medium">
+                {exp.estado === 'DETECCION' && 'Siguiente: Analizar viabilidad y confirmar con el cliente'}
+                {exp.estado === 'EVALUACION' && 'Siguiente: Recopilar documentación inicial'}
+                {exp.estado === 'PREPARACION' && 'Siguiente: Completar y revisar toda la documentación'}
+                {exp.estado === 'PRESENTADA' && 'Siguiente: Esperar resolución de la administración'}
+                {exp.estado === 'SUBSANACION' && 'Acción urgente: Subir documentos corregidos antes del plazo'}
+                {exp.estado === 'CONCEDIDA' && 'Siguiente: Aceptar la resolución e iniciar ejecución'}
+                {exp.estado === 'JUSTIFICACION' && 'Siguiente: Presentar facturas y justificantes de gasto'}
+                {exp.estado === 'CERRADA' && 'Expediente finalizado correctamente'}
+                {exp.estado === 'DENEGADA' && 'Revisar alternativas de subvención para este cliente'}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -729,13 +840,20 @@ export function ExpedienteDetalle() {
                     </div>
                   </div>
                 )}
-                {/* D24 — botón registrar revisión */}
-                <div className="mt-5 pt-4 border-t border-slate-100 flex justify-end">
+                {/* D24 — botones de registro */}
+                <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between gap-3 flex-wrap">
+                  <button
+                    onClick={handleRegistrarRevisionExterna}
+                    className="text-xs text-indigo-600 hover:text-indigo-900 font-medium border border-indigo-200 rounded-lg px-3 py-1.5 hover:bg-indigo-50 transition-colors flex items-center gap-1.5"
+                  >
+                    <Info size={12} />
+                    Registrar revisión externa (Administración)
+                  </button>
                   <button
                     onClick={handleRegistrarRevision}
                     className="text-xs text-slate-500 hover:text-slate-900 font-medium border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 transition-colors"
                   >
-                    Registrar revisión
+                    Registrar revisión interna
                   </button>
                 </div>
               </Card>

@@ -317,18 +317,30 @@ export function Dashboard() {
                         <p className="text-xs text-slate-400 py-4 text-center">Sin urgencias esta semana</p>
                       ) : (
                         <div className="space-y-2">
-                          {urgentes.map((exp) => {
+                          {urgentes.map((exp, idx) => {
                             const cli = clientes.find((c) => c.id === exp.clienteId)
                             const dias = diffDays(exp.fechaVencimiento!)
+                            const isTop = idx === 0
                             return (
                               <div
                                 key={exp.id}
-                                className="flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-50 rounded-lg p-1.5 -mx-1.5 transition-colors"
+                                className={clsx(
+                                  'flex items-center justify-between gap-2 cursor-pointer rounded-lg p-1.5 -mx-1.5 transition-colors',
+                                  isTop ? 'bg-red-50 hover:bg-red-100 border border-red-100' : 'hover:bg-slate-50'
+                                )}
                                 onClick={() => navigate(`/expedientes/${exp.id}`)}
                               >
-                                <div className="min-w-0">
-                                  <p className="text-xs font-medium text-slate-900 truncate">{cli?.nombre}</p>
-                                  <EstadoBadge estado={exp.estado} size="sm" />
+                                <div className="min-w-0 flex items-center gap-2">
+                                  {isTop && (
+                                    <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                                    </span>
+                                  )}
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-medium text-slate-900 truncate">{cli?.nombre}</p>
+                                    <EstadoBadge estado={exp.estado} size="sm" />
+                                  </div>
                                 </div>
                                 <span className={clsx(
                                   'text-xs font-bold flex-shrink-0',

@@ -4,7 +4,7 @@ import { Card } from '../../components/ui/Card'
 import { EstadoBadge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { useAppStore } from '../../store'
-import { ArrowLeft, Mail, Phone, AlertTriangle, CheckCircle, User } from 'lucide-react'
+import { ArrowLeft, Mail, Phone, AlertTriangle, CheckCircle, User, Search } from 'lucide-react'
 import { clsx } from 'clsx'
 
 const TAMANO_LABELS = {
@@ -38,9 +38,18 @@ export function ClienteDetalle() {
         title={cliente.nombre}
         subtitle={`NIF: ${cliente.nif}`}
         actions={
-          <Button variant="secondary" size="sm" icon={<ArrowLeft size={14} />} onClick={() => navigate('/clientes')}>
-            Volver
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              icon={<Search size={14} />}
+              onClick={() => navigate(`/convocatorias?sector=${encodeURIComponent(cliente.sector)}&ccaa=${encodeURIComponent(cliente.comunidadAutonoma)}`)}
+            >
+              Buscar subvenciones para este cliente
+            </Button>
+            <Button variant="secondary" size="sm" icon={<ArrowLeft size={14} />} onClick={() => navigate('/clientes')}>
+              Volver
+            </Button>
+          </div>
         }
       />
       <div className="flex-1 overflow-y-auto p-6">

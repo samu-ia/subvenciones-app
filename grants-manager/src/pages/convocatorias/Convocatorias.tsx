@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Navbar } from '../../components/layout/Navbar'
 import { Card } from '../../components/ui/Card'
 import { TipoBadge } from '../../components/ui/Badge'
@@ -12,14 +12,24 @@ import { clsx } from 'clsx'
 export function Convocatorias() {
   const { convocatorias } = useAppStore()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [search, setSearch] = useState('')
   const [filterTipo, setFilterTipo] = useState('')
 
+  // N2 — pre-filter by sector/ccaa from URL params (set by ClienteDetalle button)
+  const paramSector = searchParams.get('sector') ?? ''
+  const paramCCAA = searchParams.get('ccaa') ?? ''
+
   const filtered = convocatorias.filter((c) => {
     const q = search.toLowerCase()
-    const matchSearch = !q || c.nombre.toLowerCase().includes(q) || c.organismo.toLowerCase().includes(q)
+    const matchSearch = !q || c.nombre.toLowerCase().includes(q) || c.organismo.toLowerCase().includes(q) ||
+      c.descripcion?.toLowerCase().includes(q)
     const matchTipo = !filterTipo || c.tipo === filterTipo
-    return matchSearch && matchTipo
+    // N2 — apply client sector/ccaa hint as text search in nombre/descripcion/requisitos
+    const matchSectorHint = !paramSector || c.nombre.toLowerCase().includes(paramSector.toLowerCase()) ||
+      c.descripcion?.toLowerCase().includes(paramSector.toLowerCase()) ||
+      c.requisitos?.some((r) => r.toLowerCase().includes(paramSector.toLowerCase()))
+    return matchSearch && matchTipo && matchSectorHint
   })
 
   const formatEur = (n: number) =>
@@ -40,6 +50,25 @@ export function Convocatorias() {
         }
       />
       <div className="flex-1 overflow-y-auto p-6">
+        {/* N2 — banner contexto cliente */}
+        {(paramSector || paramCCAA) && (
+          <div className="mb-4 flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+            <Search size={15} className="text-blue-500 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-blue-800">
+                Mostrando subvenciones para cliente del sector <strong>{paramSector}</strong>
+                {paramCCAA && <> en <strong>{paramCCAA}</strong></>}
+              </p>
+              <p className="text-xs text-blue-600 mt-0.5">{filtered.length} convocatorias encontradas</p>
+            </div>
+            <button
+              onClick={() => navigate('/convocatorias')}
+              className="text-xs text-blue-600 hover:text-blue-900 font-medium"
+            >
+              Ver todas →
+            </button>
+          </div>
+        )}
         {/* Filters */}
         <div className="flex items-center gap-3 mb-5 flex-wrap">
           <div className="flex-1 min-w-52">

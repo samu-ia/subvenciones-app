@@ -14,6 +14,7 @@ export function Alertas() {
   const navigate = useNavigate()
   const [filterTipo, setFilterTipo] = useState('')
   const [filterEstado, setFilterEstado] = useState('')
+  const [filterEstaSemana, setFilterEstaSemana] = useState(false) // L5
   const [showNuevaAlerta, setShowNuevaAlerta] = useState(false) // B22
 
   // B22 — estado formulario nueva alerta
@@ -30,7 +31,8 @@ export function Alertas() {
     .filter((a) => {
       const matchTipo = !filterTipo || a.tipo === filterTipo
       const matchEstado = !filterEstado || a.estado === filterEstado
-      return matchTipo && matchEstado
+      const matchEstaSemana = !filterEstaSemana || getDiasRestantes(a) <= 7
+      return matchTipo && matchEstado && matchEstaSemana
     })
     .sort((a, b) => getDiasRestantes(a) - getDiasRestantes(b))
 
@@ -110,8 +112,20 @@ export function Alertas() {
             <option value="enviada">Enviada</option>
             <option value="vista">Vista</option>
           </Select>
-          {(filterTipo || filterEstado) && (
-            <Button variant="ghost" size="sm" onClick={() => { setFilterTipo(''); setFilterEstado('') }}>
+          {/* L5 — filtro "Esta semana" */}
+          <button
+            onClick={() => setFilterEstaSemana((v) => !v)}
+            className={clsx(
+              'px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors flex items-center gap-1.5',
+              filterEstaSemana
+                ? 'bg-slate-900 text-white border-slate-900'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+            )}
+          >
+            ⚡ Esta semana
+          </button>
+          {(filterTipo || filterEstado || filterEstaSemana) && (
+            <Button variant="ghost" size="sm" onClick={() => { setFilterTipo(''); setFilterEstado(''); setFilterEstaSemana(false) }}>
               Limpiar
             </Button>
           )}
