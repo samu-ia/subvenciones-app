@@ -3,32 +3,57 @@ import { createClient } from '@/lib/supabase/server';
 import { getOrCreateToolConfig, getProviderConfig } from '@/lib/db/ia-config';
 import { createProvider } from '@/lib/ai/providers/factory';
 import { withRetry } from '@/lib/utils/ai-retry';
+import type { AIProvider } from '@/lib/types/ai-config';
 import type { Message } from '@/lib/ai/providers/base';
 
+// Modelo por defecto según proveedor resuelto
+const DEFAULT_MODEL: Record<AIProvider, string> = {
+  anthropic: 'claude-sonnet-4-6',
+  google: 'gemini-2.5-flash',
+  openai: 'gpt-4o',
+  openrouter: 'auto',
+  azure: 'gpt-4o',
+  custom: 'gpt-4o',
+};
+
 // ─── Seleccionar proveedor con fallback a variables de entorno ────────────────
+// Devuelve { provider, providerName } para poder elegir el modelo correcto
 
 async function resolveProvider(userId: string) {
-  // 1. Config en DB (prioridad: anthropic → google → openai)
-  for (const prov of ['anthropic', 'google', 'openai'] as const) {
+  // 1. Config en DB (prioridad: google → anthropic → openai)
+  // Prioriza google si el usuario solo configuró Gemini en UI
+  for (const prov of ['google', 'anthropic', 'openai'] as const) {
     const dbConfig = await getProviderConfig(userId, prov);
     if (dbConfig?.enabled && dbConfig.api_key) {
-      return createProvider({ provider: prov, apiKey: dbConfig.api_key, enabled: true });
+      return {
+        provider: createProvider({ provider: prov, apiKey: dbConfig.api_key, enabled: true }),
+        providerName: prov as AIProvider,
+      };
     }
   }
 
-  // 2. Variables de entorno (fallback cuando no hay config en DB)
-  if (process.env.ANTHROPIC_API_KEY) {
-    return createProvider({ provider: 'anthropic', apiKey: process.env.ANTHROPIC_API_KEY, enabled: true });
-  }
+  // 2. Variables de entorno (fallback)
   if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
-    return createProvider({
-      provider: 'google',
-      apiKey: (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY)!,
-      enabled: true,
-    });
+    return {
+      provider: createProvider({
+        provider: 'google',
+        apiKey: (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY)!,
+        enabled: true,
+      }),
+      providerName: 'google' as AIProvider,
+    };
+  }
+  if (process.env.ANTHROPIC_API_KEY) {
+    return {
+      provider: createProvider({ provider: 'anthropic', apiKey: process.env.ANTHROPIC_API_KEY, enabled: true }),
+      providerName: 'anthropic' as AIProvider,
+    };
   }
   if (process.env.OPENAI_API_KEY && !process.env.OPENAI_API_KEY.includes('tu_openai')) {
-    return createProvider({ provider: 'openai', apiKey: process.env.OPENAI_API_KEY, enabled: true });
+    return {
+      provider: createProvider({ provider: 'openai', apiKey: process.env.OPENAI_API_KEY, enabled: true }),
+      providerName: 'openai' as AIProvider,
+    };
   }
 
   return null;
@@ -44,13 +69,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
-    const provider = await resolveProvider(user.id);
-    if (!provider) {
+    const resolved = await resolveProvider(user.id);
+    if (!resolved) {
       return NextResponse.json(
         { error: 'No hay proveedor de IA configurado. Ve a Ajustes → IA y añade una API key de Anthropic o Google.' },
         { status: 503 }
       );
     }
+    const { provider, providerName } = resolved;
 
     const { contextoId, contextoTipo, mensaje, documentosReferenciados, historial } = await request.json();
 
@@ -63,6 +89,10 @@ export async function POST(request: NextRequest) {
 
     // Config de herramienta (modelo, temperatura, system prompt personalizado)
     const toolConfig = await getOrCreateToolConfig(user.id, 'notebook');
+    // Usar modelo compatible con el proveedor real (no el del toolConfig si es de otro proveedor)
+    const modeloEfectivo = toolConfig.provider === providerName
+      ? (toolConfig.model || DEFAULT_MODEL[providerName])
+      : DEFAULT_MODEL[providerName];
 
     // Contexto del expediente/reunión
     const contexto = await recopilarContexto(supabase, contextoId, contextoTipo, documentosReferenciados);
@@ -82,7 +112,7 @@ export async function POST(request: NextRequest) {
     // Llamada con retry automático ante errores transitorios
     const result = await withRetry(() =>
       provider.complete(messages, {
-        model: toolConfig.model || 'claude-sonnet-4-6',
+        model: modeloEfectivo,
         temperature: toolConfig.temperature ?? 0.7,
         maxTokens: toolConfig.maxTokens ?? 2048,
         systemPrompt,

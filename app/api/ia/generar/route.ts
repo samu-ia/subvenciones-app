@@ -3,26 +3,43 @@ import { createClient } from '@/lib/supabase/server';
 import { getOrCreateToolConfig, getProviderConfig } from '@/lib/db/ia-config';
 import { createProvider } from '@/lib/ai/providers/factory';
 import { withRetry } from '@/lib/utils/ai-retry';
+import type { AIProvider } from '@/lib/types/ai-config';
+
+const DEFAULT_MODEL: Record<AIProvider, string> = {
+  anthropic: 'claude-sonnet-4-6',
+  google: 'gemini-2.5-flash',
+  openai: 'gpt-4o',
+  openrouter: 'auto',
+  azure: 'gpt-4o',
+  custom: 'gpt-4o',
+};
 
 // ─── Seleccionar proveedor con fallback env-vars ──────────────────────────────
 
 async function resolveProvider(userId: string, tool: 'summary' | 'checklist' | 'email' | 'notebook') {
   const toolConfig = await getOrCreateToolConfig(userId, tool);
 
+  // 1. Proveedor del tool config si está en DB
   const dbConfig = await getProviderConfig(userId, toolConfig.provider);
   if (dbConfig?.enabled && dbConfig.api_key) {
-    return { provider: createProvider({ provider: toolConfig.provider, apiKey: dbConfig.api_key, enabled: true }), toolConfig };
+    return { provider: createProvider({ provider: toolConfig.provider, apiKey: dbConfig.api_key, enabled: true }), toolConfig, providerName: toolConfig.provider };
   }
 
-  // Fallback env vars
-  for (const [prov, key] of [
-    ['anthropic', process.env.ANTHROPIC_API_KEY],
-    ['google', process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY],
-    ['openai', process.env.OPENAI_API_KEY],
-  ] as const) {
-    if (key && !key.includes('tu_openai') && !key.includes('aqui')) {
-      return { provider: createProvider({ provider: prov, apiKey: key, enabled: true }), toolConfig };
+  // 2. Cualquier proveedor configurado en DB (prioridad: google → anthropic)
+  for (const prov of ['google', 'anthropic', 'openai'] as const) {
+    const cfg = await getProviderConfig(userId, prov);
+    if (cfg?.enabled && cfg.api_key) {
+      return { provider: createProvider({ provider: prov, apiKey: cfg.api_key, enabled: true }), toolConfig, providerName: prov as AIProvider };
     }
+  }
+
+  // 3. Fallback env vars
+  if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
+    const key = (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY)!;
+    return { provider: createProvider({ provider: 'google', apiKey: key, enabled: true }), toolConfig, providerName: 'google' as AIProvider };
+  }
+  if (process.env.ANTHROPIC_API_KEY) {
+    return { provider: createProvider({ provider: 'anthropic', apiKey: process.env.ANTHROPIC_API_KEY, enabled: true }), toolConfig, providerName: 'anthropic' as AIProvider };
   }
 
   return null;
@@ -109,7 +126,11 @@ export async function POST(request: NextRequest) {
         { status: 503 }
       );
     }
-    const { provider, toolConfig } = resolved;
+    const { provider, toolConfig, providerName } = resolved;
+    // Modelo compatible con el proveedor real (evita usar claude-* con Google o gpt-* con Anthropic)
+    const modeloEfectivo = toolConfig.provider === providerName
+      ? (toolConfig.model || DEFAULT_MODEL[providerName])
+      : DEFAULT_MODEL[providerName];
 
     const contexto = await recopilarContexto(supabase, contextoId, contextoTipo);
     const prompts = buildPrompt(tipo, contexto, prompt);
@@ -118,7 +139,7 @@ export async function POST(request: NextRequest) {
       provider.complete(
         [{ role: 'user', content: prompts.user }],
         {
-          model: toolConfig.model || 'claude-sonnet-4-6',
+          model: modeloEfectivo,
           temperature: Math.min(toolConfig.temperature ?? 0.5, 0.6),
           maxTokens: toolConfig.maxTokens ?? 4096,
           systemPrompt: prompts.system,
