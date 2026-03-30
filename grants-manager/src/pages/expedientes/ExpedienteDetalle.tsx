@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Navbar } from '../../components/layout/Navbar'
 import { Card } from '../../components/ui/Card'
@@ -117,6 +117,8 @@ export function ExpedienteDetalle() {
   const [showAddPresupuesto, setShowAddPresupuesto] = useState(false)
   const [showComplianceTooltip, setShowComplianceTooltip] = useState(false)
   const [generandoMemoria, setGenerandoMemoria] = useState(false)
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [newPresupuesto, setNewPresupuesto] = useState({
     proveedorNombre: '',
     proveedorCif: '',
@@ -176,48 +178,182 @@ export function ExpedienteDetalle() {
   })
   const docsListos = docsCheck.filter((d) => d.ok).length
 
-  // Generar memoria técnica con IA (simulado)
+  // Generar memoria técnica con IA — plantillas por tipo de convocatoria
   const handleGenerarMemoria = () => {
     if (generandoMemoria) return
     setGenerandoMemoria(true)
-    const empresaNombre = cliente?.nombre || 'La empresa'
+    const empresa = cliente?.nombre || 'La empresa'
     const convNombre = conv?.nombre || 'la convocatoria seleccionada'
+    const nombre = convNombre.toLowerCase()
+
     setTimeout(() => {
-      const memoria = `MEMORIA TÉCNICA DEL PROYECTO
+      let memoria: string
+
+      if (nombre.includes('i+d') || nombre.includes('cdti') || nombre.includes('investigación') || nombre.includes('innovacion') || nombre.includes('innovación')) {
+        // Plantilla I+D / Innovación
+        memoria = `MEMORIA TÉCNICA — PROYECTO DE I+D E INNOVACIÓN
 
 1. DESCRIPCIÓN DEL PROYECTO
-${empresaNombre} solicita financiación para la digitalización de sus procesos de gestión comercial mediante la implantación de un sistema ERP integrado. El proyecto incluye la adquisición de software de gestión de inventario, terminal POS y formación al personal, en el marco de ${convNombre}.
+${empresa} propone un proyecto de investigación aplicada orientado al desarrollo de nuevas soluciones tecnológicas en su sector. El proyecto se enmarca en ${convNombre} y tiene como objetivo generar nuevo conocimiento transferible al mercado.
 
-2. JUSTIFICACIÓN DE LA NECESIDAD
-La empresa actualmente gestiona sus operaciones mediante hojas de cálculo y procesos manuales, lo que genera ineficiencias estimadas en 15 horas/semana. La digitalización permitirá reducir errores, mejorar el control de stock y aumentar la productividad de forma medible.
+2. JUSTIFICACIÓN CIENTÍFICO-TÉCNICA
+La empresa ha identificado un gap tecnológico en su cadena de valor que impide competir en igualdad de condiciones con empresas europeas del sector. El proyecto aborda este reto mediante metodología científica validada e incorporación de talento investigador.
 
-3. OBJETIVOS
-- Objetivo principal: Digitalizar el sistema de gestión comercial en 6 meses
-- Reducir tiempo de gestión en un 60%
-- Eliminar errores de inventario en un 80%
-- Formar al 100% del personal en las nuevas herramientas
+3. OBJETIVOS DEL PROYECTO
+- OBJ-1: Desarrollar prototipo funcional validado en entorno relevante (TRL 5→7)
+- OBJ-2: Publicar al menos 1 resultado científico en revista indexada
+- OBJ-3: Proteger los resultados mediante patente o modelo de utilidad
+- OBJ-4: Incorporar 2 nuevos perfiles técnicos especializados
 
-4. PLAN DE EJECUCIÓN
-Mes 1-2: Selección e instalación del software
-Mes 2-3: Migración de datos y configuración
-Mes 3-4: Formación del personal
-Mes 5-6: Puesta en marcha y ajustes
+4. PLAN DE TRABAJO (18 MESES)
+WP1 (M1–M4): Revisión del estado del arte y diseño experimental
+WP2 (M3–M10): Desarrollo y pruebas del prototipo
+WP3 (M8–M14): Validación en entorno real con cliente piloto
+WP4 (M12–M18): Explotación de resultados y diseminación
 
 5. PRESUPUESTO ESTIMADO
-Software ERP (licencia anual): 3.600€
-Hardware (terminal + periféricos): 2.400€
-Instalación y configuración: 800€
-Formación (40 horas): 1.200€
-TOTAL: 8.000€
+Personal investigador (2 FTE × 18 meses): 72.000€
+Subcontratación laboratorio externo: 18.000€
+Material fungible y equipamiento: 12.000€
+Difusión y protección de resultados: 5.000€
+Gastos indirectos (15%): 16.050€
+TOTAL: 123.050€
 
 6. IMPACTO ESPERADO
-La inversión se amortizará en menos de 18 meses gracias al ahorro en tiempo de gestión y reducción de errores. El proyecto generará o consolidará 3 puestos de trabajo.
+El proyecto incrementará el TRL de la tecnología de 4 a 7, facilitando su transferencia al mercado. Se prevé generar 2 nuevos productos comercializables en los 24 meses posteriores a la finalización.
 
 ⚠️ Este es un borrador generado por IA. Revísalo y personalízalo antes de presentar.`
+
+      } else if (nombre.includes('feder') || nombre.includes('cohesión') || nombre.includes('inversion') || nombre.includes('inversión') || nombre.includes('modernizacion') || nombre.includes('modernización')) {
+        // Plantilla FEDER / Inversión productiva
+        memoria = `MEMORIA TÉCNICA — PROYECTO DE INVERSIÓN PRODUCTIVA
+
+1. DESCRIPCIÓN DEL PROYECTO
+${empresa} solicita cofinanciación FEDER para la modernización de sus instalaciones productivas y la incorporación de maquinaria de última generación. La inversión se enmarca en ${convNombre} y contribuye a los objetivos de competitividad regional.
+
+2. SITUACIÓN ACTUAL Y NECESIDAD DE INVERSIÓN
+Las instalaciones actuales tienen una antigüedad media de 12 años y generan un coste energético un 35% superior a la media sectorial. La nueva maquinaria permitirá reducir el consumo energético, aumentar la capacidad productiva y mejorar las condiciones de trabajo.
+
+3. OBJETIVOS
+- Aumentar la capacidad productiva en un 40%
+- Reducir el consumo energético en un 30% (≈ 45 tCO₂/año evitadas)
+- Reducir el coste de producción por unidad en un 20%
+- Mantener y consolidar 12 puestos de trabajo directos
+
+4. DESCRIPCIÓN DE LA INVERSIÓN
+Línea de producción automatizada (CNC): 280.000€
+Sistema de gestión energética (ISO 50001): 45.000€
+Adecuación nave y obra civil: 35.000€
+Ingeniería y puesta en marcha: 22.000€
+TOTAL INVERSIÓN ELEGIBLE: 382.000€
+
+5. PLAN DE EJECUCIÓN
+Fase 1 (M1–M3): Licitación y adjudicación de proveedores
+Fase 2 (M3–M8): Instalación y puesta en marcha de equipamiento
+Fase 3 (M7–M10): Formación y optimización de producción
+Fase 4 (M10–M12): Seguimiento y medición de indicadores
+
+6. IMPACTO SOCIOECONÓMICO
+La inversión permitirá incrementar la facturación estimada en 850.000€/año adicionales, consolidar el empleo existente y generar 3 nuevas contrataciones en perfiles técnicos especializados.
+
+⚠️ Este es un borrador generado por IA. Revísalo y personalízalo antes de presentar.`
+
+      } else if (nombre.includes('digital') || nombre.includes('kit digital') || nombre.includes('tic') || nombre.includes('transformacion') || nombre.includes('transformación')) {
+        // Plantilla Digitalización
+        memoria = `MEMORIA TÉCNICA — PROYECTO DE TRANSFORMACIÓN DIGITAL
+
+1. DESCRIPCIÓN DEL PROYECTO
+${empresa} solicita financiación para la digitalización integral de sus procesos de negocio mediante la implantación de un ecosistema tecnológico integrado. El proyecto se desarrolla en el marco de ${convNombre}.
+
+2. DIAGNÓSTICO DIGITAL ACTUAL
+La empresa opera actualmente con herramientas no integradas (hojas de cálculo, email, procesos manuales), lo que genera duplicidades de información, demoras en la toma de decisiones y limitada trazabilidad de operaciones. El índice DESI interno se estima en 28/100.
+
+3. SOLUCIÓN TECNOLÓGICA PROPUESTA
+- ERP cloud (módulos: ventas, compras, almacén, finanzas)
+- CRM para gestión comercial y seguimiento de clientes
+- Business Intelligence y cuadro de mando ejecutivo
+- Firma electrónica y digitalización documental
+- Ciberseguridad: EDR + backup offsite + formación
+
+4. OBJETIVOS MEDIBLES
+- Reducir tiempo de cierre contable mensual: de 5 días a 1 día
+- Eliminar el 90% de procesos manuales en logística
+- Aumentar conversión comercial en un 25% con CRM
+- Alcanzar índice DESI interno de 72/100 al finalizar
+
+5. PLAN DE IMPLANTACIÓN (6 MESES)
+Mes 1: Análisis de procesos y selección de proveedor tecnológico
+Mes 2–3: Implantación ERP y migración de datos históricos
+Mes 3–4: Implantación CRM y módulo BI
+Mes 5: Formación a todo el equipo (24 horas por persona)
+Mes 6: Go-live, soporte intensivo y ajuste de indicadores
+
+6. PRESUPUESTO
+ERP cloud (3 años): 12.600€
+CRM (3 años): 4.200€
+BI y reporting: 3.800€
+Ciberseguridad: 2.900€
+Formación y consultoría: 4.500€
+TOTAL ELEGIBLE: 28.000€
+
+⚠️ Este es un borrador generado por IA. Revísalo y personalízalo antes de presentar.`
+
+      } else {
+        // Plantilla genérica (exportación, turismo, medioambiente, etc.)
+        memoria = `MEMORIA TÉCNICA DEL PROYECTO
+
+1. DESCRIPCIÓN DEL PROYECTO
+${empresa} presenta su candidatura a ${convNombre} con un proyecto orientado a reforzar su posición competitiva, mejorar su capacidad operativa y contribuir a los objetivos de desarrollo económico del programa.
+
+2. JUSTIFICACIÓN DE LA NECESIDAD
+La empresa ha identificado áreas de mejora estructurales que requieren inversión externa para ser abordadas en tiempo y forma. Sin esta financiación, el proyecto se pospondría un mínimo de 3 años, con el consiguiente coste de oportunidad frente a competidores que ya han realizado estas inversiones.
+
+3. OBJETIVOS DEL PROYECTO
+- Objetivo 1: Incrementar la competitividad y eficiencia operativa en un 25%
+- Objetivo 2: Abrir nuevos mercados o canales de distribución
+- Objetivo 3: Mejorar la cualificación del equipo humano
+- Objetivo 4: Reducir el impacto medioambiental de la actividad
+
+4. PLAN DE EJECUCIÓN (12 MESES)
+Fase 1 (M1–M3): Preparación, contratación y arranque
+Fase 2 (M3–M8): Ejecución de acciones principales
+Fase 3 (M8–M11): Validación y ajuste de resultados
+Fase 4 (M11–M12): Cierre, justificación y evaluación de impacto
+
+5. PRESUPUESTO ESTIMADO
+Consultoría y servicios externos: 15.000€
+Inversión en activos / equipamiento: 40.000€
+Formación y capacitación: 8.000€
+Gastos de gestión y administración: 5.000€
+TOTAL ELEGIBLE: 68.000€
+
+6. IMPACTO ESPERADO
+El proyecto aportará un incremento de facturación estimado en 120.000€ en los 24 meses posteriores a su finalización, consolidando el empleo existente y creando al menos 2 nuevos puestos de trabajo cualificados.
+
+⚠️ Este es un borrador generado por IA. Revísalo y personalízalo antes de presentar.`
+      }
+
       addNota(exp.id, memoria, 'IA — Gemini (borrador)')
       setGenerandoMemoria(false)
       showToast('Borrador de memoria técnica generado y añadido a las notas')
     }, 2000)
+  }
+
+  // Subir documento — abre selector de archivos del sistema
+  const handleSubirDocumento = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingDoc(file.name)
+    // Simular subida con delay
+    setTimeout(() => {
+      setUploadingDoc(null)
+      showToast(`Documento "${file.name}" subido correctamente`)
+      e.target.value = '' // reset para poder subir el mismo archivo otra vez
+    }, 1500)
   }
 
   // D24 — registrar revisión
@@ -503,7 +639,7 @@ La inversión se amortizará en menos de 18 meses gracias al ahorro en tiempo de
 
         {/* Tabs */}
         <div className="bg-white border-b border-slate-100 px-6">
-          <div className="flex gap-0">
+          <div className="flex">
             {TABS.map((t) => (
               <button
                 key={t}
@@ -716,7 +852,21 @@ La inversión se amortizará en menos de 18 meses gracias al ahorro en tiempo de
                         </button>
                       ))}
                     </div>
-                    <Button size="sm" icon={<Upload size={14} />}>Subir documento</Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png"
+                      onChange={handleFileSelected}
+                    />
+                    <Button
+                      size="sm"
+                      icon={uploadingDoc ? <Clock size={14} className="animate-spin" /> : <Upload size={14} />}
+                      onClick={handleSubirDocumento}
+                      disabled={!!uploadingDoc}
+                    >
+                      {uploadingDoc ? 'Subiendo...' : 'Subir documento'}
+                    </Button>
                   </div>
                   {docsFiltrados.length === 0 ? (
                     <div className="text-center py-12 text-sm text-slate-400">
