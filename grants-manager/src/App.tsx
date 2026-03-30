@@ -8,6 +8,8 @@ import { Convocatorias } from './pages/convocatorias/Convocatorias'
 import { Expedientes } from './pages/expedientes/Expedientes'
 import { ExpedienteDetalle } from './pages/expedientes/ExpedienteDetalle'
 import { Alertas } from './pages/alertas/Alertas'
+import { PortalProveedor } from './pages/proveedor/PortalProveedor'
+import { SolicitudDetalle } from './pages/proveedor/SolicitudDetalle'
 
 const queryClient = new QueryClient()
 
@@ -25,6 +27,8 @@ function App() {
             <Route path="/expedientes" element={<Expedientes />} />
             <Route path="/expedientes/:id" element={<ExpedienteDetalle />} />
             <Route path="/alertas" element={<Alertas />} />
+            <Route path="/proveedor" element={<PortalProveedor />} />
+            <Route path="/proveedor/solicitud/:presupuestoId" element={<SolicitudDetalle />} />
           </Routes>
         </PageWrapper>
       </BrowserRouter>

@@ -20,6 +20,7 @@ interface AppState {
   addNota: (expedienteId: string, texto: string, autor: string) => void
   addPresupuesto: (presupuesto: Presupuesto) => void
   updatePresupuestoEstado: (id: string, estado: Presupuesto['estado']) => void
+  submitPresupuestoProveedor: (id: string, importe: number, plazo: number, notas: string) => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -111,6 +112,20 @@ export const useAppStore = create<AppState>((set) => ({
               fechaRecepcion: (estado === 'recibido' || estado === 'seleccionado') && !p.fechaRecepcion
                 ? new Date()
                 : p.fechaRecepcion,
+            }
+          : p
+      ),
+    })),
+  submitPresupuestoProveedor: (id, importe, plazo, notas) =>
+    set((s) => ({
+      presupuestos: s.presupuestos.map((p) =>
+        p.id === id
+          ? {
+              ...p,
+              importe,
+              estado: 'recibido' as const,
+              fechaRecepcion: new Date(),
+              notas: notas || `Plazo de ejecución: ${plazo} días`,
             }
           : p
       ),

@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import {
-  LayoutDashboard, Users, FileText, Bell, Building2, ChevronLeft, ChevronRight,
+  LayoutDashboard, Users, FileText, Bell, Building2, ChevronLeft, ChevronRight, Store,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useAppStore } from '../../store'
@@ -86,6 +86,38 @@ export function Sidebar() {
           </NavLink>
         ))}
       </nav>
+
+      {/* Vista Proveedor */}
+      <div className="px-2 py-3 border-t border-slate-800">
+        {!sidebarCollapsed && (
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 mb-1.5">
+            Vista Proveedor
+          </p>
+        )}
+        <NavLink
+          to="/proveedor"
+          className={({ isActive }) =>
+            clsx(
+              'flex items-center gap-3 rounded-lg transition-all duration-150 relative',
+              sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5',
+              isActive
+                ? 'bg-indigo-600/30 text-indigo-300'
+                : 'text-slate-400 hover:bg-white/5 hover:text-indigo-300'
+            )
+          }
+          title={sidebarCollapsed ? 'Portal Proveedor' : undefined}
+        >
+          {({ isActive }) => (
+            <>
+              {isActive && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-indigo-400 rounded-r-full" />
+              )}
+              <Store size={18} className="flex-shrink-0" />
+              {!sidebarCollapsed && <span className="text-sm font-medium">Portal Proveedor</span>}
+            </>
+          )}
+        </NavLink>
+      </div>
 
       {/* Collapse button at bottom when collapsed */}
       {sidebarCollapsed && (

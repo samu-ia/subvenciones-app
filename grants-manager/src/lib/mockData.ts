@@ -681,4 +681,50 @@ export const presupuestos: Presupuesto[] = [
     fechaSolicitud: d(-15),
     descripcion: 'Pendiente de recibir presupuesto formal.',
   },
+  // Presupuestos pendientes para el Portal Proveedor (Sistemas Digitales Norte S.L.)
+  {
+    id: 'p4',
+    expedienteId: 'e7',
+    proveedorNombre: 'Sistemas Digitales Norte S.L.',
+    proveedorCif: 'B12345678',
+    estado: 'pendiente',
+    fechaSolicitud: d(-3),
+    descripcion: 'Solicitud de presupuesto para digitalización del sistema de gestión de stock y punto de venta.',
+  },
+  {
+    id: 'p5',
+    expedienteId: 'e25',
+    proveedorNombre: 'Sistemas Digitales Norte S.L.',
+    proveedorCif: 'B12345678',
+    estado: 'pendiente',
+    fechaSolicitud: d(-5),
+    descripcion: 'Solicitud de presupuesto para modernización y digitalización del establecimiento comercial.',
+  },
+  // Trabajo en curso — seleccionado previamente
+  {
+    id: 'p6',
+    expedienteId: 'e1',
+    proveedorNombre: 'Sistemas Digitales Norte S.L.',
+    proveedorCif: 'B12345678',
+    importe: 5800,
+    estado: 'seleccionado',
+    fechaSolicitud: d(-60),
+    fechaRecepcion: d(-55),
+    descripcion: 'Implementación Kit Digital: CRM + página web + factura electrónica.',
+    notas: 'Proyecto en ejecución. Entrega prevista fin de mes.',
+  },
 ]
+
+// Mock proveedor data
+export const mockProveedor = {
+  id: 'prov_001',
+  nombre: 'Sistemas Digitales Norte S.L.',
+  cif: 'B12345678',
+  contacto: 'Marta Iglesias',
+  email: 'marta@sdnorte.es',
+  especialidades: ['Digitalización', 'Formación', 'Software ERP'],
+  zona: 'Norte (Galicia, Asturias, Cantabria)',
+  valoracion: 4.8,
+  expedientesCompletados: 12,
+  tasaExito: 91,
+}
