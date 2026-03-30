@@ -22,13 +22,17 @@ export function Alertas() {
   const [nuevaDias, setNuevaDias] = useState('7')
   const [nuevaExpId, setNuevaExpId] = useState('')
 
+  // Compute live diasRestantes from fechaDisparo so urgency is always current
+  const getDiasRestantes = (a: Alerta) =>
+    Math.ceil((a.fechaDisparo.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+
   const filtered = alertas
     .filter((a) => {
       const matchTipo = !filterTipo || a.tipo === filterTipo
       const matchEstado = !filterEstado || a.estado === filterEstado
       return matchTipo && matchEstado
     })
-    .sort((a, b) => a.diasRestantes - b.diasRestantes)
+    .sort((a, b) => getDiasRestantes(a) - getDiasRestantes(b))
 
   const pending = alertas.filter((a) => a.estado === 'pendiente').length
 
@@ -202,30 +206,31 @@ export function Alertas() {
               const cli = clientes.find((c) => c.id === exp?.clienteId)
               const conv = convocatorias.find((c) => c.idBdns === exp?.convocatoriaId)
               const isVista = alerta.estado === 'vista'
+              const dias = getDiasRestantes(alerta)
 
               return (
                 <div
                   key={alerta.id}
                   className={clsx(
                     'rounded-xl border p-4 flex items-start gap-4 transition-all',
-                    getUrgencyColor(alerta.diasRestantes),
+                    getUrgencyColor(dias),
                     isVista && 'opacity-60'
                   )}
                 >
                   {/* Urgency dot */}
                   <div className={clsx(
                     'w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1',
-                    alerta.diasRestantes < 0 ? 'bg-slate-400' :
-                    alerta.diasRestantes <= 5 ? 'bg-red-500' :
-                    alerta.diasRestantes <= 14 ? 'bg-orange-400' : 'bg-slate-300'
+                    dias < 0 ? 'bg-slate-400' :
+                    dias <= 5 ? 'bg-red-500' :
+                    dias <= 14 ? 'bg-orange-400' : 'bg-slate-300'
                   )} />
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-3 mb-1.5">
                       <div className="flex items-center gap-2 flex-wrap">
                         <AlertaTipoBadge tipo={alerta.tipo} />
-                        <span className={clsx('text-xs', getDiaColor(alerta.diasRestantes))}>
-                          {getDiaLabel(alerta.diasRestantes)}
+                        <span className={clsx('text-xs', getDiaColor(dias))}>
+                          {getDiaLabel(dias)}
                         </span>
                       </div>
                       <span className={clsx(

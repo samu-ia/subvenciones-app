@@ -53,9 +53,12 @@ export function Dashboard() {
     .sort((a, b) => diffDays(a.fechaVencimiento!) - diffDays(b.fechaVencimiento!))
     .slice(0, 5)
 
+  const getAlertaDias = (a: typeof alertas[number]) =>
+    Math.ceil((a.fechaDisparo.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+
   // A22 — acción prioritaria: alerta más urgente
   const alertaMasUrgente = alertasPendientes.length > 0
-    ? [...alertasPendientes].sort((a, b) => a.diasRestantes - b.diasRestantes)[0]
+    ? [...alertasPendientes].sort((a, b) => getAlertaDias(a) - getAlertaDias(b))[0]
     : null
 
   const formatEur = (n: number) =>
@@ -210,11 +213,7 @@ export function Dashboard() {
                       <div>
                         <p className="text-sm font-medium text-slate-900">{alertaMasUrgente.mensaje}</p>
                         <p className="text-xs text-red-600 mt-0.5">
-                          {alertaMasUrgente.diasRestantes <= 0
-                            ? 'Vencido'
-                            : alertaMasUrgente.diasRestantes === 1
-                              ? 'Vence mañana'
-                              : `Vence en ${alertaMasUrgente.diasRestantes} días`}
+                          {(() => { const d = getAlertaDias(alertaMasUrgente); return d <= 0 ? 'Vencido' : d === 1 ? 'Vence mañana' : `Vence en ${d} días` })()}
                         </p>
                       </div>
                     </div>
@@ -369,7 +368,8 @@ export function Dashboard() {
                       {alertas.slice(0, 4).map((alerta) => {
                         const exp = expedientes.find((e) => e.id === alerta.expedienteId)
                         const cli = clientes.find((c) => c.id === exp?.clienteId)
-                        const urgency = alerta.diasRestantes <= 5 ? 'red' : alerta.diasRestantes <= 14 ? 'orange' : 'slate'
+                        const alertaDias = getAlertaDias(alerta)
+                        const urgency = alertaDias <= 5 ? 'red' : alertaDias <= 14 ? 'orange' : 'slate'
                         return (
                           <div
                             key={alerta.id}
@@ -384,12 +384,12 @@ export function Dashboard() {
                               <p className="text-xs text-slate-700 leading-snug line-clamp-2">{alerta.mensaje}</p>
                               <p className="text-xs text-slate-400 mt-0.5">{cli?.nombre ?? '—'}</p>
                             </div>
-                            {alerta.diasRestantes > 0 && (
+                            {alertaDias > 0 && (
                               <span className={clsx(
                                 'text-xs font-medium flex-shrink-0',
                                 urgency === 'red' ? 'text-red-500' : urgency === 'orange' ? 'text-orange-500' : 'text-slate-500'
                               )}>
-                                {alerta.diasRestantes}d
+                                {alertaDias}d
                               </span>
                             )}
                           </div>

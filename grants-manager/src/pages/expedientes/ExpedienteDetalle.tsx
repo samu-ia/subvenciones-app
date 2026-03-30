@@ -7,10 +7,15 @@ import { Button } from '../../components/ui/Button'
 import { useAppStore } from '../../store'
 import {
   ArrowLeft, FileText, MessageSquare, Clock, Upload,
-  CheckCircle, XCircle, AlertTriangle, ChevronRight
+  CheckCircle, XCircle, AlertTriangle, ChevronRight, ChevronDown
 } from 'lucide-react'
 import { clsx } from 'clsx'
-import { ESTADO_COLORS, ESTADO_LABELS } from '../../types'
+import { ESTADO_COLORS, ESTADO_LABELS, type EstadoExpediente } from '../../types'
+
+const TODOS_ESTADOS: EstadoExpediente[] = [
+  'DETECCION', 'EVALUACION', 'PREPARACION', 'PRESENTADA',
+  'SUBSANACION', 'CONCEDIDA', 'JUSTIFICACION', 'CERRADA', 'DENEGADA',
+]
 
 const TABS = ['Datos generales', 'Documentos', 'Notas', 'Historial'] as const
 
@@ -34,10 +39,11 @@ type DocFiltro = typeof DOC_FILTROS[number]
 export function ExpedienteDetalle() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { expedientes, clientes, convocatorias, gestores, addHistorialEntry } = useAppStore()
+  const { expedientes, clientes, convocatorias, gestores, addHistorialEntry, updateExpedienteEstado, addNota } = useAppStore()
   const [tab, setTab] = useState<typeof TABS[number]>('Datos generales')
   const [nota, setNota] = useState('')
   const [docFiltro, setDocFiltro] = useState<DocFiltro>('Todos') // D16
+  const [showEstadoMenu, setShowEstadoMenu] = useState(false)
 
   const exp = expedientes.find((e) => e.id === id)
   if (!exp) return (
@@ -77,6 +83,21 @@ export function ExpedienteDetalle() {
     addHistorialEntry(exp.id, 'Revisado por Gestor', 'Gestor')
   }
 
+  // Estado change
+  const handleCambioEstado = (nuevoEstado: EstadoExpediente) => {
+    if (nuevoEstado !== exp.estado) {
+      updateExpedienteEstado(exp.id, nuevoEstado, 'Laura Martínez')
+    }
+    setShowEstadoMenu(false)
+  }
+
+  // Añadir nota
+  const handleAddNota = () => {
+    if (!nota.trim()) return
+    addNota(exp.id, nota.trim(), 'Laura Martínez')
+    setNota('')
+  }
+
   return (
     <>
       <Navbar
@@ -110,7 +131,41 @@ export function ExpedienteDetalle() {
         {/* Header band */}
         <div className="bg-white border-b border-slate-100 px-6 py-4">
           <div className="flex flex-wrap items-center gap-4">
-            <EstadoBadge estado={exp.estado} />
+            {/* Estado con dropdown para cambiar */}
+            <div className="relative">
+              <button
+                onClick={() => setShowEstadoMenu((v) => !v)}
+                className="flex items-center gap-1.5 group"
+                title="Cambiar estado"
+              >
+                <EstadoBadge estado={exp.estado} />
+                <ChevronDown size={12} className="text-slate-400 group-hover:text-slate-700 transition-colors" />
+              </button>
+              {showEstadoMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setShowEstadoMenu(false)}
+                  />
+                  <div className="absolute left-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1 min-w-44">
+                    <p className="text-xs text-slate-400 px-3 py-1.5 font-medium">Cambiar estado a:</p>
+                    {TODOS_ESTADOS.filter((s) => s !== exp.estado).map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => handleCambioEstado(s)}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-slate-50 transition-colors"
+                      >
+                        <span
+                          className="w-2 h-2 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: ESTADO_COLORS[s] }}
+                        />
+                        <span className="text-sm text-slate-700">{ESTADO_LABELS[s]}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
             {exp.numeroOficial && (
               <span className="text-xs text-slate-500 font-mono bg-slate-100 px-2 py-1 rounded">{exp.numeroOficial}</span>
             )}
@@ -371,7 +426,7 @@ export function ExpedienteDetalle() {
                     onChange={(e) => setNota(e.target.value)}
                   />
                   <div className="flex justify-end mt-2">
-                    <Button size="sm" disabled={!nota.trim()} icon={<MessageSquare size={13} />}>
+                    <Button size="sm" disabled={!nota.trim()} icon={<MessageSquare size={13} />} onClick={handleAddNota}>
                       Añadir nota
                     </Button>
                   </div>

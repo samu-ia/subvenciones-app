@@ -14,14 +14,12 @@ export function Convocatorias() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [filterTipo, setFilterTipo] = useState('')
-  const [filterOrganismo, setFilterOrganismo] = useState('')
 
   const filtered = convocatorias.filter((c) => {
     const q = search.toLowerCase()
     const matchSearch = !q || c.nombre.toLowerCase().includes(q) || c.organismo.toLowerCase().includes(q)
     const matchTipo = !filterTipo || c.tipo === filterTipo
-    const matchOrg = !filterOrganismo || c.organismo.includes(filterOrganismo)
-    return matchSearch && matchTipo && matchOrg
+    return matchSearch && matchTipo
   })
 
   const formatEur = (n: number) =>
@@ -36,7 +34,7 @@ export function Convocatorias() {
         subtitle="Convocatorias activas y recientes"
         actions={
           <Button size="sm" variant="secondary" icon={<ExternalLink size={14} />}
-            onClick={() => window.open('https://www.pap.hacienda.gob.es/bdnstrans/GE/es/convocatorias', '_blank')}>
+            onClick={() => { const w = window.open('https://www.pap.hacienda.gob.es/bdnstrans/GE/es/convocatorias', '_blank', 'noopener,noreferrer'); if (w) w.opener = null }}>
             Abrir BDNS
           </Button>
         }
@@ -60,7 +58,7 @@ export function Convocatorias() {
             <option value="local">Local</option>
           </Select>
           {(search || filterTipo) && (
-            <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setFilterTipo(''); setFilterOrganismo('') }}>
+            <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setFilterTipo('') }}>
               Limpiar
             </Button>
           )}
@@ -113,7 +111,7 @@ export function Convocatorias() {
                       variant="ghost"
                       size="sm"
                       icon={<ExternalLink size={12} />}
-                      onClick={(e) => { e.stopPropagation(); window.open(conv.urlSede, '_blank') }}
+                      onClick={(e) => { e.stopPropagation(); const w = window.open(conv.urlSede, '_blank', 'noopener,noreferrer'); if (w) w.opener = null }}
                     >
                       Sede
                     </Button>

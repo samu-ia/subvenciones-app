@@ -26,9 +26,9 @@ export function Button({
           'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 active:bg-slate-100': variant === 'secondary',
           'text-slate-600 hover:bg-slate-100 active:bg-slate-200': variant === 'ghost',
           'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100': variant === 'danger',
-          'px-2.5 py-1.5 text-xs': size === 'sm',
-          'px-3.5 py-2 text-sm': size === 'md',
-          'px-5 py-2.5 text-base': size === 'lg',
+          'px-2.5 py-2 text-xs min-h-[34px]': size === 'sm',
+          'px-3.5 py-2.5 text-sm min-h-[40px]': size === 'md',
+          'px-5 py-3 text-base min-h-[48px]': size === 'lg',
         },
         className
       )}

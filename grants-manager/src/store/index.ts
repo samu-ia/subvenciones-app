@@ -11,11 +11,12 @@ interface AppState {
   sidebarCollapsed: boolean
   urgentPinnedIds: string[]
   setSidebarCollapsed: (v: boolean) => void
-  updateExpedienteEstado: (id: string, estado: EstadoExpediente) => void
+  updateExpedienteEstado: (id: string, estado: EstadoExpediente, usuario?: string) => void
   marcarAlertaVista: (id: string) => void
   addAlerta: (alerta: Alerta) => void
   toggleUrgentPin: (id: string) => void
   addHistorialEntry: (expedienteId: string, texto: string, usuario: string) => void
+  addNota: (expedienteId: string, texto: string, autor: string) => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -27,7 +28,7 @@ export const useAppStore = create<AppState>((set) => ({
   sidebarCollapsed: false,
   urgentPinnedIds: [],
   setSidebarCollapsed: (v) => set({ sidebarCollapsed: v }),
-  updateExpedienteEstado: (id, estado) =>
+  updateExpedienteEstado: (id, estado, usuario = 'Gestor') =>
     set((s) => ({
       expedientes: s.expedientes.map((e) =>
         e.id === id
@@ -36,7 +37,7 @@ export const useAppStore = create<AppState>((set) => ({
               estado,
               historial: [
                 ...e.historial,
-                { id: `h${Date.now()}`, estadoAnterior: e.estado, estadoNuevo: estado, fecha: new Date(), usuario: 'Gestor' },
+                { id: `h${Date.now()}`, estadoAnterior: e.estado, estadoNuevo: estado, fecha: new Date(), usuario },
               ],
             }
           : e
@@ -69,6 +70,25 @@ export const useAppStore = create<AppState>((set) => ({
                   fecha: new Date(),
                   usuario,
                   comentario: texto,
+                },
+              ],
+            }
+          : e
+      ),
+    })),
+  addNota: (expedienteId, texto, autor) =>
+    set((s) => ({
+      expedientes: s.expedientes.map((e) =>
+        e.id === expedienteId
+          ? {
+              ...e,
+              notas: [
+                ...e.notas,
+                {
+                  id: `n${Date.now()}`,
+                  texto,
+                  fecha: new Date(),
+                  autor,
                 },
               ],
             }

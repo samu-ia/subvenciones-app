@@ -77,7 +77,7 @@ export function Expedientes() {
         e.fechaVencimiento ? e.fechaVencimiento.toLocaleDateString('es-ES') : '',
       ]
     })
-    const csv = [headers, ...rows].map((r) => r.map((v) => `"${v}"`).join(',')).join('\n')
+    const csv = [headers, ...rows].map((r) => r.map((v) => `"${v.replace(/"/g, '""')}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
