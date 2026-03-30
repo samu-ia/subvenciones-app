@@ -853,7 +853,7 @@ La inversión se amortizará en menos de 18 meses gracias al ahorro en tiempo de
                               </span>
                             </div>
                             {n.autor.includes('IA') || n.autor.includes('Gemini') ? (
-                              <pre className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap font-sans">{n.texto}</pre>
+                              <pre className="text-sm !text-slate-700 leading-relaxed whitespace-pre-wrap font-sans m-0 [&_*]:!text-slate-700">{n.texto}</pre>
                             ) : (
                               <p className="text-sm text-slate-700 leading-relaxed">{n.texto}</p>
                             )}

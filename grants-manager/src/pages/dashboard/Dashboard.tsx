@@ -16,6 +16,18 @@ const ESTADO_ORDER: EstadoExpediente[] = [
   'SUBSANACION', 'CONCEDIDA', 'JUSTIFICACION', 'CERRADA', 'DENEGADA',
 ]
 
+const ESTADO_SHORT: Record<EstadoExpediente, string> = {
+  DETECCION: 'Detec.',
+  EVALUACION: 'Eval.',
+  PREPARACION: 'Prep.',
+  PRESENTADA: 'Present.',
+  SUBSANACION: 'Subsan.',
+  CONCEDIDA: 'Concedida',
+  JUSTIFICACION: 'Justif.',
+  CERRADA: 'Cerrada',
+  DENEGADA: 'Denega.',
+}
+
 export function Dashboard() {
   const { expedientes, alertas, clientes, convocatorias } = useAppStore()
   const navigate = useNavigate()
@@ -36,7 +48,7 @@ export function Dashboard() {
   const tasaExito = cerradas.length > 0 ? Math.round((concedidas.length / cerradas.length) * 100) : 0
 
   const porEstado = ESTADO_ORDER.map((estado) => ({
-    name: ESTADO_LABELS[estado].substring(0, 6),
+    name: ESTADO_SHORT[estado],
     fullName: ESTADO_LABELS[estado],
     count: expedientes.filter((e) => e.estado === estado).length,
     color: ESTADO_COLORS[estado],
