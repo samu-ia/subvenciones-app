@@ -111,8 +111,8 @@ export const convocatorias: Convocatoria[] = [
   {
     idBdns: '698432', nombre: 'Ayudas a proyectos I+D empresarial — CDTI 2024',
     organismo: 'Centro para el Desarrollo Tecnológico Industrial (CDTI)', tipo: 'estatal',
-    fechaApertura: new Date('2024-02-01'), fechaCierre: new Date('2024-06-30'),
-    fechaJustificacion: new Date('2025-12-31'),
+    fechaApertura: new Date('2026-02-01'), fechaCierre: new Date('2026-09-30'),
+    fechaJustificacion: new Date('2027-12-31'),
     importeMax: 1500000, porcentajeSubvencionable: 75,
     urlSede: 'https://www.cdti.es', requisitos: ['Empresa española', 'Proyecto I+D', 'Presupuesto > 175.000€'],
     descripcion: 'Financiación de proyectos de Investigación Industrial y Desarrollo Experimental.',
@@ -120,8 +120,8 @@ export const convocatorias: Convocatoria[] = [
   {
     idBdns: '745001', nombre: 'Incentivos a la inversión en Andalucía — Orden INN-B',
     organismo: 'Junta de Andalucía — Consejería de Industria', tipo: 'autonomica',
-    fechaApertura: new Date('2024-01-08'), fechaCierre: new Date('2024-07-08'),
-    fechaJustificacion: new Date('2025-06-30'),
+    fechaApertura: new Date('2026-01-08'), fechaCierre: new Date('2026-08-08'),
+    fechaJustificacion: new Date('2027-06-30'),
     importeMax: 200000, porcentajeSubvencionable: 40,
     urlSede: 'https://www.juntadeandalucia.es', requisitos: ['Empresa con sede en Andalucía', 'Inversión productiva', 'Creación de empleo'],
     descripcion: 'Incentivos a proyectos de inversión empresarial en la Comunidad Autónoma de Andalucía.',
@@ -138,8 +138,8 @@ export const convocatorias: Convocatoria[] = [
   {
     idBdns: '718956', nombre: 'Ayudas a la contratación de parados de larga duración — SEPE',
     organismo: 'Servicio Público de Empleo Estatal (SEPE)', tipo: 'estatal',
-    fechaApertura: new Date('2024-01-01'), fechaCierre: new Date('2024-12-31'),
-    fechaJustificacion: new Date('2025-06-30'),
+    fechaApertura: new Date('2026-01-01'), fechaCierre: new Date('2026-12-31'),
+    fechaJustificacion: new Date('2027-06-30'),
     importeMax: 20000, porcentajeSubvencionable: 100,
     urlSede: 'https://www.sepe.es', requisitos: ['Cualquier empresa', 'Contratar desempleado > 12 meses'],
     descripcion: 'Bonificaciones en cuotas de Seguridad Social por contratación de desempleados de larga duración.',
@@ -156,8 +156,8 @@ export const convocatorias: Convocatoria[] = [
   {
     idBdns: '741567', nombre: 'Ayudas a la eficiencia energética en industria — IDAE',
     organismo: 'Instituto para la Diversificación y Ahorro de la Energía (IDAE)', tipo: 'estatal',
-    fechaApertura: new Date('2024-02-15'), fechaCierre: new Date('2024-09-15'),
-    fechaJustificacion: new Date('2025-09-30'),
+    fechaApertura: new Date('2026-02-15'), fechaCierre: new Date('2026-09-15'),
+    fechaJustificacion: new Date('2027-09-30'),
     importeMax: 300000, porcentajeSubvencionable: 55,
     urlSede: 'https://www.idae.es', requisitos: ['Empresa industrial', 'Ahorro energético > 10%', 'Auditoría previa'],
     descripcion: 'Subvenciones para proyectos de mejora de la eficiencia energética en el sector industrial.',
@@ -165,8 +165,8 @@ export const convocatorias: Convocatoria[] = [
   {
     idBdns: '729888', nombre: 'Subvenciones a entidades del tercer sector social — IMSERSO',
     organismo: 'IMSERSO — Ministerio de Derechos Sociales', tipo: 'estatal',
-    fechaApertura: new Date('2024-01-10'), fechaCierre: new Date('2024-03-31'),
-    fechaJustificacion: new Date('2024-12-31'),
+    fechaApertura: new Date('2026-01-10'), fechaCierre: new Date('2026-06-30'),
+    fechaJustificacion: new Date('2027-06-30'),
     importeMax: 150000, porcentajeSubvencionable: 80,
     urlSede: 'https://www.imserso.es', requisitos: ['Entidad sin ánimo de lucro', 'Actividad social', 'Inscrita en registro'],
     descripcion: 'Financiación de programas sociales para personas mayores y con discapacidad.',
@@ -174,8 +174,8 @@ export const convocatorias: Convocatoria[] = [
   {
     idBdns: '755670', nombre: 'Plan Renove Maquinaria Agrícola — MAPA 2024',
     organismo: 'Ministerio de Agricultura, Pesca y Alimentación', tipo: 'estatal',
-    fechaApertura: new Date('2024-04-01'), fechaCierre: new Date('2024-07-31'),
-    fechaJustificacion: new Date('2025-04-30'),
+    fechaApertura: new Date('2026-04-01'), fechaCierre: new Date('2026-09-30'),
+    fechaJustificacion: new Date('2027-04-30'),
     importeMax: 30000, porcentajeSubvencionable: 30,
     urlSede: 'https://www.mapa.gob.es', requisitos: ['Agricultor activo', 'Dar de baja maquinaria antigua', 'Uso profesional'],
     descripcion: 'Ayudas para la adquisición de nueva maquinaria agrícola con baja de la antigua.',
@@ -183,8 +183,8 @@ export const convocatorias: Convocatoria[] = [
   {
     idBdns: '748932', nombre: 'Fomento del turismo rural sostenible — Comunitat Valenciana',
     organismo: 'Turisme Comunitat Valenciana', tipo: 'autonomica',
-    fechaApertura: new Date('2024-02-20'), fechaCierre: new Date('2024-05-20'),
-    fechaJustificacion: new Date('2025-01-31'),
+    fechaApertura: new Date('2026-02-20'), fechaCierre: new Date('2026-07-20'),
+    fechaJustificacion: new Date('2027-01-31'),
     importeMax: 40000, porcentajeSubvencionable: 50,
     urlSede: 'https://turisme.gva.es', requisitos: ['Alojamiento rural en CV', 'Certificación sostenibilidad', 'Menos de 20 plazas'],
     descripcion: 'Subvenciones para establecimientos de turismo rural con criterios de sostenibilidad.',
@@ -192,8 +192,8 @@ export const convocatorias: Convocatoria[] = [
   {
     idBdns: '762180', nombre: 'Digitalización de autónomos y microempresas — Comunidad de Madrid',
     organismo: 'Comunidad de Madrid — Consejería de Economía', tipo: 'autonomica',
-    fechaApertura: new Date('2024-03-11'), fechaCierre: new Date('2024-06-11'),
-    fechaJustificacion: new Date('2025-03-31'),
+    fechaApertura: new Date('2026-03-11'), fechaCierre: new Date('2026-08-11'),
+    fechaJustificacion: new Date('2027-03-31'),
     importeMax: 12000, porcentajeSubvencionable: 80,
     urlSede: 'https://www.comunidad.madrid', requisitos: ['Autónomo o empresa < 10 trabajadores', 'Sede en Madrid', 'Sin ayudas similares'],
     descripcion: 'Ayudas para la digitalización de negocios con menos de 10 trabajadores en la Comunidad de Madrid.',
@@ -210,8 +210,8 @@ export const convocatorias: Convocatoria[] = [
   {
     idBdns: '771234', nombre: 'Rehabilitación energética en edificios — Programa PREE',
     organismo: 'IDAE — Plan de Recuperación (PRTR)', tipo: 'estatal',
-    fechaApertura: new Date('2024-04-15'), fechaCierre: new Date('2024-11-30'),
-    fechaJustificacion: new Date('2026-06-30'),
+    fechaApertura: new Date('2026-04-15'), fechaCierre: new Date('2026-11-30'),
+    fechaJustificacion: new Date('2028-06-30'),
     importeMax: 1000000, porcentajeSubvencionable: 35,
     urlSede: 'https://www.idae.es/pree', requisitos: ['Propietario de edificio', 'Reducción de emisiones > 30%', 'Certificado energético'],
     descripcion: 'Ayudas NEXT GENERATION para rehabilitación energética de edificios existentes.',
@@ -219,8 +219,8 @@ export const convocatorias: Convocatoria[] = [
   {
     idBdns: '709876', nombre: 'Emprendimiento social — Programa Impulsa — Basque Gov',
     organismo: 'Gobierno Vasco — Departamento de Trabajo', tipo: 'autonomica',
-    fechaApertura: new Date('2024-02-01'), fechaCierre: new Date('2024-04-30'),
-    fechaJustificacion: new Date('2025-02-28'),
+    fechaApertura: new Date('2026-02-01'), fechaCierre: new Date('2026-06-30'),
+    fechaJustificacion: new Date('2027-02-28'),
     importeMax: 60000, porcentajeSubvencionable: 65,
     urlSede: 'https://www.euskadi.eus', requisitos: ['Empresa de economía social', 'Domicilio en Euskadi', 'Creación de empleo'],
     descripcion: 'Apoyo a iniciativas de emprendimiento social y cooperativas en el País Vasco.',
@@ -245,7 +245,7 @@ export const expedientes: Expediente[] = [
       { id: 'd3', expedienteId: 'e1', tipo: 'Factura agente digitalizador', nombreArchivo: 'factura_agente_001.pdf', fechaSubida: new Date('2024-03-01'), estado: 'subido', tamanio: '0.8 MB' },
     ],
     notas: [
-      { id: 'n1', texto: 'Resolución favorable recibida. Cliente notificado.', fecha: new Date('2024-03-15'), autor: 'Laura Martínez' },
+      { id: 'n1', texto: 'Resolución favorable recibida. Cliente notificado.', fecha: d(-15), autor: 'Laura Martínez' },
     ],
     historial: [
       { id: 'h1', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: d(-130), usuario: 'Laura Martínez' },
@@ -265,7 +265,7 @@ export const expedientes: Expediente[] = [
       { id: 'd5', expedienteId: 'e2', tipo: 'Pitch Deck', nombreArchivo: 'pitch_deck_eic.pdf', fechaSubida: new Date('2024-03-01'), estado: 'pendiente', tamanio: '12.1 MB' },
     ],
     notas: [
-      { id: 'n2', texto: 'Expediente muy prometedor. Alta probabilidad de concesión según scoring EIC.', fecha: new Date('2024-03-05'), autor: 'Carlos Ruiz' },
+      { id: 'n2', texto: 'Expediente muy prometedor. Alta probabilidad de concesión según scoring EIC.', fecha: d(-25), autor: 'Carlos Ruiz' },
     ],
     historial: [
       { id: 'h6', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: d(-55), usuario: 'Carlos Ruiz' },
@@ -299,8 +299,8 @@ export const expedientes: Expediente[] = [
       { id: 'd10', expedienteId: 'e4', tipo: 'Informe de ejecución', nombreArchivo: 'informe_ejecucion.pdf', fechaSubida: new Date(''), estado: 'pendiente' },
     ],
     notas: [
-      { id: 'n3', texto: 'Quedan 2 facturas por subir. Avisar al cliente.', fecha: new Date('2024-03-25'), autor: 'Ana Torres' },
-      { id: 'n4', texto: 'Cliente confirma que sube resto de documentación esta semana.', fecha: new Date('2024-03-27'), autor: 'Ana Torres' },
+      { id: 'n3', texto: 'Quedan 2 facturas por subir. Avisar al cliente.', fecha: d(-5), autor: 'Ana Torres' },
+      { id: 'n4', texto: 'Cliente confirma que sube resto de documentación esta semana.', fecha: d(-3), autor: 'Ana Torres' },
     ],
     historial: [
       { id: 'h11', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: d(-90), usuario: 'Ana Torres' },
@@ -322,7 +322,7 @@ export const expedientes: Expediente[] = [
       { id: 'd13', expedienteId: 'e5', tipo: 'Certificado sostenibilidad actualizado', nombreArchivo: '', fechaSubida: new Date(''), estado: 'pendiente' },
     ],
     notas: [
-      { id: 'n5', texto: 'Organismo requiere certificado de sostenibilidad más reciente (< 6 meses). El aportado es de 2022.', fecha: new Date('2024-03-22'), autor: 'Laura Martínez' },
+      { id: 'n5', texto: 'Organismo requiere certificado de sostenibilidad más reciente (< 6 meses). El aportado es de 2022.', fecha: d(-8), autor: 'Laura Martínez' },
     ],
     historial: [
       { id: 'h16', estadoAnterior: null, estadoNuevo: 'PREPARACION', fecha: d(-38), usuario: 'Laura Martínez' },
@@ -340,7 +340,7 @@ export const expedientes: Expediente[] = [
       { id: 'd15', expedienteId: 'e6', tipo: 'Ficha técnica maquinaria', nombreArchivo: '', fechaSubida: new Date(''), estado: 'pendiente' },
     ],
     notas: [
-      { id: 'n6', texto: 'Pendiente de ficha técnica del tractor nuevo.', fecha: new Date('2024-03-20'), autor: 'Carlos Ruiz' },
+      { id: 'n6', texto: 'Pendiente de ficha técnica del tractor nuevo.', fecha: d(-10), autor: 'Carlos Ruiz' },
     ],
     historial: [
       { id: 'h19', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: d(-28), usuario: 'Carlos Ruiz' },
@@ -354,7 +354,7 @@ export const expedientes: Expediente[] = [
     fechaVencimiento: d(20),
     documentos: [],
     notas: [
-      { id: 'n7', texto: 'Cliente muy interesado. Encaja perfectamente con su perfil.', fecha: new Date('2024-03-25'), autor: 'Ana Torres' },
+      { id: 'n7', texto: 'Cliente muy interesado. Encaja perfectamente con su perfil.', fecha: d(-5), autor: 'Ana Torres' },
     ],
     historial: [
       { id: 'h21', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: d(-5), usuario: 'Ana Torres' },
@@ -384,7 +384,7 @@ export const expedientes: Expediente[] = [
       { id: 'd18', expedienteId: 'e9', tipo: 'Plan financiero', nombreArchivo: 'plan_financiero_cdti.xlsx', fechaSubida: new Date('2024-03-12'), estado: 'subido', tamanio: '0.9 MB' },
     ],
     notas: [
-      { id: 'n8', texto: 'Proyecto de alto impacto. Coordinado con el equipo técnico del cliente.', fecha: new Date('2024-03-12'), autor: 'Carlos Ruiz' },
+      { id: 'n8', texto: 'Proyecto de alto impacto. Coordinado con el equipo técnico del cliente.', fecha: d(-18), autor: 'Carlos Ruiz' },
     ],
     historial: [
       { id: 'h24', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: d(-48), usuario: 'Carlos Ruiz' },
@@ -401,7 +401,7 @@ export const expedientes: Expediente[] = [
       { id: 'd20', expedienteId: 'e10', tipo: 'Proyecto técnico', nombreArchivo: '', fechaSubida: new Date(''), estado: 'pendiente' },
     ],
     notas: [
-      { id: 'n9', texto: 'Edificio con calificación G. Gran potencial de ahorro energético.', fecha: new Date('2024-03-22'), autor: 'Laura Martínez' },
+      { id: 'n9', texto: 'Edificio con calificación G. Gran potencial de ahorro energético.', fecha: d(-8), autor: 'Laura Martínez' },
     ],
     historial: [
       { id: 'h26', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: d(-22), usuario: 'Laura Martínez' },
@@ -415,7 +415,7 @@ export const expedientes: Expediente[] = [
     fechaVencimiento: undefined,
     documentos: [],
     notas: [
-      { id: 'n10', texto: 'Denegada por no cumplir requisito de empresa de economía social. Revisar alternativas.', fecha: new Date('2024-03-25'), autor: 'Ana Torres' },
+      { id: 'n10', texto: 'Denegada por no cumplir requisito de empresa de economía social. Revisar alternativas.', fecha: d(-5), autor: 'Ana Torres' },
     ],
     historial: [
       { id: 'h28', estadoAnterior: null, estadoNuevo: 'PREPARACION', fecha: d(-90), usuario: 'Ana Torres' },
@@ -458,7 +458,7 @@ export const expedientes: Expediente[] = [
       { id: 'd22', expedienteId: 'e14', tipo: 'Plan de internacionalización', nombreArchivo: 'plan_intl_dvn.pdf', fechaSubida: new Date('2024-03-25'), estado: 'subido', tamanio: '4.5 MB' },
     ],
     notas: [
-      { id: 'n11', texto: 'Buena puntuación en criterios previos ICEX.', fecha: new Date('2024-03-26'), autor: 'Carlos Ruiz' },
+      { id: 'n11', texto: 'Buena puntuación en criterios previos ICEX.', fecha: d(-4), autor: 'Carlos Ruiz' },
     ],
     historial: [
       { id: 'h35', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: d(-18), usuario: 'Carlos Ruiz' },
@@ -472,7 +472,7 @@ export const expedientes: Expediente[] = [
     fechaVencimiento: d(50),
     documentos: [],
     notas: [
-      { id: 'n12', texto: 'Expediente alineado con expansión prevista a Andalucía.', fecha: new Date('2024-03-27'), autor: 'Ana Torres' },
+      { id: 'n12', texto: 'Expediente alineado con expansión prevista a Andalucía.', fecha: d(-3), autor: 'Ana Torres' },
     ],
     historial: [
       { id: 'h37', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: d(-20), usuario: 'Ana Torres' },

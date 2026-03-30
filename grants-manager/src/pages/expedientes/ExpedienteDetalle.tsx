@@ -509,7 +509,7 @@ La inversión se amortizará en menos de 18 meses gracias al ahorro en tiempo de
                 key={t}
                 onClick={() => setTab(t)}
                 className={clsx(
-                  'px-4 py-3 text-sm font-medium border-b-2 transition-colors',
+                  'inline-flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors',
                   tab === t
                     ? 'border-slate-900 text-slate-900'
                     : 'border-transparent text-slate-500 hover:text-slate-700'
@@ -517,7 +517,7 @@ La inversión se amortizará en menos de 18 meses gracias al ahorro en tiempo de
               >
                 {t}
                 {t === 'Presupuestos' && expPresupuestos.length > 0 && (
-                  <span className="ml-1.5 text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full">
+                  <span className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full">
                     {expPresupuestos.length}
                   </span>
                 )}

@@ -1021,16 +1021,19 @@ export function NuevaSubvencion() {
                     <div>
                       <p className="text-sm font-semibold text-slate-900">
                         Plazo de solicitud:{' '}
-                        <span className={clsx(diasRestantes !== null && diasRestantes <= 30 ? 'text-red-600' : 'text-slate-900')}>
+                        <span className={clsx(diasRestantes !== null && diasRestantes > 0 && diasRestantes <= 30 ? 'text-red-600' : 'text-slate-900')}>
                           {selected.fechaCierre
                             ? new Date(selected.fechaCierre).toLocaleDateString('es-ES')
                             : 'Ver convocatoria'}
                         </span>
                       </p>
-                      {diasRestantes !== null && (
+                      {diasRestantes !== null && diasRestantes > 0 && (
                         <p className={clsx('text-xs mt-0.5', diasRestantes <= 30 ? 'text-red-600 font-medium' : 'text-slate-500')}>
                           Quedan {diasRestantes} días
                         </p>
+                      )}
+                      {diasRestantes !== null && diasRestantes <= 0 && (
+                        <p className="text-xs mt-0.5 text-slate-400">Verifica la fecha en la sede electrónica</p>
                       )}
                     </div>
                   </div>
