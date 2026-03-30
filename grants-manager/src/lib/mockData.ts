@@ -10,7 +10,7 @@ export const clientes: Cliente[] = [
   {
     id: 'c1', nombre: 'Hostelería Atlántica S.L.', nif: 'B15234567',
     sector: 'Hostelería', cnae: '5610', comunidadAutonoma: 'Galicia',
-    tamano: 'pyme', certificadoDigital: 'FNMT-RCM', caducidadCertificado: new Date('2024-11-15'),
+    tamano: 'pyme', certificadoDigital: 'FNMT-RCM', caducidadCertificado: new Date('2025-11-15'),
     contacto: 'María González', email: 'maria@hosteleria-atlantica.es', telefono: '981 234 567',
     fechaAlta: new Date('2023-03-12'),
     cumplimientoHacienda: 'ok', cumplimientoSS: 'ok',
@@ -18,7 +18,7 @@ export const clientes: Cliente[] = [
   {
     id: 'c2', nombre: 'Industrias Metálicas del Norte S.A.', nif: 'A33456789',
     sector: 'Industria Manufacturera', cnae: '2511', comunidadAutonoma: 'Asturias',
-    tamano: 'pyme', certificadoDigital: 'Camerfirma', caducidadCertificado: new Date('2025-06-30'),
+    tamano: 'pyme', certificadoDigital: 'Camerfirma', caducidadCertificado: new Date('2026-06-30'),
     contacto: 'Pedro Álvarez', email: 'pedro@metalicas-norte.es', telefono: '985 678 901',
     fechaAlta: new Date('2023-05-20'),
     cumplimientoHacienda: 'revisar', cumplimientoSS: 'ok',
@@ -26,7 +26,7 @@ export const clientes: Cliente[] = [
   {
     id: 'c3', nombre: 'Fundación Horizonte Social', nif: 'G28901234',
     sector: 'Servicios Sociales', cnae: '8899', comunidadAutonoma: 'Madrid',
-    tamano: 'ong', certificadoDigital: 'FNMT-RCM', caducidadCertificado: new Date('2025-09-01'),
+    tamano: 'ong', certificadoDigital: 'FNMT-RCM', caducidadCertificado: new Date('2026-09-01'),
     contacto: 'Rosa Jiménez', email: 'rosa@horizontesocial.org', telefono: '914 321 765',
     fechaAlta: new Date('2023-01-08'),
     cumplimientoHacienda: 'ok', cumplimientoSS: 'ok',
@@ -34,7 +34,7 @@ export const clientes: Cliente[] = [
   {
     id: 'c4', nombre: 'Comercial Valencia Fresh S.L.', nif: 'B46789012',
     sector: 'Comercio Minorista', cnae: '4711', comunidadAutonoma: 'Valencia',
-    tamano: 'micropyme', certificadoDigital: 'Izenpe', caducidadCertificado: new Date('2025-03-15'),
+    tamano: 'micropyme', certificadoDigital: 'Izenpe', caducidadCertificado: new Date('2026-05-15'),
     contacto: 'Jordi Ferrer', email: 'jordi@valenciafresh.es', telefono: '963 456 789',
     fechaAlta: new Date('2023-07-14'),
     cumplimientoHacienda: 'ok', cumplimientoSS: 'revisar',
@@ -42,7 +42,7 @@ export const clientes: Cliente[] = [
   {
     id: 'c5', nombre: 'Agro Extremadura Bio S.C.', nif: 'F10234567',
     sector: 'Agricultura', cnae: '0111', comunidadAutonoma: 'Extremadura',
-    tamano: 'micropyme', certificadoDigital: 'FNMT-RCM', caducidadCertificado: new Date('2025-12-01'),
+    tamano: 'micropyme', certificadoDigital: 'FNMT-RCM', caducidadCertificado: new Date('2026-12-01'),
     contacto: 'Antonio Morales', email: 'antonio@agroextremadura.es', telefono: '927 111 222',
     fechaAlta: new Date('2023-09-03'),
     cumplimientoHacienda: 'ok', cumplimientoSS: 'ok',
@@ -50,7 +50,7 @@ export const clientes: Cliente[] = [
   {
     id: 'c6', nombre: 'Tech Innovate BCN S.L.', nif: 'B08567890',
     sector: 'Tecnología', cnae: '6201', comunidadAutonoma: 'Cataluña',
-    tamano: 'pyme', certificadoDigital: 'Camerfirma', caducidadCertificado: new Date('2026-02-28'),
+    tamano: 'pyme', certificadoDigital: 'Camerfirma', caducidadCertificado: new Date('2027-02-28'),
     contacto: 'Marc Puigdomènech', email: 'marc@techinnovate.es', telefono: '932 567 890',
     fechaAlta: new Date('2023-11-22'),
     cumplimientoHacienda: 'ok', cumplimientoSS: 'ok',
@@ -58,7 +58,7 @@ export const clientes: Cliente[] = [
   {
     id: 'c7', nombre: 'Turismo Rural La Rioja S.L.', nif: 'B26345678',
     sector: 'Turismo', cnae: '5510', comunidadAutonoma: 'La Rioja',
-    tamano: 'micropyme', certificadoDigital: 'FNMT-RCM', caducidadCertificado: new Date('2025-07-20'),
+    tamano: 'micropyme', certificadoDigital: 'FNMT-RCM', caducidadCertificado: new Date('2026-07-20'),
     contacto: 'Elena Navarrete', email: 'elena@turismorioja.es', telefono: '941 234 567',
     fechaAlta: new Date('2024-01-15'),
     cumplimientoHacienda: 'ok', cumplimientoSS: 'ok',
@@ -66,7 +66,7 @@ export const clientes: Cliente[] = [
   {
     id: 'c8', nombre: 'Construcciones Levante 2000 S.A.', nif: 'A03123456',
     sector: 'Construcción', cnae: '4120', comunidadAutonoma: 'Murcia',
-    tamano: 'pyme', certificadoDigital: 'FNMT-RCM', caducidadCertificado: new Date('2025-10-31'),
+    tamano: 'pyme', certificadoDigital: 'FNMT-RCM', caducidadCertificado: new Date('2026-10-31'),
     contacto: 'Francisco López', email: 'flopez@construlevante.es', telefono: '968 345 678',
     fechaAlta: new Date('2024-02-28'),
     cumplimientoHacienda: 'revisar', cumplimientoSS: 'ok',
@@ -74,7 +74,7 @@ export const clientes: Cliente[] = [
   {
     id: 'c9', nombre: 'Centro Educativo Innovación S.L.', nif: 'B41678901',
     sector: 'Educación', cnae: '8559', comunidadAutonoma: 'Andalucía',
-    tamano: 'pyme', certificadoDigital: 'Camerfirma', caducidadCertificado: new Date('2026-01-10'),
+    tamano: 'pyme', certificadoDigital: 'Camerfirma', caducidadCertificado: new Date('2027-01-10'),
     contacto: 'Isabel Reyes', email: 'ireyes@centroinnovacion.es', telefono: '954 789 012',
     fechaAlta: new Date('2024-03-10'),
     cumplimientoHacienda: 'ok', cumplimientoSS: 'ok',
@@ -82,7 +82,7 @@ export const clientes: Cliente[] = [
   {
     id: 'c10', nombre: 'Distribuciones Vasco-Navarras S.A.', nif: 'A20456789',
     sector: 'Transporte y Logística', cnae: '4941', comunidadAutonoma: 'País Vasco',
-    tamano: 'gran_empresa', certificadoDigital: 'Izenpe', caducidadCertificado: new Date('2025-08-15'),
+    tamano: 'gran_empresa', certificadoDigital: 'Izenpe', caducidadCertificado: new Date('2026-08-15'),
     contacto: 'Iñaki Zubicaray', email: 'izubicaray@vasconavarras.es', telefono: '944 567 890',
     fechaAlta: new Date('2023-06-01'),
     cumplimientoHacienda: 'ok', cumplimientoSS: 'ok',
@@ -93,8 +93,8 @@ export const convocatorias: Convocatoria[] = [
   {
     idBdns: '731245', nombre: 'Ayudas a la modernización del comercio minorista 2024',
     organismo: 'Ministerio de Industria y Turismo', tipo: 'estatal',
-    fechaApertura: new Date('2024-01-15'), fechaCierre: new Date('2024-04-15'),
-    fechaJustificacion: new Date('2024-10-31'),
+    fechaApertura: new Date('2026-01-15'), fechaCierre: new Date('2026-06-30'),
+    fechaJustificacion: new Date('2026-12-31'),
     importeMax: 50000, porcentajeSubvencionable: 50,
     urlSede: 'https://sede.mincotur.gob.es', requisitos: ['PYME', 'Sector comercio', 'Antigüedad > 2 años'],
     descripcion: 'Subvenciones para digitalización y modernización de establecimientos comerciales.',
@@ -102,8 +102,8 @@ export const convocatorias: Convocatoria[] = [
   {
     idBdns: '731890', nombre: 'Programa Kit Digital — Segmento II (3-9 empleados)',
     organismo: 'Red.es — Ministerio de Transformación Digital', tipo: 'estatal',
-    fechaApertura: new Date('2023-09-01'), fechaCierre: new Date('2024-05-31'),
-    fechaJustificacion: new Date('2025-03-31'),
+    fechaApertura: new Date('2026-01-01'), fechaCierre: new Date('2026-09-30'),
+    fechaJustificacion: new Date('2027-03-31'),
     importeMax: 6000, porcentajeSubvencionable: 100,
     urlSede: 'https://acelerapyme.gob.es', requisitos: ['3-9 empleados', 'Actividad en España', 'No en crisis'],
     descripcion: 'Digitalización de pequeñas empresas mediante soluciones tecnológicas.',
@@ -129,8 +129,8 @@ export const convocatorias: Convocatoria[] = [
   {
     idBdns: '752340', nombre: 'FEDER Galicia 2021-2027 — Pyme Digital',
     organismo: 'Xunta de Galicia — Axencia Galega de Innovación', tipo: 'europea',
-    fechaApertura: new Date('2024-03-01'), fechaCierre: new Date('2024-08-15'),
-    fechaJustificacion: new Date('2026-03-01'),
+    fechaApertura: new Date('2026-03-01'), fechaCierre: new Date('2026-08-15'),
+    fechaJustificacion: new Date('2028-03-01'),
     importeMax: 80000, porcentajeSubvencionable: 60,
     urlSede: 'https://gain.xunta.gal', requisitos: ['PYME en Galicia', 'Proyecto de digitalización', 'Cofinanciación FEDER'],
     descripcion: 'Cofinanciación con Fondos FEDER para digitalización de PYMEs gallegas.',
@@ -147,8 +147,8 @@ export const convocatorias: Convocatoria[] = [
   {
     idBdns: '763201', nombre: 'Horizon Europe — EIC Accelerator 2024',
     organismo: 'Comisión Europea — EIC', tipo: 'europea',
-    fechaApertura: new Date('2024-01-17'), fechaCierre: new Date('2024-10-04'),
-    fechaJustificacion: new Date('2026-12-31'),
+    fechaApertura: new Date('2026-01-17'), fechaCierre: new Date('2026-10-04'),
+    fechaJustificacion: new Date('2028-12-31'),
     importeMax: 2500000, porcentajeSubvencionable: 70,
     urlSede: 'https://eic.ec.europa.eu', requisitos: ['Start-up o PYME', 'Tecnología disruptiva', 'Potencial de escala'],
     descripcion: 'Financiación europea para start-ups y PYMEs con tecnologías disruptivas de alto impacto.',
@@ -201,8 +201,8 @@ export const convocatorias: Convocatoria[] = [
   {
     idBdns: '736710', nombre: 'Apoyo a la internacionalización empresarial — ICEX Next',
     organismo: 'ICEX España Exportación e Inversiones', tipo: 'estatal',
-    fechaApertura: new Date('2024-01-15'), fechaCierre: new Date('2024-04-30'),
-    fechaJustificacion: new Date('2025-04-30'),
+    fechaApertura: new Date('2026-01-15'), fechaCierre: new Date('2026-05-31'),
+    fechaJustificacion: new Date('2027-04-30'),
     importeMax: 100000, porcentajeSubvencionable: 50,
     urlSede: 'https://www.icex.es', requisitos: ['PYME', 'Facturación < 10M€', 'Proyecto de internacionalización viable'],
     descripcion: 'Financiación de proyectos de internacionalización para PYMEs con potencial exportador.',
@@ -248,11 +248,11 @@ export const expedientes: Expediente[] = [
       { id: 'n1', texto: 'Resolución favorable recibida. Cliente notificado.', fecha: new Date('2024-03-15'), autor: 'Laura Martínez' },
     ],
     historial: [
-      { id: 'h1', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: new Date('2024-01-20'), usuario: 'Laura Martínez' },
-      { id: 'h2', estadoAnterior: 'DETECCION', estadoNuevo: 'EVALUACION', fecha: new Date('2024-01-25'), usuario: 'Laura Martínez' },
-      { id: 'h3', estadoAnterior: 'EVALUACION', estadoNuevo: 'PREPARACION', fecha: new Date('2024-02-01'), usuario: 'Laura Martínez' },
-      { id: 'h4', estadoAnterior: 'PREPARACION', estadoNuevo: 'PRESENTADA', fecha: new Date('2024-02-10'), usuario: 'Laura Martínez' },
-      { id: 'h5', estadoAnterior: 'PRESENTADA', estadoNuevo: 'CONCEDIDA', fecha: new Date('2024-03-15'), usuario: 'Sistema BDNS' },
+      { id: 'h1', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: d(-130), usuario: 'Laura Martínez' },
+      { id: 'h2', estadoAnterior: 'DETECCION', estadoNuevo: 'EVALUACION', fecha: d(-120), usuario: 'Laura Martínez' },
+      { id: 'h3', estadoAnterior: 'EVALUACION', estadoNuevo: 'PREPARACION', fecha: d(-105), usuario: 'Laura Martínez' },
+      { id: 'h4', estadoAnterior: 'PREPARACION', estadoNuevo: 'PRESENTADA', fecha: d(-90), usuario: 'Laura Martínez' },
+      { id: 'h5', estadoAnterior: 'PRESENTADA', estadoNuevo: 'CONCEDIDA', fecha: d(-60), usuario: 'Sistema BDNS' },
     ],
   },
   {
@@ -268,8 +268,8 @@ export const expedientes: Expediente[] = [
       { id: 'n2', texto: 'Expediente muy prometedor. Alta probabilidad de concesión según scoring EIC.', fecha: new Date('2024-03-05'), autor: 'Carlos Ruiz' },
     ],
     historial: [
-      { id: 'h6', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: new Date('2024-02-01'), usuario: 'Carlos Ruiz' },
-      { id: 'h7', estadoAnterior: 'DETECCION', estadoNuevo: 'EVALUACION', fecha: new Date('2024-02-20'), usuario: 'Carlos Ruiz' },
+      { id: 'h6', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: d(-55), usuario: 'Carlos Ruiz' },
+      { id: 'h7', estadoAnterior: 'DETECCION', estadoNuevo: 'EVALUACION', fecha: d(-38), usuario: 'Carlos Ruiz' },
     ],
   },
   {
@@ -283,9 +283,9 @@ export const expedientes: Expediente[] = [
     ],
     notas: [],
     historial: [
-      { id: 'h8', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: new Date('2024-02-15'), usuario: 'Carlos Ruiz' },
-      { id: 'h9', estadoAnterior: 'DETECCION', estadoNuevo: 'PREPARACION', fecha: new Date('2024-03-01'), usuario: 'Carlos Ruiz' },
-      { id: 'h10', estadoAnterior: 'PREPARACION', estadoNuevo: 'PRESENTADA', fecha: new Date('2024-03-20'), usuario: 'Carlos Ruiz' },
+      { id: 'h8', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: d(-45), usuario: 'Carlos Ruiz' },
+      { id: 'h9', estadoAnterior: 'DETECCION', estadoNuevo: 'PREPARACION', fecha: d(-32), usuario: 'Carlos Ruiz' },
+      { id: 'h10', estadoAnterior: 'PREPARACION', estadoNuevo: 'PRESENTADA', fecha: d(-18), usuario: 'Carlos Ruiz' },
     ],
   },
   {
@@ -303,11 +303,11 @@ export const expedientes: Expediente[] = [
       { id: 'n4', texto: 'Cliente confirma que sube resto de documentación esta semana.', fecha: new Date('2024-03-27'), autor: 'Ana Torres' },
     ],
     historial: [
-      { id: 'h11', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: new Date('2024-01-05'), usuario: 'Ana Torres' },
-      { id: 'h12', estadoAnterior: 'DETECCION', estadoNuevo: 'PREPARACION', fecha: new Date('2024-01-15'), usuario: 'Ana Torres' },
-      { id: 'h13', estadoAnterior: 'PREPARACION', estadoNuevo: 'PRESENTADA', fecha: new Date('2024-02-01'), usuario: 'Ana Torres' },
-      { id: 'h14', estadoAnterior: 'PRESENTADA', estadoNuevo: 'CONCEDIDA', fecha: new Date('2024-02-20'), usuario: 'IMSERSO' },
-      { id: 'h15', estadoAnterior: 'CONCEDIDA', estadoNuevo: 'JUSTIFICACION', fecha: new Date('2024-03-10'), usuario: 'Ana Torres' },
+      { id: 'h11', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: d(-90), usuario: 'Ana Torres' },
+      { id: 'h12', estadoAnterior: 'DETECCION', estadoNuevo: 'PREPARACION', fecha: d(-75), usuario: 'Ana Torres' },
+      { id: 'h13', estadoAnterior: 'PREPARACION', estadoNuevo: 'PRESENTADA', fecha: d(-58), usuario: 'Ana Torres' },
+      { id: 'h14', estadoAnterior: 'PRESENTADA', estadoNuevo: 'CONCEDIDA', fecha: d(-40), usuario: 'IMSERSO' },
+      { id: 'h15', estadoAnterior: 'CONCEDIDA', estadoNuevo: 'JUSTIFICACION', fecha: d(-22), usuario: 'Ana Torres' },
     ],
   },
   {
@@ -325,9 +325,9 @@ export const expedientes: Expediente[] = [
       { id: 'n5', texto: 'Organismo requiere certificado de sostenibilidad más reciente (< 6 meses). El aportado es de 2022.', fecha: new Date('2024-03-22'), autor: 'Laura Martínez' },
     ],
     historial: [
-      { id: 'h16', estadoAnterior: null, estadoNuevo: 'PREPARACION', fecha: new Date('2024-02-20'), usuario: 'Laura Martínez' },
-      { id: 'h17', estadoAnterior: 'PREPARACION', estadoNuevo: 'PRESENTADA', fecha: new Date('2024-03-05'), usuario: 'Laura Martínez' },
-      { id: 'h18', estadoAnterior: 'PRESENTADA', estadoNuevo: 'SUBSANACION', fecha: new Date('2024-03-22'), usuario: 'Turisme CV' },
+      { id: 'h16', estadoAnterior: null, estadoNuevo: 'PREPARACION', fecha: d(-38), usuario: 'Laura Martínez' },
+      { id: 'h17', estadoAnterior: 'PREPARACION', estadoNuevo: 'PRESENTADA', fecha: d(-22), usuario: 'Laura Martínez' },
+      { id: 'h18', estadoAnterior: 'PRESENTADA', estadoNuevo: 'SUBSANACION', fecha: d(-8), usuario: 'Turisme CV' },
     ],
   },
   {
@@ -343,8 +343,8 @@ export const expedientes: Expediente[] = [
       { id: 'n6', texto: 'Pendiente de ficha técnica del tractor nuevo.', fecha: new Date('2024-03-20'), autor: 'Carlos Ruiz' },
     ],
     historial: [
-      { id: 'h19', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: new Date('2024-03-01'), usuario: 'Carlos Ruiz' },
-      { id: 'h20', estadoAnterior: 'DETECCION', estadoNuevo: 'PREPARACION', fecha: new Date('2024-03-15'), usuario: 'Carlos Ruiz' },
+      { id: 'h19', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: d(-28), usuario: 'Carlos Ruiz' },
+      { id: 'h20', estadoAnterior: 'DETECCION', estadoNuevo: 'PREPARACION', fecha: d(-14), usuario: 'Carlos Ruiz' },
     ],
   },
   {
@@ -357,7 +357,7 @@ export const expedientes: Expediente[] = [
       { id: 'n7', texto: 'Cliente muy interesado. Encaja perfectamente con su perfil.', fecha: new Date('2024-03-25'), autor: 'Ana Torres' },
     ],
     historial: [
-      { id: 'h21', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: new Date('2024-03-25'), usuario: 'Ana Torres' },
+      { id: 'h21', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: d(-5), usuario: 'Ana Torres' },
     ],
   },
   {
@@ -370,8 +370,8 @@ export const expedientes: Expediente[] = [
     ],
     notas: [],
     historial: [
-      { id: 'h22', estadoAnterior: null, estadoNuevo: 'PREPARACION', fecha: new Date('2024-03-01'), usuario: 'Ana Torres' },
-      { id: 'h23', estadoAnterior: 'PREPARACION', estadoNuevo: 'PRESENTADA', fecha: new Date('2024-03-15'), usuario: 'Ana Torres' },
+      { id: 'h22', estadoAnterior: null, estadoNuevo: 'PREPARACION', fecha: d(-30), usuario: 'Ana Torres' },
+      { id: 'h23', estadoAnterior: 'PREPARACION', estadoNuevo: 'PRESENTADA', fecha: d(-14), usuario: 'Ana Torres' },
     ],
   },
   {
@@ -387,8 +387,8 @@ export const expedientes: Expediente[] = [
       { id: 'n8', texto: 'Proyecto de alto impacto. Coordinado con el equipo técnico del cliente.', fecha: new Date('2024-03-12'), autor: 'Carlos Ruiz' },
     ],
     historial: [
-      { id: 'h24', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: new Date('2024-02-15'), usuario: 'Carlos Ruiz' },
-      { id: 'h25', estadoAnterior: 'DETECCION', estadoNuevo: 'EVALUACION', fecha: new Date('2024-03-05'), usuario: 'Carlos Ruiz' },
+      { id: 'h24', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: d(-48), usuario: 'Carlos Ruiz' },
+      { id: 'h25', estadoAnterior: 'DETECCION', estadoNuevo: 'EVALUACION', fecha: d(-30), usuario: 'Carlos Ruiz' },
     ],
   },
   {
@@ -404,8 +404,8 @@ export const expedientes: Expediente[] = [
       { id: 'n9', texto: 'Edificio con calificación G. Gran potencial de ahorro energético.', fecha: new Date('2024-03-22'), autor: 'Laura Martínez' },
     ],
     historial: [
-      { id: 'h26', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: new Date('2024-03-10'), usuario: 'Laura Martínez' },
-      { id: 'h27', estadoAnterior: 'DETECCION', estadoNuevo: 'PREPARACION', fecha: new Date('2024-03-20'), usuario: 'Laura Martínez' },
+      { id: 'h26', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: d(-22), usuario: 'Laura Martínez' },
+      { id: 'h27', estadoAnterior: 'DETECCION', estadoNuevo: 'PREPARACION', fecha: d(-10), usuario: 'Laura Martínez' },
     ],
   },
   {
@@ -418,9 +418,9 @@ export const expedientes: Expediente[] = [
       { id: 'n10', texto: 'Denegada por no cumplir requisito de empresa de economía social. Revisar alternativas.', fecha: new Date('2024-03-25'), autor: 'Ana Torres' },
     ],
     historial: [
-      { id: 'h28', estadoAnterior: null, estadoNuevo: 'PREPARACION', fecha: new Date('2024-02-01'), usuario: 'Ana Torres' },
-      { id: 'h29', estadoAnterior: 'PREPARACION', estadoNuevo: 'PRESENTADA', fecha: new Date('2024-02-15'), usuario: 'Ana Torres' },
-      { id: 'h30', estadoAnterior: 'PRESENTADA', estadoNuevo: 'DENEGADA', fecha: new Date('2024-03-25'), usuario: 'Gobierno Vasco' },
+      { id: 'h28', estadoAnterior: null, estadoNuevo: 'PREPARACION', fecha: d(-90), usuario: 'Ana Torres' },
+      { id: 'h29', estadoAnterior: 'PREPARACION', estadoNuevo: 'PRESENTADA', fecha: d(-72), usuario: 'Ana Torres' },
+      { id: 'h30', estadoAnterior: 'PRESENTADA', estadoNuevo: 'DENEGADA', fecha: d(-52), usuario: 'Gobierno Vasco' },
     ],
   },
   {
@@ -433,9 +433,9 @@ export const expedientes: Expediente[] = [
     ],
     notas: [],
     historial: [
-      { id: 'h31', estadoAnterior: null, estadoNuevo: 'CONCEDIDA', fecha: new Date('2023-11-15'), usuario: 'Carlos Ruiz' },
-      { id: 'h32', estadoAnterior: 'CONCEDIDA', estadoNuevo: 'JUSTIFICACION', fecha: new Date('2024-01-10'), usuario: 'Carlos Ruiz' },
-      { id: 'h33', estadoAnterior: 'JUSTIFICACION', estadoNuevo: 'CERRADA', fecha: new Date('2024-02-28'), usuario: 'Carlos Ruiz' },
+      { id: 'h31', estadoAnterior: null, estadoNuevo: 'CONCEDIDA', fecha: d(-200), usuario: 'Carlos Ruiz' },
+      { id: 'h32', estadoAnterior: 'CONCEDIDA', estadoNuevo: 'JUSTIFICACION', fecha: d(-150), usuario: 'Carlos Ruiz' },
+      { id: 'h33', estadoAnterior: 'JUSTIFICACION', estadoNuevo: 'CERRADA', fecha: d(-90), usuario: 'Carlos Ruiz' },
     ],
   },
   {
@@ -446,7 +446,7 @@ export const expedientes: Expediente[] = [
     documentos: [],
     notas: [],
     historial: [
-      { id: 'h34', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: new Date('2024-03-28'), usuario: 'Ana Torres' },
+      { id: 'h34', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: d(-2), usuario: 'Ana Torres' },
     ],
   },
   {
@@ -461,8 +461,8 @@ export const expedientes: Expediente[] = [
       { id: 'n11', texto: 'Buena puntuación en criterios previos ICEX.', fecha: new Date('2024-03-26'), autor: 'Carlos Ruiz' },
     ],
     historial: [
-      { id: 'h35', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: new Date('2024-03-15'), usuario: 'Carlos Ruiz' },
-      { id: 'h36', estadoAnterior: 'DETECCION', estadoNuevo: 'EVALUACION', fecha: new Date('2024-03-25'), usuario: 'Carlos Ruiz' },
+      { id: 'h35', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: d(-18), usuario: 'Carlos Ruiz' },
+      { id: 'h36', estadoAnterior: 'DETECCION', estadoNuevo: 'EVALUACION', fecha: d(-7), usuario: 'Carlos Ruiz' },
     ],
   },
   {
@@ -475,8 +475,8 @@ export const expedientes: Expediente[] = [
       { id: 'n12', texto: 'Expediente alineado con expansión prevista a Andalucía.', fecha: new Date('2024-03-27'), autor: 'Ana Torres' },
     ],
     historial: [
-      { id: 'h37', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: new Date('2024-03-20'), usuario: 'Ana Torres' },
-      { id: 'h38', estadoAnterior: 'DETECCION', estadoNuevo: 'PREPARACION', fecha: new Date('2024-03-27'), usuario: 'Ana Torres' },
+      { id: 'h37', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: d(-20), usuario: 'Ana Torres' },
+      { id: 'h38', estadoAnterior: 'DETECCION', estadoNuevo: 'PREPARACION', fecha: d(-8), usuario: 'Ana Torres' },
     ],
   },
   {
@@ -487,8 +487,8 @@ export const expedientes: Expediente[] = [
     documentos: [],
     notas: [],
     historial: [
-      { id: 'h39', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: new Date('2024-03-10'), usuario: 'Laura Martínez' },
-      { id: 'h40', estadoAnterior: 'DETECCION', estadoNuevo: 'EVALUACION', fecha: new Date('2024-03-28'), usuario: 'Laura Martínez' },
+      { id: 'h39', estadoAnterior: null, estadoNuevo: 'DETECCION', fecha: d(-25), usuario: 'Laura Martínez' },
+      { id: 'h40', estadoAnterior: 'DETECCION', estadoNuevo: 'EVALUACION', fecha: d(-7), usuario: 'Laura Martínez' },
     ],
   },
   // Additional expedientes to have 25
@@ -502,7 +502,7 @@ export const expedientes: Expediente[] = [
     ],
     notas: [],
     historial: [
-      { id: 'h41', estadoAnterior: null, estadoNuevo: 'PRESENTADA', fecha: new Date('2024-03-18'), usuario: 'Ana Torres' },
+      { id: 'h41', estadoAnterior: null, estadoNuevo: 'PRESENTADA', fecha: d(-13), usuario: 'Ana Torres' },
     ],
   },
   {
@@ -513,8 +513,8 @@ export const expedientes: Expediente[] = [
     documentos: [],
     notas: [],
     historial: [
-      { id: 'h42', estadoAnterior: null, estadoNuevo: 'PRESENTADA', fecha: new Date('2024-02-20'), usuario: 'Carlos Ruiz' },
-      { id: 'h43', estadoAnterior: 'PRESENTADA', estadoNuevo: 'CONCEDIDA', fecha: new Date('2024-03-10'), usuario: 'SEPE' },
+      { id: 'h42', estadoAnterior: null, estadoNuevo: 'PRESENTADA', fecha: d(-40), usuario: 'Carlos Ruiz' },
+      { id: 'h43', estadoAnterior: 'PRESENTADA', estadoNuevo: 'CONCEDIDA', fecha: d(-22), usuario: 'SEPE' },
     ],
   },
   {
@@ -597,8 +597,8 @@ export const expedientes: Expediente[] = [
       { id: 'n13', texto: 'Urgente: plazo de justificación en 3 días.', fecha: d(-1), autor: 'Laura Martínez' },
     ],
     historial: [
-      { id: 'h51', estadoAnterior: null, estadoNuevo: 'CONCEDIDA', fecha: new Date('2024-02-05'), usuario: 'Sistema' },
-      { id: 'h52', estadoAnterior: 'CONCEDIDA', estadoNuevo: 'JUSTIFICACION', fecha: new Date('2024-03-01'), usuario: 'Laura Martínez' },
+      { id: 'h51', estadoAnterior: null, estadoNuevo: 'CONCEDIDA', fecha: d(-120), usuario: 'Sistema' },
+      { id: 'h52', estadoAnterior: 'CONCEDIDA', estadoNuevo: 'JUSTIFICACION', fecha: d(-35), usuario: 'Laura Martínez' },
     ],
   },
 ]

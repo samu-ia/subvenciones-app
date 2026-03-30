@@ -407,12 +407,12 @@ export function NuevaSubvencion() {
       throw new Error('Use mock')
     } catch {
       setSearchError(true)
-      // Fallback: use mock data
-      const key = sector.toLowerCase()
-      const mock =
-        MOCK_BDNS_RESULTS[key] ||
-        MOCK_BDNS_RESULTS['hostelería'] ||
-        MOCK_BDNS_RESULTS['default']
+      // Fallback: use mock data (normalize accents for key lookup)
+      const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      const kwNorm = normalize(effectiveKeywords)
+      const secNorm = normalize(sector)
+      const mockKey = Object.keys(MOCK_BDNS_RESULTS).find(k => kwNorm.includes(normalize(k)) || secNorm.includes(normalize(k))) || 'default'
+      const mock = MOCK_BDNS_RESULTS[mockKey]
       // Also include matching from store convocatorias
       const fromStore: BdnsConvocatoria[] = convocatorias
         .filter((c) => {
@@ -585,9 +585,23 @@ export function NuevaSubvencion() {
               {/* Right: results */}
               <div className="col-span-3">
                 {results.length === 0 && !searching && (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-400 py-16">
-                    <Search size={32} className="mb-3 opacity-30" />
-                    <p className="text-sm">Introduce palabras clave y pulsa "Buscar en BDNS"</p>
+                  <div className="py-6">
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Búsquedas frecuentes</p>
+                    <div className="flex flex-wrap gap-2 mb-6">
+                      {['digitalización', 'eficiencia energética', 'I+D', 'internacionalización', 'hostelería', 'agricultura', 'turismo rural', 'contratación'].map((kw) => (
+                        <button
+                          key={kw}
+                          onClick={() => handleSearch(kw)}
+                          className="px-3 py-1.5 rounded-full text-xs border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-colors"
+                        >
+                          {kw}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                      <p className="text-xs font-semibold text-emerald-800 mb-1">💡 Consejo</p>
+                      <p className="text-xs text-emerald-700">Usa palabras clave del sector del cliente. La IA analizará cada convocatoria y te dirá exactamente qué porcentaje cubre y qué documentos necesitas.</p>
+                    </div>
                   </div>
                 )}
                 {searching && (

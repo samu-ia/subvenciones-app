@@ -208,7 +208,7 @@ function KanbanView({ expedientes, clientes, convocatorias, gestores, navigate, 
               <div className="flex items-start gap-2 mb-2.5 px-1">
                 <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-0.5" style={{ backgroundColor: ESTADO_COLORS[estado] }} />
                 <div className="flex-1 min-w-0">
-                  <span className="text-xs font-semibold text-slate-700 uppercase tracking-wide">{ESTADO_LABELS[estado]}</span>
+                  <span className="text-xs font-semibold text-slate-700 uppercase tracking-wide truncate block" title={ESTADO_LABELS[estado]}>{ESTADO_LABELS[estado]}</span>
                   {/* A02-A05 — descripción llana */}
                   <p className="text-xs text-slate-400 mt-0.5 font-normal normal-case tracking-normal">{COLUMNA_DESC[estado]}</p>
                 </div>

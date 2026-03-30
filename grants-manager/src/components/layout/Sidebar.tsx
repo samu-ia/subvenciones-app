@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { useEffect } from 'react'
 import {
   LayoutDashboard, Users, FileText, Bell, Building2, ChevronLeft, ChevronRight, Store, Sparkles,
 } from 'lucide-react'
@@ -16,6 +17,16 @@ const navItems = [
 export function Sidebar() {
   const { sidebarCollapsed, setSidebarCollapsed, alertas } = useAppStore()
   const pendingAlerts = alertas.filter((a) => a.estado === 'pendiente').length
+
+  useEffect(() => {
+    const checkMobile = () => {
+      if (window.innerWidth < 768) setSidebarCollapsed(true)
+      else setSidebarCollapsed(false)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [setSidebarCollapsed])
 
   return (
     <aside
