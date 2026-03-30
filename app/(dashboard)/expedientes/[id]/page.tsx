@@ -295,9 +295,7 @@ function PanelFicha({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fee_estado: nuevoEstado }),
       });
-      if (res.ok) {
-        setFeeEstado(nuevoEstado);
-      }
+      if (res.ok) setFeeEstado(nuevoEstado);
     } finally {
       setFeeSaving(false);
     }
@@ -319,13 +317,13 @@ function PanelFicha({
   }
 
   const fmtE = (n?: number | null) => {
-    if (!n) return 'N/D';
+    if (!n) return null;
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M €`;
     if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K €`;
     return `${n.toLocaleString('es-ES')} €`;
   };
-  const fmtFecha = (s?: string | null) => s ? new Date(s).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/D';
-  const diasRestantes = subvencion?.plazo_fin ? Math.ceil((new Date(subvencion.plazo_fin).getTime() - Date.now()) / 86_400_000) : null;
+  const fmtFecha = (s?: string | null) => s ? new Date(s).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : null;
+  const diasHastaFin = subvencion?.plazo_fin ? Math.ceil((new Date(subvencion.plazo_fin).getTime() - Date.now()) / 86_400_000) : null;
 
   const respuestas = solicitud?.respuestas_ia ?? [];
   const proyecto = respuestas.filter(r => r.categoria === 'proyecto');
@@ -335,176 +333,270 @@ function PanelFicha({
   try { if (solicitud?.informe_viabilidad) informeData = JSON.parse(solicitud.informe_viabilidad as string); } catch { /* no JSON */ }
 
   const QUICK_ACTIONS = [
-    { emoji: '📋', label: 'Memoria completa', msg: 'Genera la memoria de solicitud completa y detallada usando todos los datos del cliente y la subvención. Crea un documento tipo "memoria" con todas las secciones rellenas con datos reales.' },
-    { emoji: '💰', label: 'Presupuesto detallado', msg: 'Genera una memoria económica y presupuesto detallado de la inversión basándote en lo que el cliente dijo que haría con la ayuda. Crea una tabla con conceptos, importes y justificación. Tipo "memoria_economica".' },
+    { emoji: '📋', label: 'Memoria', msg: 'Genera la memoria de solicitud completa y detallada usando todos los datos del cliente y la subvención. Crea un documento tipo "memoria" con todas las secciones rellenas con datos reales.' },
+    { emoji: '💰', label: 'Presupuesto', msg: 'Genera una memoria económica y presupuesto detallado de la inversión basándote en lo que el cliente dijo que haría con la ayuda. Crea una tabla con conceptos, importes y justificación. Tipo "memoria_economica".' },
     { emoji: '📅', label: 'Cronograma', msg: 'Genera un cronograma de ejecución del proyecto en formato tabla Markdown con fases, actividades, fechas estimadas y responsables. Tipo "cronograma".' },
-    { emoji: '✉️', label: 'Email — pedir documentos', msg: 'Redacta un email profesional para enviar al cliente solicitándole la documentación necesaria para tramitar esta subvención. Incluye la lista de documentos del checklist. Tipo "email".' },
-    { emoji: '📝', label: 'Proyecto técnico', msg: 'Genera el proyecto técnico completo que justifique la necesidad de la subvención, con descripción técnica detallada del proyecto, tecnología o inversión a realizar. Tipo "proyecto_tecnico".' },
-    { emoji: '🔎', label: 'Resumen ejecutivo', msg: 'Genera un resumen ejecutivo de 1 página con los puntos clave del expediente: empresa, subvención, encaje, proyecto y próximos pasos. Tipo "informe".' },
+    { emoji: '✉️', label: 'Email docs', msg: 'Redacta un email profesional para enviar al cliente solicitándole la documentación necesaria para tramitar esta subvención. Incluye la lista de documentos del checklist. Tipo "email".' },
+    { emoji: '📝', label: 'Técnico', msg: 'Genera el proyecto técnico completo que justifique la necesidad de la subvención, con descripción técnica detallada del proyecto, tecnología o inversión a realizar. Tipo "proyecto_tecnico".' },
+    { emoji: '🔎', label: 'Resumen', msg: 'Genera un resumen ejecutivo de 1 página con los puntos clave del expediente: empresa, subvención, encaje, proyecto y próximos pasos. Tipo "informe".' },
   ];
 
-  const C = { border: '#e8ecf4', bg: '#f8fafc', navy: '#0d1f3c', muted: '#94a3b8', green: '#059669', amber: '#d97706', red: '#dc2626' };
-  const row = (label: string, value: string | null | undefined) => (
-    <div style={{ display: 'flex', gap: 8, padding: '6px 0', borderBottom: `1px solid ${C.border}`, fontSize: '0.8rem' }}>
-      <span style={{ color: C.muted, flexShrink: 0, width: 130 }}>{label}</span>
-      <span style={{ color: C.navy, fontWeight: 500, flex: 1 }}>{value || 'N/D'}</span>
-    </div>
-  );
+  const S = { border: '#e8ecf4', bg: '#f8fafc', navy: '#0d1f3c', muted: '#94a3b8', green: '#059669', amber: '#d97706', red: '#dc2626', teal: '#0d9488' };
 
+  // Fases principales (sin terminales) para el stepper
+  const FASES_MAIN = FASES_EXPEDIENTE.slice(0, 10);
+  const currentFaseIdx = FASES_MAIN.findIndex(f => f.value === currentFase);
   const faseActual = FASES_EXPEDIENTE.find(f => f.value === currentFase);
+  const esTerminal = ['denegada', 'desistida'].includes(currentFase);
+
+  // Fechas clave del expediente
+  const FECHAS_CLAVE = [
+    { label: 'Plazo solicitud', fecha: expediente.plazo_solicitud, icon: '📋', urgente: true },
+    { label: 'Fecha presentación', fecha: expediente.fecha_presentacion, icon: '📤' },
+    { label: 'Res. provisional', fecha: expediente.fecha_resolucion_provisional, icon: '⚖️' },
+    { label: 'Fin alegaciones', fecha: expediente.fecha_alegaciones_fin, icon: '💬' },
+    { label: 'Res. definitiva', fecha: expediente.fecha_resolucion_definitiva, icon: '✅' },
+    { label: 'Fin ejecución', fecha: expediente.fecha_fin_ejecucion, icon: '🏁' },
+    { label: 'Plazo aceptación', fecha: expediente.plazo_aceptacion, icon: '🖊️', urgente: true },
+    { label: 'Plazo justificación', fecha: expediente.plazo_justificacion, icon: '📊', urgente: true },
+    ...(subvencion?.plazo_fin ? [{ label: 'Convocatoria cierra', fecha: subvencion.plazo_fin, icon: '⏰', urgente: true }] : []),
+  ].filter(f => f.fecha);
+
+  const prop = (label: string, value: string | null | undefined) => value ? (
+    <div style={{ display: 'flex', gap: 8, padding: '5px 0', borderBottom: `1px solid ${S.border}`, fontSize: '0.78rem' }}>
+      <span style={{ color: S.muted, flexShrink: 0, width: 120 }}>{label}</span>
+      <span style={{ color: S.navy, fontWeight: 500, flex: 1, wordBreak: 'break-word' }}>{value}</span>
+    </div>
+  ) : null;
 
   return (
-    <div style={{ overflowY: 'auto', padding: '14px 14px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ overflowY: 'auto', padding: '0 0 24px', display: 'flex', flexDirection: 'column' }}>
 
-      {/* Fase del expediente */}
-      <div>
-        <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.muted, marginBottom: 8 }}>Fase del expediente</div>
-        <div style={{ background: '#fff', borderRadius: 10, border: `1px solid ${C.border}`, padding: '10px 12px' }}>
-          {/* Indicador visual de progreso */}
-          <div style={{ display: 'flex', gap: 3, marginBottom: 10 }}>
-            {FASES_EXPEDIENTE.slice(0, 10).map((f, i) => {
-              const fIdx = FASES_EXPEDIENTE.slice(0,10).findIndex(x => x.value === currentFase);
-              const done = i < fIdx;
-              const active = i === fIdx;
-              return (
-                <div key={f.value} style={{
-                  flex: 1, height: 5, borderRadius: 3,
-                  background: done || active ? faseActual?.color || '#3b82f6' : '#e2e8f0',
-                  opacity: done ? 0.5 : active ? 1 : 1,
-                }} />
-              );
-            })}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <select
-              value={currentFase}
-              onChange={e => cambiarFase(e.target.value)}
-              disabled={faseSaving}
-              style={{
-                flex: 1, fontSize: '0.82rem', padding: '7px 10px', borderRadius: 8,
-                border: `2px solid ${faseActual?.color || C.border}`,
-                background: '#fff', fontFamily: 'inherit', cursor: 'pointer', fontWeight: 600,
-                color: faseActual?.color || C.navy,
-              }}
-            >
-              {FASES_EXPEDIENTE.map(f => (
-                <option key={f.value} value={f.value}>{f.label}</option>
-              ))}
-            </select>
-            {faseSaving && <span style={{ fontSize: '0.72rem', color: C.muted }}>Guardando...</span>}
-          </div>
-          {/* Importes concedido si hay */}
-          {expediente.importe_concedido && (
-            <div style={{ marginTop: 8, padding: '6px 0', fontSize: '0.8rem', display: 'flex', gap: 8 }}>
-              <span style={{ color: C.muted, width: 130, flexShrink: 0 }}>Importe concedido</span>
-              <span style={{ fontWeight: 700, color: C.green }}>{fmtE(expediente.importe_concedido)}</span>
-            </div>
-          )}
+      {/* ── ESTADO & FASE ─────────────────────────────────────── */}
+      <div style={{ padding: '14px 14px 0' }}>
+        <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: S.muted, marginBottom: 10 }}>
+          Fase del expediente {faseSaving && <span style={{ color: S.teal }}>· Guardando...</span>}
+        </div>
+
+        {/* Steps — fase actual destacada, las demás clicables */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 12 }}>
+          {FASES_MAIN.map((f, i) => {
+            const done = i < currentFaseIdx;
+            const active = f.value === currentFase;
+            const future = i > currentFaseIdx;
+            return (
+              <button
+                key={f.value}
+                onClick={() => !faseSaving && cambiarFase(f.value)}
+                disabled={faseSaving}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '7px 10px', borderRadius: 7, border: 'none',
+                  background: active ? `${f.color}18` : 'transparent',
+                  cursor: faseSaving ? 'wait' : 'pointer',
+                  textAlign: 'left', fontFamily: 'inherit',
+                  transition: 'background 0.1s',
+                  outline: active ? `2px solid ${f.color}` : 'none',
+                  outlineOffset: '-1px',
+                }}
+              >
+                {/* Step indicator */}
+                <div style={{
+                  width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '0.6rem', fontWeight: 800,
+                  background: done ? S.teal : active ? f.color : '#e2e8f0',
+                  color: done || active ? '#fff' : S.muted,
+                  border: active ? `2px solid ${f.color}` : done ? `2px solid ${S.teal}` : '2px solid #e2e8f0',
+                }}>
+                  {done ? '✓' : i + 1}
+                </div>
+                <span style={{
+                  fontSize: '0.78rem', fontWeight: active ? 700 : done ? 500 : 400,
+                  color: active ? f.color : done ? S.navy : future ? '#9ca3af' : S.navy,
+                }}>
+                  {f.label.replace(/^\d+\.\s/, '')}
+                </span>
+                {active && <span style={{
+                  marginLeft: 'auto', fontSize: '0.6rem', fontWeight: 700,
+                  background: f.color, color: '#fff', padding: '1px 6px', borderRadius: 100,
+                }}>Actual</span>}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Terminales */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+          {(['denegada', 'desistida'] as const).map(v => {
+            const f = FASES_EXPEDIENTE.find(x => x.value === v)!;
+            return (
+              <button key={v} onClick={() => !faseSaving && cambiarFase(v)} disabled={faseSaving}
+                style={{
+                  flex: 1, padding: '5px', borderRadius: 6, border: `1px solid ${currentFase === v ? f.color : S.border}`,
+                  background: currentFase === v ? `${f.color}18` : 'transparent',
+                  fontSize: '0.72rem', fontWeight: currentFase === v ? 700 : 400,
+                  color: currentFase === v ? f.color : S.muted,
+                  cursor: faseSaving ? 'wait' : 'pointer', fontFamily: 'inherit',
+                }}>
+                {v.charAt(0).toUpperCase() + v.slice(1)}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Gestión de fee */}
-      {feeEstado && feeEstado !== 'no_aplica' && (
-        <div>
-          <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.muted, marginBottom: 8 }}>Comisión (Fee)</div>
-          <div style={{ background: '#fff', borderRadius: 10, border: `1px solid ${C.border}`, padding: '12px 14px' }}>
-            {expediente.fee_amount && (
-              <div style={{ display: 'flex', gap: 8, marginBottom: 10, fontSize: '0.8rem' }}>
-                <span style={{ color: C.muted, width: 130, flexShrink: 0 }}>Importe fee</span>
-                <span style={{ fontWeight: 700, color: C.navy }}>{fmtE(expediente.fee_amount)}</span>
-              </div>
-            )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <span style={{
-                display: 'inline-block', padding: '3px 10px', borderRadius: 6, fontSize: '0.72rem', fontWeight: 700,
-                background: feeEstado === 'cobrado' ? '#ecfdf5' : feeEstado === 'facturado' ? '#eff6ff' : '#fff7ed',
-                color: feeEstado === 'cobrado' ? C.green : feeEstado === 'facturado' ? '#2563eb' : C.amber,
-                border: `1px solid ${feeEstado === 'cobrado' ? '#bbf7d0' : feeEstado === 'facturado' ? '#bfdbfe' : '#fed7aa'}`,
-              }}>
-                {feeEstado === 'pendiente' && '⏳ Pendiente de facturar'}
-                {feeEstado === 'facturado' && '📄 Factura emitida'}
-                {feeEstado === 'cobrado' && '✅ Cobrado'}
-              </span>
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {feeEstado === 'pendiente' && (
-                <button
-                  onClick={() => cambiarFeeEstado('facturado')}
-                  disabled={feeSaving}
-                  style={{
-                    flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid #bfdbfe',
-                    background: '#eff6ff', color: '#1d4ed8', fontSize: '0.78rem', fontWeight: 700,
-                    cursor: feeSaving ? 'wait' : 'pointer', fontFamily: 'inherit',
-                    opacity: feeSaving ? 0.6 : 1,
-                  }}
-                  onMouseEnter={e => { if (!feeSaving) { e.currentTarget.style.background = '#dbeafe'; } }}
-                  onMouseLeave={e => { e.currentTarget.style.background = '#eff6ff'; }}
-                >
-                  📄 Marcar factura emitida
-                </button>
-              )}
-              {feeEstado === 'facturado' && (
-                <button
-                  onClick={() => cambiarFeeEstado('cobrado')}
-                  disabled={feeSaving}
-                  style={{
-                    flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid #bbf7d0',
-                    background: '#ecfdf5', color: '#059669', fontSize: '0.78rem', fontWeight: 700,
-                    cursor: feeSaving ? 'wait' : 'pointer', fontFamily: 'inherit',
-                    opacity: feeSaving ? 0.6 : 1,
-                  }}
-                  onMouseEnter={e => { if (!feeSaving) { e.currentTarget.style.background = '#d1fae5'; } }}
-                  onMouseLeave={e => { e.currentTarget.style.background = '#ecfdf5'; }}
-                >
-                  ✅ Confirmar cobro
-                </button>
-              )}
-              {feeEstado === 'cobrado' && (
-                <span style={{ fontSize: '0.78rem', color: C.green, fontWeight: 600 }}>
-                  Fee completamente liquidado
-                </span>
-              )}
-            </div>
-            {feeSaving && <span style={{ fontSize: '0.72rem', color: C.muted, marginTop: 6, display: 'block' }}>Guardando...</span>}
+      <div style={{ height: 1, background: S.border }} />
+
+      {/* ── FECHAS CLAVE ──────────────────────────────────────── */}
+      {FECHAS_CLAVE.length > 0 && (
+        <div style={{ padding: '12px 14px' }}>
+          <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: S.muted, marginBottom: 10 }}>
+            Fechas clave
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {FECHAS_CLAVE.map(({ label, fecha, icon, urgente }) => {
+              const dias = fecha ? Math.ceil((new Date(fecha).getTime() - Date.now()) / 86_400_000) : null;
+              const isFuture = dias !== null && dias >= 0;
+              const isUrgent = urgente && dias !== null && dias >= 0 && dias <= 14;
+              const isPast = dias !== null && dias < 0;
+              return (
+                <div key={label} style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '6px 8px', borderRadius: 6,
+                  background: isUrgent ? '#fff7ed' : 'transparent',
+                }}>
+                  <span style={{ fontSize: '0.85rem', flexShrink: 0 }}>{icon}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.7rem', color: S.muted, fontWeight: 500 }}>{label}</div>
+                    <div style={{ fontSize: '0.78rem', color: isPast ? S.muted : S.navy, fontWeight: 600 }}>
+                      {fmtFecha(fecha!)}
+                    </div>
+                  </div>
+                  {dias !== null && (
+                    <span style={{
+                      fontSize: '0.68rem', fontWeight: 700, padding: '2px 6px', borderRadius: 100, flexShrink: 0,
+                      background: isPast ? '#f1f5f9' : isUrgent ? '#fff7ed' : '#f0fdf4',
+                      color: isPast ? S.muted : isUrgent ? '#f97316' : S.green,
+                      border: `1px solid ${isPast ? '#e2e8f0' : isUrgent ? '#fed7aa' : '#bbf7d0'}`,
+                    }}>
+                      {isPast ? `Hace ${Math.abs(dias)}d` : dias === 0 ? 'Hoy' : `${dias}d`}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* Acciones rápidas */}
-      <div>
-        <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.muted, marginBottom: 8 }}>Generar con IA</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+      <div style={{ height: 1, background: S.border }} />
+
+      {/* ── IMPORTE CONCEDIDO + FEE ───────────────────────────── */}
+      {(expediente.importe_concedido || (feeEstado && feeEstado !== 'no_aplica')) && (
+        <>
+          <div style={{ padding: '12px 14px' }}>
+            <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: S.muted, marginBottom: 10 }}>
+              Resolución económica
+            </div>
+
+            {expediente.importe_concedido && (
+              <div style={{
+                background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8,
+                padding: '10px 12px', marginBottom: 10,
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              }}>
+                <span style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 600 }}>Importe concedido</span>
+                <span style={{ fontSize: '1rem', fontWeight: 800, color: S.green }}>{fmtE(expediente.importe_concedido)}</span>
+              </div>
+            )}
+
+            {feeEstado && feeEstado !== 'no_aplica' && (
+              <div style={{ background: '#fff', borderRadius: 8, border: `1px solid ${S.border}`, padding: '10px 12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <span style={{ fontSize: '0.75rem', color: S.navy, fontWeight: 600 }}>
+                    Comisión {expediente.fee_amount ? `— ${fmtE(expediente.fee_amount)}` : ''}
+                  </span>
+                  <span style={{
+                    fontSize: '0.65rem', fontWeight: 700, padding: '2px 7px', borderRadius: 100,
+                    background: feeEstado === 'cobrado' ? '#ecfdf5' : feeEstado === 'facturado' ? '#eff6ff' : '#fff7ed',
+                    color: feeEstado === 'cobrado' ? S.green : feeEstado === 'facturado' ? '#2563eb' : S.amber,
+                    border: `1px solid ${feeEstado === 'cobrado' ? '#bbf7d0' : feeEstado === 'facturado' ? '#bfdbfe' : '#fed7aa'}`,
+                  }}>
+                    {feeEstado === 'pendiente' ? 'Pendiente' : feeEstado === 'facturado' ? 'Facturado' : 'Cobrado'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {feeEstado === 'pendiente' && (
+                    <button onClick={() => cambiarFeeEstado('facturado')} disabled={feeSaving}
+                      style={{ flex: 1, padding: '7px', borderRadius: 7, border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      Emitir factura
+                    </button>
+                  )}
+                  {feeEstado === 'facturado' && (
+                    <button onClick={() => cambiarFeeEstado('cobrado')} disabled={feeSaving}
+                      style={{ flex: 1, padding: '7px', borderRadius: 7, border: '1px solid #bbf7d0', background: '#ecfdf5', color: S.green, fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      Confirmar cobro ✓
+                    </button>
+                  )}
+                  {feeEstado === 'cobrado' && (
+                    <span style={{ fontSize: '0.72rem', color: S.green, fontWeight: 600 }}>Fee liquidado ✓</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <div style={{ height: 1, background: S.border }} />
+        </>
+      )}
+
+      {/* ── GENERAR CON IA ───────────────────────────────────── */}
+      <div style={{ padding: '12px 14px' }}>
+        <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: S.muted, marginBottom: 10 }}>
+          Generar documentos IA
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
           {QUICK_ACTIONS.map(a => (
             <button key={a.label} onClick={() => onQuickAction(a.msg)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 10px', borderRadius: 8, border: `1px solid ${C.border}`, background: '#fff', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, color: C.navy, textAlign: 'left', fontFamily: 'inherit' }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#eff6ff'; e.currentTarget.style.borderColor = '#3b82f6'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = C.border; }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '7px 8px', borderRadius: 7,
+                border: `1px solid ${S.border}`, background: '#fff',
+                cursor: 'pointer', fontSize: '0.72rem', fontWeight: 600,
+                color: S.navy, textAlign: 'left', fontFamily: 'inherit',
+                transition: 'all 0.12s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#f0fdf4'; e.currentTarget.style.borderColor = S.teal; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = S.border; }}
             >
-              <span style={{ fontSize: '1rem', lineHeight: 1 }}>{a.emoji}</span>
+              <span style={{ fontSize: '0.9rem', lineHeight: 1 }}>{a.emoji}</span>
               {a.label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Subvención */}
+      <div style={{ height: 1, background: S.border }} />
+
+      {/* ── SUBVENCIÓN ───────────────────────────────────────── */}
       {subvencion && (
-        <div>
-          <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.muted, marginBottom: 6 }}>Subvención</div>
-          <div style={{ background: '#fff', borderRadius: 10, border: `1px solid ${C.border}`, padding: '10px 12px' }}>
-            {row('Título', subvencion.titulo)}
-            {row('Organismo', subvencion.organismo)}
-            {row('Importe máx.', fmtE(subvencion.importe_maximo))}
-            <div style={{ display: 'flex', gap: 8, padding: '6px 0', borderBottom: `1px solid ${C.border}`, fontSize: '0.8rem' }}>
-              <span style={{ color: C.muted, flexShrink: 0, width: 130 }}>Plazo fin</span>
-              <span style={{ color: diasRestantes != null && diasRestantes < 30 ? C.red : C.navy, fontWeight: 600 }}>
-                {fmtFecha(subvencion.plazo_fin)}{diasRestantes != null ? ` (${diasRestantes > 0 ? diasRestantes + 'd' : 'VENCIDO'})` : ''}
-              </span>
-            </div>
-            {subvencion.objeto && row('Objeto', subvencion.objeto)}
+        <div style={{ padding: '12px 14px' }}>
+          <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: S.muted, marginBottom: 8 }}>
+            Subvención
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {subvencion.titulo && (
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: S.navy, marginBottom: 6, lineHeight: 1.4 }}>
+                {subvencion.titulo}
+              </div>
+            )}
+            {prop('Organismo', subvencion.organismo)}
+            {prop('Importe máx.', fmtE(subvencion.importe_maximo))}
+            {subvencion.objeto && prop('Objeto', subvencion.objeto)}
             {subvencion.url_oficial && (
-              <div style={{ padding: '6px 0', fontSize: '0.8rem' }}>
-                <a href={subvencion.url_oficial} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ padding: '5px 0', fontSize: '0.75rem' }}>
+                <a href={subvencion.url_oficial} target="_blank" rel="noopener noreferrer"
+                  style={{ color: S.teal, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
                   <ExternalLink size={11} /> Ver convocatoria oficial
                 </a>
               </div>
@@ -513,76 +605,101 @@ function PanelFicha({
         </div>
       )}
 
-      {/* Cliente */}
-      <div>
-        <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.muted, marginBottom: 6 }}>Empresa</div>
-        <div style={{ background: '#fff', borderRadius: 10, border: `1px solid ${C.border}`, padding: '10px 12px' }}>
-          {row('NIF', expediente.nif)}
-          {row('Sector', cliente?.cnae_descripcion)}
-          {row('Tamaño', cliente?.tamano_empresa)}
-          {row('Empleados', cliente?.num_empleados?.toString())}
-          {row('Facturación', fmtE(cliente?.facturacion_anual))}
-          {row('Forma jurídica', cliente?.forma_juridica)}
-          {row('Antigüedad', cliente?.anos_antiguedad != null ? `${cliente.anos_antiguedad} años` : null)}
-          {row('Localización', [cliente?.ciudad, cliente?.comunidad_autonoma].filter(Boolean).join(', '))}
-          {cliente?.descripcion_actividad && row('Actividad', cliente.descripcion_actividad)}
+      <div style={{ height: 1, background: S.border }} />
+
+      {/* ── EMPRESA ─────────────────────────────────────────── */}
+      <div style={{ padding: '12px 14px' }}>
+        <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: S.muted, marginBottom: 8 }}>
+          Empresa
         </div>
+        {prop('NIF', expediente.nif)}
+        {prop('Sector', cliente?.cnae_descripcion)}
+        {prop('Tamaño', cliente?.tamano_empresa)}
+        {prop('Empleados', cliente?.num_empleados?.toString())}
+        {prop('Facturación', fmtE(cliente?.facturacion_anual))}
+        {prop('Forma jurídica', cliente?.forma_juridica)}
+        {cliente?.anos_antiguedad != null && prop('Antigüedad', `${cliente.anos_antiguedad} años`)}
+        {prop('Localización', [cliente?.ciudad, cliente?.comunidad_autonoma].filter(Boolean).join(', '))}
+        {cliente?.descripcion_actividad && prop('Actividad', cliente.descripcion_actividad)}
       </div>
 
-      {/* Informe de viabilidad */}
+      {/* ── INFORME VIABILIDAD ───────────────────────────────── */}
       {informeData && (
-        <div>
-          <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.muted, marginBottom: 6 }}>Informe de Viabilidad</div>
-          <div style={{ background: '#fff', borderRadius: 10, border: `1px solid ${C.border}`, padding: '10px 12px' }}>
-            {informeData.puntuacion_encaje != null && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                <div style={{ width: 44, height: 44, borderRadius: '50%', background: Number(informeData.puntuacion_encaje) >= 70 ? '#ecfdf5' : '#fff7ed', border: `2px solid ${Number(informeData.puntuacion_encaje) >= 70 ? C.green : C.amber}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: 800, color: Number(informeData.puntuacion_encaje) >= 70 ? C.green : C.amber, flexShrink: 0 }}>
-                  {informeData.puntuacion_encaje as number}%
+        <>
+          <div style={{ height: 1, background: S.border }} />
+          <div style={{ padding: '12px 14px' }}>
+            <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: S.muted, marginBottom: 8 }}>
+              Informe de viabilidad
+            </div>
+            <div style={{ background: '#fff', borderRadius: 8, border: `1px solid ${S.border}`, padding: '10px 12px' }}>
+              {informeData.puntuacion_encaje != null && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                  <div style={{
+                    width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
+                    background: Number(informeData.puntuacion_encaje) >= 70 ? '#ecfdf5' : '#fff7ed',
+                    border: `2px solid ${Number(informeData.puntuacion_encaje) >= 70 ? S.green : S.amber}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.82rem', fontWeight: 800,
+                    color: Number(informeData.puntuacion_encaje) >= 70 ? S.green : S.amber,
+                  }}>
+                    {informeData.puntuacion_encaje as number}%
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 700, color: S.navy }}>{String(informeData.recomendacion ?? '').toUpperCase()}</div>
+                    <div style={{ fontSize: '0.7rem', color: S.muted }}>{String(informeData.recomendacion_motivo ?? '')}</div>
+                  </div>
                 </div>
-                <div>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: C.navy }}>{String(informeData.recomendacion ?? '').toUpperCase()}</div>
-                  <div style={{ fontSize: '0.72rem', color: C.muted }}>{String(informeData.recomendacion_motivo ?? '')}</div>
-                </div>
-              </div>
-            )}
-            {informeData.resumen_ejecutivo != null && <p style={{ fontSize: '0.78rem', color: '#334155', lineHeight: 1.6, margin: '0 0 8px' }}>{String(informeData.resumen_ejecutivo)}</p>}
+              )}
+              {informeData.resumen_ejecutivo != null && (
+                <p style={{ fontSize: '0.75rem', color: '#334155', lineHeight: 1.6, margin: 0 }}>{String(informeData.resumen_ejecutivo)}</p>
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
 
-      {/* Respuestas del cuestionario */}
+      {/* ── RESPUESTAS CUESTIONARIO ──────────────────────────── */}
       {proyecto.length > 0 && (
-        <div>
-          <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.muted, marginBottom: 6 }}>Lo que el cliente quiere hacer</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {proyecto.map((r, i) => (
-              <div key={i} style={{ background: '#fff', borderRadius: 8, border: `1px solid ${C.border}`, padding: '10px 12px' }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: C.muted, marginBottom: 4 }}>{r.pregunta}</div>
-                <div style={{ fontSize: '0.8rem', color: C.navy, lineHeight: 1.5 }}>{String(r.respuesta ?? '—')}</div>
-              </div>
-            ))}
+        <>
+          <div style={{ height: 1, background: S.border }} />
+          <div style={{ padding: '12px 14px' }}>
+            <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: S.muted, marginBottom: 8 }}>
+              Proyecto del cliente
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {proyecto.map((r, i) => (
+                <div key={i} style={{ background: '#fff', borderRadius: 7, border: `1px solid ${S.border}`, padding: '9px 11px' }}>
+                  <div style={{ fontSize: '0.68rem', fontWeight: 700, color: S.muted, marginBottom: 3 }}>{r.pregunta}</div>
+                  <div style={{ fontSize: '0.78rem', color: S.navy, lineHeight: 1.5 }}>{String(r.respuesta ?? '—')}</div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </>
       )}
 
-      {/* Encaje */}
+      {/* ── CRITERIOS ENCAJE ────────────────────────────────── */}
       {encaje.length > 0 && (
-        <div>
-          <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: C.muted, marginBottom: 6 }}>
-            Criterios de encaje
-            {solicitud?.encaje_score != null && (
-              <span style={{ marginLeft: 6, color: C.navy }}>{Math.round((solicitud.encaje_score as number) * 100)}%</span>
-            )}
+        <>
+          <div style={{ height: 1, background: S.border }} />
+          <div style={{ padding: '12px 14px' }}>
+            <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: S.muted, marginBottom: 8 }}>
+              Criterios de encaje{solicitud?.encaje_score != null && (
+                <span style={{ marginLeft: 6, color: S.navy, textTransform: 'none' }}>
+                  — {Math.round((solicitud.encaje_score as number) * 100)}%
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {encaje.map((r, i) => (
+                <div key={i} style={{ display: 'flex', gap: 8, padding: '5px 8px', background: '#fff', borderRadius: 6, border: `1px solid ${S.border}`, fontSize: '0.75rem' }}>
+                  <span style={{ color: r.respuesta ? S.green : S.red, fontWeight: 700, flexShrink: 0 }}>{r.respuesta ? '✓' : '✗'}</span>
+                  <span style={{ color: S.navy }}>{r.pregunta}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {encaje.map((r, i) => (
-              <div key={i} style={{ display: 'flex', gap: 8, padding: '5px 8px', background: '#fff', borderRadius: 6, border: `1px solid ${C.border}`, fontSize: '0.78rem' }}>
-                <span style={{ color: r.respuesta ? C.green : C.red, fontWeight: 700, flexShrink: 0 }}>{r.respuesta ? '✓' : '✗'}</span>
-                <span style={{ color: C.navy }}>{r.pregunta}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        </>
       )}
     </div>
   );

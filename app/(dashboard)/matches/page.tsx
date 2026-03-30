@@ -53,6 +53,12 @@ function scoreInfo(s: number) {
   return               { label: 'Encaje posible',      color: C.muted, bg: C.bg, border: C.border };
 }
 
+function scoreCircleColor(s: number): string {
+  if (s >= 0.65) return '#f97316';
+  if (s >= 0.40) return '#0d9488';
+  return '#94a3b8';
+}
+
 function fmtImporte(n?: number) {
   if (!n) return null;
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M €`;
@@ -77,17 +83,18 @@ const ESTADO_STYLE: Record<string, { label: string; color: string; bg: string }>
   descartado:  { label: 'Descartado',  color: C.muted,   bg: '#f1f5f9' },
 };
 
-// ─── Componente fila ──────────────────────────────────────────────────────────
+// ─── Componente tarjeta ───────────────────────────────────────────────────────
 
 function FilaMatch({ m, onEstadoChange }: {
   m: Match;
   onEstadoChange: (id: string, estado: string) => void;
 }) {
-  const si = scoreInfo(m.score);
   const est = ESTADO_STYLE[m.estado] ?? ESTADO_STYLE.nuevo;
   const dias = diasRestantes(m.subvencion?.plazo_fin);
   const urgente = dias !== null && dias >= 0 && dias <= 15;
   const [cambiando, setCambiando] = useState(false);
+  const circleColor = scoreCircleColor(m.score);
+  const scoreNum = Math.round(m.score * 100);
 
   async function cambiarEstado(nuevoEstado: string) {
     if (cambiando) return;
@@ -96,131 +103,206 @@ function FilaMatch({ m, onEstadoChange }: {
     setCambiando(false);
   }
 
+  const importe = fmtImporte(m.subvencion?.importe_maximo);
+  const motivo = m.motivos?.[0] ?? null;
+  const comunidad = m.subvencion?.comunidad_autonoma ?? null;
+  const organismo = m.subvencion?.organismo ?? null;
+
+  // Deadline pill
+  let deadlinePill: React.ReactNode = null;
+  if (m.subvencion?.estado_convocatoria === 'abierta') {
+    if (dias !== null) {
+      const deadlineColor = dias < 0 ? C.muted : urgente ? C.fire : C.green;
+      const deadlineBg   = dias < 0 ? '#f1f5f9' : urgente ? C.fireBg : C.greenBg;
+      const deadlineText = dias < 0 ? 'Vencida' : dias === 0 ? 'Hoy cierra' : `${dias}d restantes`;
+      deadlinePill = (
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          fontSize: '0.7rem', fontWeight: 600,
+          color: deadlineColor, background: deadlineBg,
+          border: `1px solid ${deadlineColor}22`,
+          padding: '3px 9px', borderRadius: 100,
+        }}>
+          <Clock size={10} />
+          {deadlineText}
+          {dias >= 0 && fmtFecha(m.subvencion?.plazo_fin) && (
+            <span style={{ opacity: 0.75 }}>· {fmtFecha(m.subvencion?.plazo_fin)}</span>
+          )}
+        </span>
+      );
+    } else {
+      deadlinePill = (
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          fontSize: '0.7rem', fontWeight: 600,
+          color: C.green, background: C.greenBg,
+          border: `1px solid #a7f3d0`,
+          padding: '3px 9px', borderRadius: 100,
+        }}>
+          Abierta
+        </span>
+      );
+    }
+  }
+
   return (
     <div style={{
-      background: C.surface, border: `1px solid ${m.estado === 'nuevo' ? '#bfdbfe' : C.border}`,
-      borderRadius: 10, padding: '14px 16px',
-      display: 'grid', gridTemplateColumns: '56px 1fr 200px 120px',
-      gap: 16, alignItems: 'center',
-      opacity: m.estado === 'descartado' ? 0.55 : 1,
-    }}>
-      {/* Score */}
-      <div style={{
-        width: 52, height: 52, borderRadius: 10,
-        background: si.bg, border: `2px solid ${si.border}`,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0,
-      }}>
-        <span style={{ fontSize: '1rem', fontWeight: 800, color: si.color, lineHeight: 1 }}>
-          {Math.round(m.score * 100)}
-        </span>
-        <span style={{ fontSize: '0.55rem', color: si.color, fontWeight: 600 }}>%</span>
-      </div>
-
-      {/* Info principal */}
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: '0.83rem', fontWeight: 700, color: C.navy, marginBottom: 2,
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {m.cliente?.nombre_empresa || m.nif}
-        </div>
-        <div style={{ fontSize: '0.78rem', color: C.ink2, marginBottom: 4,
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      background: C.surface,
+      border: `1px solid ${m.estado === 'nuevo' ? '#bfdbfe' : C.border}`,
+      borderRadius: 12,
+      padding: '18px 20px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 10,
+      opacity: m.estado === 'descartado' ? 0.45 : 1,
+      transition: 'box-shadow 0.15s ease, opacity 0.2s ease',
+    }}
+      onMouseEnter={e => { if (m.estado !== 'descartado') (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.07)'; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'; }}
+    >
+      {/* Row 1: title + score circle */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{
+          fontSize: '0.9rem', fontWeight: 700, color: C.navy,
+          lineHeight: 1.35,
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+          flex: 1,
+        }}>
           {m.subvencion?.titulo || '—'}
         </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {m.subvencion?.organismo && (
-            <span style={{ fontSize: '0.68rem', color: C.muted, background: '#f1f5f9',
-              padding: '2px 7px', borderRadius: 100 }}>
-              {m.subvencion.organismo.slice(0, 40)}
-            </span>
-          )}
-          {m.subvencion?.importe_maximo && (
-            <span style={{ fontSize: '0.68rem', color: C.blue, background: C.blueBg,
-              padding: '2px 7px', borderRadius: 100, fontWeight: 600 }}>
-              hasta {fmtImporte(m.subvencion.importe_maximo)}
-            </span>
-          )}
-          {m.subvencion?.comunidad_autonoma && (
-            <span style={{ fontSize: '0.68rem', color: C.ink2, background: '#f1f5f9',
-              padding: '2px 7px', borderRadius: 100 }}>
-              {m.subvencion.comunidad_autonoma}
-            </span>
-          )}
-          {m.motivos?.slice(0, 1).map((mot, i) => (
-            <span key={i} style={{ fontSize: '0.68rem', color: C.green, background: C.greenBg,
-              padding: '2px 7px', borderRadius: 100 }}>
-              {mot}
-            </span>
-          ))}
+        {/* Score circle */}
+        <div style={{
+          width: 44, height: 44, borderRadius: '50%',
+          background: `${circleColor}18`,
+          border: `2px solid ${circleColor}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+        }}>
+          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: circleColor, lineHeight: 1 }}>
+            {scoreNum}
+          </span>
         </div>
       </div>
 
-      {/* Plazo */}
-      <div style={{ textAlign: 'right' }}>
-        {m.subvencion?.estado_convocatoria === 'abierta' ? (
-          dias !== null ? (
-            <div>
-              <span style={{
-                fontSize: '0.72rem', fontWeight: 700,
-                color: urgente ? C.fire : C.green,
-                background: urgente ? C.fireBg : C.greenBg,
-                padding: '3px 8px', borderRadius: 100,
-              }}>
-                {dias < 0 ? 'Vencida' : dias === 0 ? 'Hoy' : `${dias}d`}
-              </span>
-              {dias >= 0 && <div style={{ fontSize: '0.65rem', color: C.muted, marginTop: 3 }}>{fmtFecha(m.subvencion?.plazo_fin)}</div>}
-            </div>
-          ) : (
-            <span style={{ fontSize: '0.72rem', color: C.green, fontWeight: 600 }}>Abierta</span>
-          )
-        ) : (
-          <span style={{ fontSize: '0.72rem', color: C.muted }}>
-            {m.subvencion?.estado_convocatoria ?? '—'}
+      {/* Row 2: organismo + comunidad tag */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        {organismo && (
+          <span style={{
+            fontSize: '0.72rem', color: C.ink2,
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            maxWidth: 260,
+          }}>
+            {organismo}
+          </span>
+        )}
+        {comunidad && (
+          <span style={{
+            fontSize: '0.68rem', color: C.ink2, background: '#f1f5f9',
+            border: `1px solid ${C.border}`,
+            padding: '2px 8px', borderRadius: 100, flexShrink: 0,
+          }}>
+            {comunidad}
+          </span>
+        )}
+        {/* empresa */}
+        {m.cliente?.nombre_empresa && (
+          <span style={{
+            fontSize: '0.68rem', color: C.muted,
+            marginLeft: 'auto', flexShrink: 0,
+          }}>
+            {m.cliente.nombre_empresa}
           </span>
         )}
       </div>
 
-      {/* Estado + acciones */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+      {/* Row 3: chips */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+        {importe && (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            fontSize: '0.7rem', fontWeight: 700,
+            color: C.blue, background: C.blueBg,
+            border: `1px solid #bfdbfe`,
+            padding: '3px 9px', borderRadius: 100,
+          }}>
+            € {importe}
+          </span>
+        )}
+        {motivo && (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            fontSize: '0.7rem', fontWeight: 600,
+            color: C.green, background: C.greenBg,
+            border: `1px solid #a7f3d0`,
+            padding: '3px 9px', borderRadius: 100,
+            maxWidth: 220,
+            overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
+          }}>
+            {motivo}
+          </span>
+        )}
+        {deadlinePill}
+      </div>
+
+      {/* Divider */}
+      <div style={{ height: 1, background: C.border, margin: '2px 0' }} />
+
+      {/* Row 4: estado badge + action buttons */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{
-          fontSize: '0.68rem', fontWeight: 700, padding: '3px 8px', borderRadius: 100,
+          fontSize: '0.68rem', fontWeight: 700, padding: '3px 9px', borderRadius: 100,
           color: est.color, background: est.bg,
+          border: `1px solid ${est.color}22`,
         }}>
           {est.label}
         </span>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {m.estado !== 'interesado' && (
-            <button onClick={() => cambiarEstado('interesado')}
-              title="Marcar como interesado"
-              style={{
-                fontSize: '0.65rem', padding: '2px 7px', borderRadius: 6,
-                border: `1px solid ${C.green}`, color: C.green, background: 'transparent',
-                cursor: 'pointer', fontWeight: 600,
-              }}>
-              Interesado
-            </button>
-          )}
-          {m.estado !== 'descartado' && (
-            <button onClick={() => cambiarEstado('descartado')}
-              title="Descartar match"
-              style={{
-                fontSize: '0.65rem', padding: '2px 7px', borderRadius: 6,
-                border: `1px solid ${C.border}`, color: C.muted, background: 'transparent',
-                cursor: 'pointer',
-              }}>
-              <X size={10} />
-            </button>
-          )}
-          {m.estado === 'descartado' && (
-            <button onClick={() => cambiarEstado('nuevo')}
+
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {m.estado === 'descartado' ? (
+            <button
+              onClick={() => cambiarEstado('nuevo')}
               title="Restaurar"
               style={{
-                fontSize: '0.65rem', padding: '2px 7px', borderRadius: 6,
-                border: `1px solid ${C.border}`, color: C.muted, background: 'transparent',
+                fontSize: '0.72rem', fontWeight: 600,
+                padding: '5px 12px', borderRadius: 7,
+                border: `1px solid ${C.border}`,
+                color: C.ink2, background: C.bg,
                 cursor: 'pointer',
               }}>
               Restaurar
             </button>
+          ) : (
+            <>
+              {m.estado !== 'interesado' && (
+                <button
+                  onClick={() => cambiarEstado('interesado')}
+                  title="Marcar como interesado"
+                  style={{
+                    fontSize: '0.72rem', fontWeight: 700,
+                    padding: '5px 12px', borderRadius: 7,
+                    border: `1px solid ${C.green}`,
+                    color: '#fff', background: C.green,
+                    cursor: 'pointer',
+                  }}>
+                  Interesado
+                </button>
+              )}
+              <button
+                onClick={() => cambiarEstado('descartado')}
+                title="Descartar match"
+                style={{
+                  width: 30, height: 30, borderRadius: 7,
+                  border: `1px solid ${C.border}`,
+                  color: C.muted, background: 'transparent',
+                  cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                <X size={13} />
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -316,11 +398,11 @@ export default function MatchesPage() {
   const interesados = matches.filter(m => m.estado === 'interesado').length;
 
   return (
-    <div style={{ maxWidth: 1100 }}>
+    <div style={{ maxWidth: 1200, padding: '32px 40px' }}>
       {/* Cabecera */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
         <div>
-          <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: C.navy, marginBottom: 4 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: C.navy, marginBottom: 4, letterSpacing: '-0.02em' }}>
             Matches activos
           </h1>
           <p style={{ fontSize: '0.83rem', color: C.ink2 }}>
@@ -388,7 +470,7 @@ export default function MatchesPage() {
       {/* Filtros */}
       <div style={{
         background: C.surface, border: `1px solid ${C.border}`,
-        borderRadius: 10, padding: '12px 16px', marginBottom: 16,
+        borderRadius: 10, padding: '12px 16px', marginBottom: 20,
         display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap',
       }}>
         <Filter size={14} color={C.muted} />
@@ -444,7 +526,7 @@ export default function MatchesPage() {
         </div>
       </div>
 
-      {/* Lista */}
+      {/* Lista / Grid */}
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
           <Loader2 size={28} color={C.blue} style={{ animation: 'spin 1s linear infinite' }} />
@@ -464,13 +546,15 @@ export default function MatchesPage() {
           )}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ fontSize: '0.72rem', color: C.muted, marginBottom: 4 }}>
+        <div>
+          <div style={{ fontSize: '0.72rem', color: C.muted, marginBottom: 12 }}>
             {matchesFiltrados.length} matches{matchesFiltrados.length !== matches.length ? ` de ${matches.length}` : ''}
           </div>
-          {matchesFiltrados.map(m => (
-            <FilaMatch key={m.id} m={m} onEstadoChange={cambiarEstado} />
-          ))}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }}>
+            {matchesFiltrados.map(m => (
+              <FilaMatch key={m.id} m={m} onEstadoChange={cambiarEstado} />
+            ))}
+          </div>
         </div>
       )}
 
