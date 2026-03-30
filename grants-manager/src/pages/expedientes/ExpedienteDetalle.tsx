@@ -286,9 +286,9 @@ La inversión se amortizará en menos de 18 meses gracias al ahorro en tiempo de
     <>
       {/* Toast notification */}
       {toastMessage && (
-        <div className="fixed top-4 right-4 z-50 bg-slate-900 text-white text-sm px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-fade-in">
+        <div className="fixed top-4 right-4 z-50 max-w-sm bg-slate-900 text-white text-sm px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-fade-in">
           <CheckCircle size={15} className="text-emerald-400 flex-shrink-0" />
-          {toastMessage}
+          <span>{toastMessage}</span>
         </div>
       )}
       <Navbar
@@ -852,7 +852,11 @@ La inversión se amortizará en menos de 18 meses gracias al ahorro en tiempo de
                                 {n.fecha.toLocaleDateString('es-ES')} {n.fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>
-                            <p className="text-sm text-slate-700 leading-relaxed">{n.texto}</p>
+                            {n.autor.includes('IA') || n.autor.includes('Gemini') ? (
+                              <pre className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap font-sans">{n.texto}</pre>
+                            ) : (
+                              <p className="text-sm text-slate-700 leading-relaxed">{n.texto}</p>
+                            )}
                           </div>
                         </div>
                       </Card>
