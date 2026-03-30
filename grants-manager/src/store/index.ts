@@ -23,6 +23,7 @@ interface AppState {
   updatePresupuestoEstado: (id: string, estado: Presupuesto['estado']) => void
   submitPresupuestoProveedor: (id: string, importe: number, plazo: number, notas: string) => void
   addCliente: (cliente: Cliente) => void
+  addExpediente: (expediente: Expediente) => void
   showToast: (message: string) => void
   clearToast: () => void
 }
@@ -41,6 +42,7 @@ export const useAppStore = create<AppState>((set) => ({
   showToast: (message) => set({ toastMessage: message }),
   clearToast: () => set({ toastMessage: null }),
   addCliente: (cliente) => set((s) => ({ clientes: [...s.clientes, cliente] })),
+  addExpediente: (expediente) => set((s) => ({ expedientes: [...s.expedientes, expediente] })),
   updateExpedienteEstado: (id, estado, usuario = 'Gestor') =>
     set((s) => ({
       expedientes: s.expedientes.map((e) =>

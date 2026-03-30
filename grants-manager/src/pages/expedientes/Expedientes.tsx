@@ -5,7 +5,7 @@ import { EstadoBadge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Input, Select } from '../../components/ui/Input'
 import { useAppStore } from '../../store'
-import { LayoutGrid, List, Search, User, Calendar, Star } from 'lucide-react'
+import { LayoutGrid, List, Search, User, Calendar, Star, Sparkles } from 'lucide-react'
 import { clsx } from 'clsx'
 import { ESTADO_COLORS, ESTADO_LABELS, type EstadoExpediente } from '../../types'
 
@@ -94,6 +94,13 @@ export function Expedientes() {
         subtitle={`${expedientes.length} expedientes`}
         actions={
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/nueva-subvencion')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-500 text-white text-xs font-semibold hover:bg-emerald-600 transition-colors"
+            >
+              <Sparkles size={13} />
+              Nueva subvención
+            </button>
             <button
               onClick={() => setVista('kanban')}
               className={clsx('w-8 h-8 rounded-lg flex items-center justify-center transition-colors',

@@ -8,7 +8,7 @@ import { useAppStore } from '../../store'
 import {
   ArrowLeft, FileText, MessageSquare, Clock, Upload,
   CheckCircle, XCircle, AlertTriangle, ChevronRight, ChevronDown,
-  Plus, DollarSign, Printer, Info
+  Plus, DollarSign, Printer, Info, Sparkles,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { ESTADO_COLORS, ESTADO_LABELS, type EstadoExpediente, type Presupuesto } from '../../types'
@@ -116,6 +116,7 @@ export function ExpedienteDetalle() {
   const [showEstadoMenu, setShowEstadoMenu] = useState(false)
   const [showAddPresupuesto, setShowAddPresupuesto] = useState(false)
   const [showComplianceTooltip, setShowComplianceTooltip] = useState(false)
+  const [generandoMemoria, setGenerandoMemoria] = useState(false)
   const [newPresupuesto, setNewPresupuesto] = useState({
     proveedorNombre: '',
     proveedorCif: '',
@@ -174,6 +175,50 @@ export function ExpedienteDetalle() {
     return { texto: req, ok: matched }
   })
   const docsListos = docsCheck.filter((d) => d.ok).length
+
+  // Generar memoria técnica con IA (simulado)
+  const handleGenerarMemoria = () => {
+    if (generandoMemoria) return
+    setGenerandoMemoria(true)
+    const empresaNombre = cliente?.nombre || 'La empresa'
+    const convNombre = conv?.nombre || 'la convocatoria seleccionada'
+    setTimeout(() => {
+      const memoria = `MEMORIA TÉCNICA DEL PROYECTO
+
+1. DESCRIPCIÓN DEL PROYECTO
+${empresaNombre} solicita financiación para la digitalización de sus procesos de gestión comercial mediante la implantación de un sistema ERP integrado. El proyecto incluye la adquisición de software de gestión de inventario, terminal POS y formación al personal, en el marco de ${convNombre}.
+
+2. JUSTIFICACIÓN DE LA NECESIDAD
+La empresa actualmente gestiona sus operaciones mediante hojas de cálculo y procesos manuales, lo que genera ineficiencias estimadas en 15 horas/semana. La digitalización permitirá reducir errores, mejorar el control de stock y aumentar la productividad de forma medible.
+
+3. OBJETIVOS
+- Objetivo principal: Digitalizar el sistema de gestión comercial en 6 meses
+- Reducir tiempo de gestión en un 60%
+- Eliminar errores de inventario en un 80%
+- Formar al 100% del personal en las nuevas herramientas
+
+4. PLAN DE EJECUCIÓN
+Mes 1-2: Selección e instalación del software
+Mes 2-3: Migración de datos y configuración
+Mes 3-4: Formación del personal
+Mes 5-6: Puesta en marcha y ajustes
+
+5. PRESUPUESTO ESTIMADO
+Software ERP (licencia anual): 3.600€
+Hardware (terminal + periféricos): 2.400€
+Instalación y configuración: 800€
+Formación (40 horas): 1.200€
+TOTAL: 8.000€
+
+6. IMPACTO ESPERADO
+La inversión se amortizará en menos de 18 meses gracias al ahorro en tiempo de gestión y reducción de errores. El proyecto generará o consolidará 3 puestos de trabajo.
+
+⚠️ Este es un borrador generado por IA. Revísalo y personalízalo antes de presentar.`
+      addNota(exp.id, memoria, 'IA — Gemini (borrador)')
+      setGenerandoMemoria(false)
+      showToast('Borrador de memoria técnica generado y añadido a las notas')
+    }, 2000)
+  }
 
   // D24 — registrar revisión
   const handleRegistrarRevision = () => {
@@ -751,6 +796,29 @@ export function ExpedienteDetalle() {
 
             {tab === 'Notas' && (
               <div className="space-y-4">
+                {/* Generar memoria técnica con IA */}
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
+                      <Sparkles size={15} className="text-blue-600" />
+                      Generar borrador de memoria técnica con IA
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Genera un borrador personalizado para {cliente?.nombre || 'este cliente'} basado en la convocatoria.
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={handleGenerarMemoria}
+                    disabled={generandoMemoria}
+                    icon={generandoMemoria ? <Clock size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                    className="flex-shrink-0"
+                  >
+                    {generandoMemoria ? 'Generando...' : 'Generar memoria'}
+                  </Button>
+                </div>
+
                 <Card padding="md">
                   {/* A13 — placeholder invitador */}
                   <textarea

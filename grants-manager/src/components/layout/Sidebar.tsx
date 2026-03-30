@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import {
-  LayoutDashboard, Users, FileText, Bell, Building2, ChevronLeft, ChevronRight, Store,
+  LayoutDashboard, Users, FileText, Bell, Building2, ChevronLeft, ChevronRight, Store, Sparkles,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useAppStore } from '../../store'
@@ -51,6 +51,31 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 py-4 flex flex-col gap-0.5 px-2">
+        {/* Nueva subvención — CTA prominente */}
+        <NavLink
+          to="/nueva-subvencion"
+          className={({ isActive }) =>
+            clsx(
+              'flex items-center gap-3 rounded-lg transition-all duration-150 relative mb-2',
+              sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5',
+              isActive
+                ? 'bg-emerald-500 text-white'
+                : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300'
+            )
+          }
+          title={sidebarCollapsed ? 'Nueva subvención' : undefined}
+        >
+          {({ isActive }) => (
+            <>
+              {isActive && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-emerald-300 rounded-r-full" />
+              )}
+              <Sparkles size={18} className="flex-shrink-0" />
+              {!sidebarCollapsed && <span className="text-sm font-semibold">Nueva subvención</span>}
+            </>
+          )}
+        </NavLink>
+
         {navItems.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
