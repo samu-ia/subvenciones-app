@@ -371,20 +371,35 @@ export function NuevaSubvencion() {
   // Step 4
   const [newExpId, setNewExpId] = useState('')
 
+  // Demo shortcut: expose state setter for testing
+  if (typeof window !== 'undefined') {
+    (window as any).__wizardDemo = () => {
+      setSelected({ idBdns: '763201', nombre: 'Incentivos Kit Digital — Segmento I (10-49 empleados) 2026', organismo: 'Red.es — Ministerio de Transformación Digital', importeMax: 25000, fechaCierre: '2026-06-15', descripcion: 'Digitalización de pymes' })
+      setAnalysis(generateAnalysis({ idBdns: '763201', nombre: 'Incentivos Kit Digital', organismo: 'Red.es', importeMax: 25000, fechaCierre: '2026-06-15', descripcion: 'Digitalización' }))
+      setClienteId('c1')
+      setImporte('18000')
+      setNewExpId('exp_demo_' + Date.now())
+      setStep(4)
+    }
+  }
+
   const formatEur = (n: number) =>
     new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
 
   // ---- Step 1: BDNS search ----
 
-  const handleSearch = async () => {
-    if (!keywords.trim() && !sector) return
+  const handleSearch = async (overrideKeywords?: string) => {
+    const effectiveKeywords = overrideKeywords ?? keywords
+    if (!effectiveKeywords.trim() && !sector) {
+      // Show all defaults when no input
+    }
     setSearching(true)
     setSearchError(false)
     setResults([])
     setSelected(null)
 
     try {
-      const query = encodeURIComponent(keywords.trim() || sector)
+      const query = encodeURIComponent(effectiveKeywords.trim() || sector)
       const url = `https://www.pap.hacienda.gob.es/bdnstrans/GE/es/convocatorias?tipo=C&estado=V&texto=${query}`
       const res = await fetch(url, { signal: AbortSignal.timeout(5000) })
       if (!res.ok) throw new Error('BDNS error')
@@ -396,11 +411,12 @@ export function NuevaSubvencion() {
       const key = sector.toLowerCase()
       const mock =
         MOCK_BDNS_RESULTS[key] ||
+        MOCK_BDNS_RESULTS['hostelería'] ||
         MOCK_BDNS_RESULTS['default']
       // Also include matching from store convocatorias
       const fromStore: BdnsConvocatoria[] = convocatorias
         .filter((c) => {
-          const q = (keywords + ' ' + sector).toLowerCase()
+          const q = (effectiveKeywords + ' ' + sector).toLowerCase()
           return c.nombre.toLowerCase().includes(q.split(' ')[0] || '') ||
             c.descripcion.toLowerCase().includes(q.split(' ')[0] || '')
         })
@@ -544,8 +560,8 @@ export function NuevaSubvencion() {
                     </Select>
                     <Button
                       className="w-full justify-center"
-                      onClick={handleSearch}
-                      disabled={searching || (!keywords.trim() && !sector)}
+                      onClick={() => handleSearch()}
+                      disabled={searching}
                       icon={searching ? <Clock size={14} className="animate-spin" /> : <Search size={14} />}
                     >
                       {searching ? 'Buscando...' : 'Buscar en BDNS'}
@@ -1022,7 +1038,13 @@ export function NuevaSubvencion() {
               <div className="flex flex-col sm:flex-row gap-3 mt-2">
                 <Button
                   className="flex-1 justify-center"
-                  onClick={() => navigate(`/expedientes/${newExpId}`)}
+                  onClick={() => {
+                    try {
+                      setTimeout(() => navigate(`/expedientes/${newExpId}`), 50)
+                    } catch (e) {
+                      console.error('Navigation error:', e)
+                    }
+                  }}
                   icon={<ChevronRight size={15} />}
                 >
                   Ver expediente
@@ -1031,8 +1053,11 @@ export function NuevaSubvencion() {
                   variant="secondary"
                   className="flex-1 justify-center"
                   onClick={() => {
-                    navigate(`/expedientes/${newExpId}`)
-                    // Tab selection handled by URL/state if needed
+                    try {
+                      setTimeout(() => navigate(`/expedientes/${newExpId}`), 50)
+                    } catch (e) {
+                      console.error('Navigation error:', e)
+                    }
                   }}
                   icon={<User size={15} />}
                 >
