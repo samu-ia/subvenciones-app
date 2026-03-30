@@ -5,14 +5,22 @@ import { AlertaTipoBadge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Select } from '../../components/ui/Input'
 import { useAppStore } from '../../store'
-import { Bell, CheckCheck, ExternalLink } from 'lucide-react'
+import { Bell, CheckCheck, ExternalLink, Plus, X } from 'lucide-react'
 import { clsx } from 'clsx'
+import type { Alerta } from '../../types'
 
 export function Alertas() {
-  const { alertas, expedientes, clientes, convocatorias, marcarAlertaVista } = useAppStore()
+  const { alertas, expedientes, clientes, convocatorias, marcarAlertaVista, addAlerta } = useAppStore()
   const navigate = useNavigate()
   const [filterTipo, setFilterTipo] = useState('')
   const [filterEstado, setFilterEstado] = useState('')
+  const [showNuevaAlerta, setShowNuevaAlerta] = useState(false) // B22
+
+  // B22 — estado formulario nueva alerta
+  const [nuevaTipo, setNuevaTipo] = useState<Alerta['tipo']>('vencimiento_convocatoria')
+  const [nuevaMensaje, setNuevaMensaje] = useState('')
+  const [nuevaDias, setNuevaDias] = useState('7')
+  const [nuevaExpId, setNuevaExpId] = useState('')
 
   const filtered = alertas
     .filter((a) => {
@@ -45,6 +53,24 @@ export function Alertas() {
     return 'text-slate-600'
   }
 
+  const handleCrearAlerta = () => {
+    if (!nuevaMensaje.trim() || !nuevaExpId) return
+    const nueva: Alerta = {
+      id: `a_manual_${Date.now()}`,
+      expedienteId: nuevaExpId,
+      tipo: nuevaTipo,
+      fechaDisparo: new Date(),
+      mensaje: nuevaMensaje.trim(),
+      estado: 'pendiente',
+      diasRestantes: parseInt(nuevaDias, 10) || 7,
+    }
+    addAlerta(nueva)
+    setShowNuevaAlerta(false)
+    setNuevaMensaje('')
+    setNuevaDias('7')
+    setNuevaExpId('')
+  }
+
   return (
     <>
       <Navbar
@@ -64,12 +90,13 @@ export function Alertas() {
         }
       />
       <div className="flex-1 overflow-y-auto p-6">
-        {/* Filters */}
-        <div className="flex items-center gap-3 mb-5">
+        {/* Filters + nueva alerta */}
+        <div className="flex items-center gap-3 mb-5 flex-wrap">
           <Select value={filterTipo} onChange={(e) => setFilterTipo(e.target.value)} className="w-52">
             <option value="">Todos los tipos</option>
-            <option value="vencimiento_convocatoria">Venc. Convocatoria</option>
-            <option value="vencimiento_justificacion">Venc. Justificación</option>
+            {/* A15-A16 — etiquetas sin abreviaturas */}
+            <option value="vencimiento_convocatoria">Cierre de Convocatoria</option>
+            <option value="vencimiento_justificacion">Plazo de Justificación</option>
             <option value="certificado_caducado">Certificado caducado</option>
             <option value="subsanacion">Subsanación</option>
           </Select>
@@ -85,7 +112,82 @@ export function Alertas() {
             </Button>
           )}
           <span className="ml-auto text-xs text-slate-400">{filtered.length} alertas</span>
+          {/* B22 — botón nueva alerta */}
+          <Button
+            size="sm"
+            icon={<Plus size={13} />}
+            onClick={() => setShowNuevaAlerta(true)}
+          >
+            Nueva alerta
+          </Button>
         </div>
+
+        {/* B22 — formulario nueva alerta */}
+        {showNuevaAlerta && (
+          <div className="bg-white border border-slate-200 rounded-xl p-5 mb-5 max-w-xl shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-slate-900">Nueva alerta manual</h3>
+              <button onClick={() => setShowNuevaAlerta(false)} className="text-slate-400 hover:text-slate-700">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-slate-600 block mb-1">Expediente</label>
+                <select
+                  value={nuevaExpId}
+                  onChange={(e) => setNuevaExpId(e.target.value)}
+                  className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                >
+                  <option value="">Seleccionar expediente...</option>
+                  {expedientes.map((e) => {
+                    const cli = clientes.find((c) => c.id === e.clienteId)
+                    return <option key={e.id} value={e.id}>{cli?.nombre} — {e.numeroOficial || e.id}</option>
+                  })}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-600 block mb-1">Tipo</label>
+                <select
+                  value={nuevaTipo}
+                  onChange={(e) => setNuevaTipo(e.target.value as Alerta['tipo'])}
+                  className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                >
+                  <option value="vencimiento_convocatoria">Cierre de Convocatoria</option>
+                  <option value="vencimiento_justificacion">Plazo de Justificación</option>
+                  <option value="certificado_caducado">Certificado caducado</option>
+                  <option value="subsanacion">Subsanación</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-600 block mb-1">Mensaje</label>
+                <input
+                  type="text"
+                  value={nuevaMensaje}
+                  onChange={(e) => setNuevaMensaje(e.target.value)}
+                  placeholder="Describe la alerta..."
+                  className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-600 block mb-1">Días restantes</label>
+                <input
+                  type="number"
+                  value={nuevaDias}
+                  onChange={(e) => setNuevaDias(e.target.value)}
+                  min="0"
+                  className="w-32 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-1">
+                <Button variant="ghost" size="sm" onClick={() => setShowNuevaAlerta(false)}>Cancelar</Button>
+                <Button size="sm" disabled={!nuevaMensaje.trim() || !nuevaExpId} onClick={handleCrearAlerta}>
+                  Crear alerta
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400">
@@ -157,13 +259,14 @@ export function Alertas() {
                         Ver
                       </Button>
                     )}
+                    {/* A15-A16 — botón "Entendido ✓" en lugar de "Marcar vista" */}
                     {!isVista && (
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => marcarAlertaVista(alerta.id)}
                       >
-                        Marcar vista
+                        Entendido ✓
                       </Button>
                     )}
                   </div>

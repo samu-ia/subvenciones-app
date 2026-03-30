@@ -1,4 +1,4 @@
-import { Bell } from 'lucide-react'
+import { Bell, HelpCircle } from 'lucide-react'
 import { useAppStore } from '../../store'
 import { useNavigate } from 'react-router-dom'
 
@@ -21,6 +21,17 @@ export function Navbar({ title, subtitle, actions }: NavbarProps) {
       </div>
       <div className="flex items-center gap-2">
         {actions}
+        {/* A19 — icono de ayuda con tooltip */}
+        <button
+          className="relative w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors group"
+          title="¿Necesitas ayuda? Llama al 900 123 456"
+          aria-label="Ayuda"
+        >
+          <HelpCircle size={16} />
+          <span className="absolute right-0 top-full mt-1.5 w-max max-w-xs bg-slate-900 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+            ¿Necesitas ayuda? Llama al 900 123 456
+          </span>
+        </button>
         <button
           onClick={() => navigate('/alertas')}
           className="relative w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
