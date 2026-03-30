@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import {
   Building2, Calendar, FolderOpen, LogOut, Database, Settings,
   ClipboardList, Store, Bell, MessageCircle, LayoutDashboard,
-  AlertTriangle, Sparkles, Inbox, Target, Radar, ChevronDown,
+  AlertTriangle, Sparkles, Inbox, Target, Radar, ChevronDown, Layers,
 } from "lucide-react";
 
 const SECTIONS = [
@@ -44,6 +44,7 @@ const SECTIONS = [
       { href: "/subvenciones-bd", label: "Pipeline BDNS", icon: Database },
       { href: "/sector-scan", label: "Radar sectorial", icon: Radar },
       { href: "/proveedores", label: "Proveedores", icon: Store },
+      { href: "/plantillas", label: "Plantillas", icon: Layers },
     ],
   },
 ];

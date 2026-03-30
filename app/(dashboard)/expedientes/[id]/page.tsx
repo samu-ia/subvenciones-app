@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
-import { ArrowLeft, Briefcase, User, Bot, CheckSquare, Store, Check, Square, ExternalLink, Mail, RefreshCw, FileText } from 'lucide-react';
+import { ArrowLeft, Briefcase, User, Bot, CheckSquare, Store, Check, Square, ExternalLink, Mail, RefreshCw, FileText, Receipt, Plus, X } from 'lucide-react';
 import WorkspaceLayout from '@/components/workspace/WorkspaceLayout';
 import NotebookLeftPanel from '@/components/workspace/docs/NotebookLeftPanel';
 import RichTextEditor from '@/components/workspace/editor/RichTextEditor';
@@ -183,6 +183,253 @@ function PanelProveedores({ expedienteId }: { expedienteId: string }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ─── Panel Presupuestos + Contratos ───────────────────────────────────────────
+
+interface Presupuesto {
+  id: string; titulo: string; descripcion?: string; importe?: number;
+  estado: 'borrador' | 'enviado' | 'recibido' | 'aprobado' | 'rechazado';
+  fecha_solicitud: string; fecha_respuesta?: string; fecha_validez?: string;
+  archivo_url?: string; notas?: string;
+  proveedor?: { id: string; nombre: string; categoria: string; contacto_email?: string };
+}
+
+interface Contrato {
+  id: string; titulo: string; tipo: string; estado: 'borrador' | 'enviado' | 'firmado' | 'rescindido';
+  importe?: number; fecha_firma?: string; fecha_inicio?: string; fecha_fin?: string;
+  archivo_url?: string; notas?: string;
+  proveedor?: { id: string; nombre: string; categoria: string };
+  presupuesto?: { id: string; titulo: string; importe?: number };
+}
+
+function PanelPresupuestos({ expedienteId }: { expedienteId: string }) {
+  const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
+  const [contratos, setContratos] = useState<Contrato[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<'presupuestos' | 'contratos'>('presupuestos');
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ titulo: '', descripcion: '', importe: '', notas: '' });
+  const [saving, setSaving] = useState(false);
+
+  const reload = async () => {
+    const [pRes, cRes] = await Promise.all([
+      fetch(`/api/expedientes/${expedienteId}/presupuestos`),
+      fetch(`/api/expedientes/${expedienteId}/contratos`),
+    ]);
+    setPresupuestos(pRes.ok ? await pRes.json() : []);
+    setContratos(cRes.ok ? await cRes.json() : []);
+    setLoading(false);
+  };
+
+  useEffect(() => { reload(); }, [expedienteId]);
+
+  const crearPresupuesto = async () => {
+    if (!form.titulo.trim()) return;
+    setSaving(true);
+    await fetch(`/api/expedientes/${expedienteId}/presupuestos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titulo: form.titulo, descripcion: form.descripcion, importe: form.importe ? parseFloat(form.importe) : null, notas: form.notas }),
+    });
+    setForm({ titulo: '', descripcion: '', importe: '', notas: '' });
+    setShowForm(false);
+    setSaving(false);
+    reload();
+  };
+
+  const actualizarEstadoPresupuesto = async (id: string, estado: string) => {
+    await fetch(`/api/expedientes/${expedienteId}/presupuestos/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ estado }),
+    });
+    reload();
+  };
+
+  const crearContrato = async (presupuesto: Presupuesto) => {
+    await fetch(`/api/expedientes/${expedienteId}/contratos`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        titulo: `Contrato — ${presupuesto.titulo}`,
+        tipo: 'servicio',
+        estado: 'borrador',
+        importe: presupuesto.importe,
+        proveedor_id: presupuesto.proveedor?.id ?? null,
+        presupuesto_id: presupuesto.id,
+      }),
+    });
+    setTab('contratos');
+    reload();
+  };
+
+  const actualizarEstadoContrato = async (id: string, estado: string) => {
+    await fetch(`/api/expedientes/${expedienteId}/contratos/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ estado }),
+    });
+    reload();
+  };
+
+  const formatEur = (n?: number | null) => n != null
+    ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
+    : '—';
+
+  const PRES_COLORS: Record<string, string> = { borrador: '#94a3b8', enviado: '#3b82f6', recibido: '#8b5cf6', aprobado: '#059669', rechazado: '#ef4444' };
+  const CONT_COLORS: Record<string, string> = { borrador: '#94a3b8', enviado: '#3b82f6', firmado: '#059669', rescindido: '#ef4444' };
+  const PRES_LABELS: Record<string, string> = { borrador: 'Borrador', enviado: 'Enviado', recibido: 'Recibido', aprobado: 'Aprobado', rechazado: 'Rechazado' };
+  const CONT_LABELS: Record<string, string> = { borrador: 'Borrador', enviado: 'Enviado', firmado: 'Firmado ✓', rescindido: 'Rescindido' };
+
+  if (loading) return <div style={{ padding: 20, color: '#94a3b8', fontSize: '0.83rem' }}>Cargando...</div>;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      {/* Sub-tabs */}
+      <div style={{ display: 'flex', borderBottom: '1px solid #e8ecf4', background: '#fafbfc', flexShrink: 0 }}>
+        {[{ key: 'presupuestos', label: `Presupuestos (${presupuestos.length})` }, { key: 'contratos', label: `Contratos (${contratos.length})` }].map(t => (
+          <button key={t.key} onClick={() => setTab(t.key as any)} style={{
+            flex: 1, padding: '8px 4px', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+            fontSize: '0.72rem', fontWeight: tab === t.key ? 700 : 500,
+            color: tab === t.key ? '#0d1f3c' : '#94a3b8',
+            background: 'transparent',
+            borderBottom: tab === t.key ? '2px solid #059669' : '2px solid transparent',
+          }}>{t.label}</button>
+        ))}
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px 16px' }}>
+        {tab === 'presupuestos' && (
+          <>
+            <button onClick={() => setShowForm(v => !v)} style={{
+              width: '100%', padding: '7px', border: '1px dashed #cbd5e1', borderRadius: 8,
+              background: showForm ? '#f0fdf4' : '#fafbfc', cursor: 'pointer', fontSize: '0.75rem',
+              color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginBottom: 10,
+              fontFamily: 'inherit',
+            }}>
+              {showForm ? <X size={13} /> : <Plus size={13} />}
+              {showForm ? 'Cancelar' : 'Nuevo presupuesto'}
+            </button>
+
+            {showForm && (
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 12, marginBottom: 12 }}>
+                {[
+                  { key: 'titulo', label: 'Título *', placeholder: 'Ej: Desarrollo plataforma web' },
+                  { key: 'descripcion', label: 'Descripción', placeholder: 'Detalla el alcance del trabajo...' },
+                  { key: 'importe', label: 'Importe (€)', placeholder: '12000' },
+                  { key: 'notas', label: 'Notas', placeholder: 'Condiciones, plazos...' },
+                ].map(({ key, label, placeholder }) => (
+                  <div key={key} style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#64748b', marginBottom: 3 }}>{label}</div>
+                    {key === 'descripcion' || key === 'notas' ? (
+                      <textarea value={(form as any)[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} placeholder={placeholder}
+                        rows={2} style={{ width: '100%', fontSize: '0.75rem', border: '1px solid #e2e8f0', borderRadius: 6, padding: '5px 8px', resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                    ) : (
+                      <input value={(form as any)[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} placeholder={placeholder}
+                        style={{ width: '100%', fontSize: '0.75rem', border: '1px solid #e2e8f0', borderRadius: 6, padding: '5px 8px', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                    )}
+                  </div>
+                ))}
+                <button onClick={crearPresupuesto} disabled={saving || !form.titulo.trim()} style={{
+                  width: '100%', padding: '7px', border: 'none', borderRadius: 7, cursor: 'pointer',
+                  background: '#059669', color: '#fff', fontSize: '0.75rem', fontWeight: 700, fontFamily: 'inherit',
+                  opacity: saving || !form.titulo.trim() ? 0.6 : 1,
+                }}>
+                  {saving ? 'Guardando...' : 'Crear presupuesto'}
+                </button>
+              </div>
+            )}
+
+            {presupuestos.length === 0 && !showForm && (
+              <div style={{ textAlign: 'center', padding: '30px 10px', color: '#94a3b8' }}>
+                <Receipt size={28} style={{ opacity: 0.4, marginBottom: 8 }} />
+                <p style={{ fontSize: '0.8rem' }}>Sin presupuestos. Crea uno para solicitar cotización al proveedor.</p>
+              </div>
+            )}
+
+            {presupuestos.map(p => (
+              <div key={p.id} style={{ background: '#fff', border: '1px solid #e8ecf4', borderRadius: 10, padding: '11px 13px', marginBottom: 9 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0d1f3c', flex: 1, lineHeight: 1.3 }}>{p.titulo}</div>
+                  <span style={{ fontSize: '0.63rem', fontWeight: 700, color: PRES_COLORS[p.estado], background: PRES_COLORS[p.estado] + '18', padding: '2px 7px', borderRadius: 10, flexShrink: 0, marginLeft: 6 }}>
+                    {PRES_LABELS[p.estado]}
+                  </span>
+                </div>
+                {p.proveedor && <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: 3 }}>🏢 {p.proveedor.nombre}</div>}
+                {p.importe && <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#059669', marginBottom: 4 }}>{formatEur(p.importe)}</div>}
+                {p.descripcion && <div style={{ fontSize: '0.72rem', color: '#475569', marginBottom: 6, lineHeight: 1.4 }}>{p.descripcion}</div>}
+                {p.notas && <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontStyle: 'italic', marginBottom: 6 }}>{p.notas}</div>}
+                <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <select value={p.estado} onChange={e => actualizarEstadoPresupuesto(p.id, e.target.value)}
+                    style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    {['borrador', 'enviado', 'recibido', 'aprobado', 'rechazado'].map(s => <option key={s} value={s}>{PRES_LABELS[s]}</option>)}
+                  </select>
+                  {p.proveedor?.contacto_email && (
+                    <a href={`mailto:${p.proveedor.contacto_email}?subject=Solicitud de presupuesto: ${p.titulo}`}
+                      style={{ fontSize: '0.65rem', color: '#3b82f6', background: '#eff6ff', padding: '2px 7px', borderRadius: 6, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <Mail size={9} /> Solicitar
+                    </a>
+                  )}
+                  {p.estado === 'aprobado' && !contratos.find(c => c.presupuesto?.id === p.id) && (
+                    <button onClick={() => crearContrato(p)} style={{
+                      fontSize: '0.65rem', color: '#fff', background: '#059669', padding: '2px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700,
+                    }}>
+                      → Generar contrato
+                    </button>
+                  )}
+                  {contratos.find(c => c.presupuesto?.id === p.id) && (
+                    <span style={{ fontSize: '0.63rem', color: '#059669', fontWeight: 600 }}>✓ Contrato creado</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+
+        {tab === 'contratos' && (
+          <>
+            {contratos.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '30px 10px', color: '#94a3b8' }}>
+                <FileText size={28} style={{ opacity: 0.4, marginBottom: 8 }} />
+                <p style={{ fontSize: '0.8rem' }}>Sin contratos. Aprueba un presupuesto y genera el contrato desde allí.</p>
+              </div>
+            )}
+            {contratos.map(c => (
+              <div key={c.id} style={{ background: '#fff', border: '1px solid #e8ecf4', borderRadius: 10, padding: '11px 13px', marginBottom: 9 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0d1f3c', flex: 1, lineHeight: 1.3 }}>{c.titulo}</div>
+                  <span style={{ fontSize: '0.63rem', fontWeight: 700, color: CONT_COLORS[c.estado], background: CONT_COLORS[c.estado] + '18', padding: '2px 7px', borderRadius: 10, flexShrink: 0, marginLeft: 6 }}>
+                    {CONT_LABELS[c.estado]}
+                  </span>
+                </div>
+                {c.proveedor && <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: 3 }}>🏢 {c.proveedor.nombre}</div>}
+                {c.importe && <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0d1f3c', marginBottom: 4 }}>{formatEur(c.importe)}</div>}
+                {c.presupuesto && (
+                  <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginBottom: 6 }}>
+                    Presupuesto: {c.presupuesto.titulo}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <select value={c.estado} onChange={e => actualizarEstadoContrato(c.id, e.target.value)}
+                    style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    {['borrador', 'enviado', 'firmado', 'rescindido'].map(s => <option key={s} value={s}>{CONT_LABELS[s]}</option>)}
+                  </select>
+                  {c.estado === 'firmado' && (
+                    <span style={{ fontSize: '0.63rem', background: '#f0fdf4', color: '#059669', padding: '2px 8px', borderRadius: 6, fontWeight: 700 }}>
+                      ✓ Listo para presentar
+                    </span>
+                  )}
+                </div>
+                {c.fecha_firma && (
+                  <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: 4 }}>
+                    Firmado: {new Date(c.fecha_firma).toLocaleDateString('es-ES')}
+                  </div>
+                )}
+              </div>
+            ))}
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -720,7 +967,7 @@ export default function ExpedienteWorkspacePage() {
   const [archivos, setArchivos] = useState<Array<{ id: string; nombre: string; mime_type?: string | null; tamano_bytes?: number; storage_path?: string }>>([]);
   const [contextSelections, setContextSelections] = useState<Record<string, ContextMode>>({});
   const [archivoSignedUrl, setArchivoSignedUrl] = useState<string | null>(null);
-  const [panelTab, setPanelTab] = useState<'ia' | 'checklist' | 'proveedores' | 'ficha'>('ficha');
+  const [panelTab, setPanelTab] = useState<'ia' | 'checklist' | 'proveedores' | 'ficha' | 'contratos'>('ficha');
   const [setupLoading, setSetupLoading] = useState(false);
   const [clienteData, setClienteData] = useState<ClienteCompleto | null>(null);
   const [subvencionData, setSubvencionData] = useState<SubvencionData | null>(null);
@@ -1222,6 +1469,7 @@ export default function ExpedienteWorkspacePage() {
               { key: 'ia', label: 'Asistente', icon: <Bot size={12} /> },
               { key: 'checklist', label: 'Checklist', icon: <CheckSquare size={12} /> },
               { key: 'proveedores', label: 'Proveedores', icon: <Store size={12} /> },
+              { key: 'contratos', label: 'Contratos', icon: <Receipt size={12} /> },
             ] as const).map(tab => (
               <button
                 key={tab.key}
@@ -1274,6 +1522,7 @@ export default function ExpedienteWorkspacePage() {
             )}
             {panelTab === 'checklist' && <PanelChecklist expedienteId={expedienteId} />}
             {panelTab === 'proveedores' && <PanelProveedores expedienteId={expedienteId} />}
+            {panelTab === 'contratos' && <PanelPresupuestos expedienteId={expedienteId} />}
           </div>
         </div>
       }
