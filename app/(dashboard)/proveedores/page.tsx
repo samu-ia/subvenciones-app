@@ -312,9 +312,11 @@ export default function ProveedoresPage() {
                 {/* Header card */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                   <div>
-                    <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0d1f3c', marginBottom: 4 }}>
+                    <a href={`/proveedores/${p.id}`} style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0d1f3c', marginBottom: 4, display: 'block', textDecoration: 'none' }}
+                      onMouseEnter={e => (e.currentTarget.style.color = '#1d4ed8')}
+                      onMouseLeave={e => (e.currentTarget.style.color = '#0d1f3c')}>
                       {p.nombre}
-                    </div>
+                    </a>
                     <span style={{ display: 'inline-block', padding: '2px 9px', borderRadius: 20, background: cat.bg, color: cat.color, fontSize: '0.7rem', fontWeight: 700 }}>
                       {cat.label}
                     </span>
