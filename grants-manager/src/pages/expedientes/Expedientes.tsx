@@ -259,12 +259,38 @@ function KanbanView({ expedientes, clientes, convocatorias, gestores, navigate, 
                         </button>
                       </div>
 
-                      <div className="flex items-center gap-1.5 mb-2">
+                      <div className="flex items-center gap-1.5 mb-1">
                         <div className="w-4 h-4 bg-slate-100 rounded-full flex items-center justify-center text-slate-500">
                           <User size={9} />
                         </div>
                         <p className="text-xs text-slate-500 truncate">{cli?.nombre}</p>
                       </div>
+                      {/* D — Compliance indicator */}
+                      {cli && (
+                        <div className="flex items-center gap-1 mb-1.5">
+                          {cli.cumplimientoHacienda === 'ok' && cli.cumplimientoSS === 'ok' ? (
+                            <span className="flex items-center gap-0.5 text-emerald-600 text-xs">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                              Cumplimiento OK
+                            </span>
+                          ) : (
+                            <>
+                              {cli.cumplimientoHacienda !== 'ok' && (
+                                <span className="flex items-center gap-0.5 text-red-600 text-xs">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
+                                  Revisar Hacienda
+                                </span>
+                              )}
+                              {cli.cumplimientoSS !== 'ok' && (
+                                <span className="flex items-center gap-0.5 text-yellow-600 text-xs ml-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 inline-block" />
+                                  Verificar SS
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )}
 
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold text-slate-800">{formatEur(exp.importeSolicitado)}</span>

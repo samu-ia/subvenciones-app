@@ -47,6 +47,17 @@ export function Dashboard() {
     .sort((a, b) => (a.fechaVencimiento!.getTime() - b.fechaVencimiento!.getTime()))
     .slice(0, 5)
 
+  // F — subsanaciones activas
+  const subsanacionesActivas = expedientes.filter((e) => e.estado === 'SUBSANACION')
+
+  // Derive vencimiento tipo
+  const getVencimientoTipo = (exp: typeof expedientes[0]): { label: string; color: string } => {
+    if (exp.estado === 'SUBSANACION') return { label: 'Subsanación', color: 'text-red-600 bg-red-50' }
+    if (exp.estado === 'JUSTIFICACION') return { label: 'Justificación', color: 'text-orange-600 bg-orange-50' }
+    if (exp.estado === 'CONCEDIDA') return { label: 'Aceptación', color: 'text-blue-600 bg-blue-50' }
+    return { label: 'Convocatoria', color: 'text-yellow-700 bg-yellow-50' }
+  }
+
   // B01 — urgentes (≤ 14 días)
   const urgentes = expedientes
     .filter((e) => e.fechaVencimiento && !['CERRADA', 'DENEGADA'].includes(e.estado) && diffDays(e.fechaVencimiento) <= 14)
@@ -400,6 +411,50 @@ export function Dashboard() {
                 </div>
               </div>
 
+              {/* F — Subsanaciones activas */}
+              {subsanacionesActivas.length > 0 && (
+                <Card padding="none">
+                  <div className="px-5 py-4 border-b border-red-100 bg-red-50 flex items-center justify-between rounded-t-2xl">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle size={16} className="text-red-500 flex-shrink-0" />
+                      <h3 className="text-sm font-semibold text-red-900">Subsanaciones activas</h3>
+                      <span className="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded-full font-semibold">
+                        {subsanacionesActivas.length}
+                      </span>
+                    </div>
+                    <p className="text-xs text-red-700">10 días hábiles para responder</p>
+                  </div>
+                  <div className="divide-y divide-slate-100">
+                    {subsanacionesActivas.map((exp) => {
+                      const cli = clientes.find((c) => c.id === exp.clienteId)
+                      const conv = convocatorias.find((c) => c.idBdns === exp.convocatoriaId)
+                      const diasRestantes = exp.fechaVencimiento ? diffDays(exp.fechaVencimiento) : null
+                      return (
+                        <div
+                          key={exp.id}
+                          className="flex items-center gap-4 px-5 py-3 hover:bg-slate-50 cursor-pointer transition-colors"
+                          onClick={() => navigate(`/expedientes/${exp.id}`)}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-900">{cli?.nombre}</p>
+                            <p className="text-xs text-slate-500 truncate">{conv?.nombre}</p>
+                          </div>
+                          {diasRestantes !== null && (
+                            <span className={clsx(
+                              'text-xs font-bold flex-shrink-0 px-2 py-1 rounded',
+                              diasRestantes <= 5 ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                            )}>
+                              {diasRestantes <= 0 ? 'Vencido' : `${diasRestantes}d restantes`}
+                            </span>
+                          )}
+                          <span className="text-xs text-red-600 font-medium flex-shrink-0">Ver →</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </Card>
+              )}
+
               {/* Próximos vencimientos */}
               <Card padding="none">
                 <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
@@ -414,7 +469,7 @@ export function Dashboard() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-slate-100">
-                      {['Cliente', 'Convocatoria', 'Estado', 'Importe', 'Vencimiento'].map((h) => (
+                      {['Cliente', 'Convocatoria', 'Estado', 'Tipo', 'Importe', 'Vencimiento'].map((h) => (
                         <th key={h} className="text-left text-xs font-medium text-slate-500 px-5 py-3">{h}</th>
                       ))}
                     </tr>
@@ -424,6 +479,7 @@ export function Dashboard() {
                       const cli = clientes.find((c) => c.id === exp.clienteId)
                       const conv = convocatorias.find((c) => c.idBdns === exp.convocatoriaId)
                       const dias = diffDays(exp.fechaVencimiento!)
+                      const tipo = getVencimientoTipo(exp)
                       return (
                         <tr
                           key={exp.id}
@@ -433,6 +489,11 @@ export function Dashboard() {
                           <td className="px-5 py-3 text-sm font-medium text-slate-900">{cli?.nombre}</td>
                           <td className="px-5 py-3 text-sm text-slate-600 max-w-xs truncate">{conv?.nombre}</td>
                           <td className="px-5 py-3"><EstadoBadge estado={exp.estado} size="sm" /></td>
+                          <td className="px-5 py-3">
+                            <span className={clsx('text-xs font-medium px-2 py-0.5 rounded-full', tipo.color)}>
+                              {tipo.label}
+                            </span>
+                          </td>
                           <td className="px-5 py-3 text-sm text-slate-700 tabular-nums">
                             {formatEur(exp.importeSolicitado)}
                           </td>

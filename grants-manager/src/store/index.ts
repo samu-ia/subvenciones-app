@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import { clientes, convocatorias, expedientes, alertas, gestores } from '../lib/mockData'
-import type { Cliente, Convocatoria, Expediente, Alerta, Gestor, EstadoExpediente } from '../types'
+import { clientes, convocatorias, expedientes, alertas, gestores, presupuestos as initialPresupuestos } from '../lib/mockData'
+import type { Cliente, Convocatoria, Expediente, Alerta, Gestor, EstadoExpediente, Presupuesto } from '../types'
 
 interface AppState {
   clientes: Cliente[]
@@ -8,6 +8,7 @@ interface AppState {
   expedientes: Expediente[]
   alertas: Alerta[]
   gestores: Gestor[]
+  presupuestos: Presupuesto[]
   sidebarCollapsed: boolean
   urgentPinnedIds: string[]
   setSidebarCollapsed: (v: boolean) => void
@@ -17,6 +18,8 @@ interface AppState {
   toggleUrgentPin: (id: string) => void
   addHistorialEntry: (expedienteId: string, texto: string, usuario: string) => void
   addNota: (expedienteId: string, texto: string, autor: string) => void
+  addPresupuesto: (presupuesto: Presupuesto) => void
+  updatePresupuestoEstado: (id: string, estado: Presupuesto['estado']) => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -25,6 +28,7 @@ export const useAppStore = create<AppState>((set) => ({
   expedientes,
   alertas,
   gestores,
+  presupuestos: initialPresupuestos,
   sidebarCollapsed: false,
   urgentPinnedIds: [],
   setSidebarCollapsed: (v) => set({ sidebarCollapsed: v }),
@@ -93,6 +97,22 @@ export const useAppStore = create<AppState>((set) => ({
               ],
             }
           : e
+      ),
+    })),
+  addPresupuesto: (presupuesto) =>
+    set((s) => ({ presupuestos: [...s.presupuestos, presupuesto] })),
+  updatePresupuestoEstado: (id, estado) =>
+    set((s) => ({
+      presupuestos: s.presupuestos.map((p) =>
+        p.id === id
+          ? {
+              ...p,
+              estado,
+              fechaRecepcion: (estado === 'recibido' || estado === 'seleccionado') && !p.fechaRecepcion
+                ? new Date()
+                : p.fechaRecepcion,
+            }
+          : p
       ),
     })),
 }))

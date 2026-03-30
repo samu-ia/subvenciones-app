@@ -1,4 +1,4 @@
-import type { Cliente, Convocatoria, Expediente, Alerta, Gestor } from '../types'
+import type { Cliente, Convocatoria, Expediente, Alerta, Gestor, Presupuesto } from '../types'
 
 export const gestores: Gestor[] = [
   { id: 'g1', nombre: 'Laura Martínez', email: 'laura@ayudapyme.es' },
@@ -13,6 +13,7 @@ export const clientes: Cliente[] = [
     tamano: 'pyme', certificadoDigital: 'FNMT-RCM', caducidadCertificado: new Date('2024-11-15'),
     contacto: 'María González', email: 'maria@hosteleria-atlantica.es', telefono: '981 234 567',
     fechaAlta: new Date('2023-03-12'),
+    cumplimientoHacienda: 'ok', cumplimientoSS: 'ok',
   },
   {
     id: 'c2', nombre: 'Industrias Metálicas del Norte S.A.', nif: 'A33456789',
@@ -20,6 +21,7 @@ export const clientes: Cliente[] = [
     tamano: 'pyme', certificadoDigital: 'Camerfirma', caducidadCertificado: new Date('2025-06-30'),
     contacto: 'Pedro Álvarez', email: 'pedro@metalicas-norte.es', telefono: '985 678 901',
     fechaAlta: new Date('2023-05-20'),
+    cumplimientoHacienda: 'revisar', cumplimientoSS: 'ok',
   },
   {
     id: 'c3', nombre: 'Fundación Horizonte Social', nif: 'G28901234',
@@ -27,6 +29,7 @@ export const clientes: Cliente[] = [
     tamano: 'ong', certificadoDigital: 'FNMT-RCM', caducidadCertificado: new Date('2025-09-01'),
     contacto: 'Rosa Jiménez', email: 'rosa@horizontesocial.org', telefono: '914 321 765',
     fechaAlta: new Date('2023-01-08'),
+    cumplimientoHacienda: 'ok', cumplimientoSS: 'ok',
   },
   {
     id: 'c4', nombre: 'Comercial Valencia Fresh S.L.', nif: 'B46789012',
@@ -34,6 +37,7 @@ export const clientes: Cliente[] = [
     tamano: 'micropyme', certificadoDigital: 'Izenpe', caducidadCertificado: new Date('2025-03-15'),
     contacto: 'Jordi Ferrer', email: 'jordi@valenciafresh.es', telefono: '963 456 789',
     fechaAlta: new Date('2023-07-14'),
+    cumplimientoHacienda: 'ok', cumplimientoSS: 'revisar',
   },
   {
     id: 'c5', nombre: 'Agro Extremadura Bio S.C.', nif: 'F10234567',
@@ -41,6 +45,7 @@ export const clientes: Cliente[] = [
     tamano: 'micropyme', certificadoDigital: 'FNMT-RCM', caducidadCertificado: new Date('2025-12-01'),
     contacto: 'Antonio Morales', email: 'antonio@agroextremadura.es', telefono: '927 111 222',
     fechaAlta: new Date('2023-09-03'),
+    cumplimientoHacienda: 'ok', cumplimientoSS: 'ok',
   },
   {
     id: 'c6', nombre: 'Tech Innovate BCN S.L.', nif: 'B08567890',
@@ -48,6 +53,7 @@ export const clientes: Cliente[] = [
     tamano: 'pyme', certificadoDigital: 'Camerfirma', caducidadCertificado: new Date('2026-02-28'),
     contacto: 'Marc Puigdomènech', email: 'marc@techinnovate.es', telefono: '932 567 890',
     fechaAlta: new Date('2023-11-22'),
+    cumplimientoHacienda: 'ok', cumplimientoSS: 'ok',
   },
   {
     id: 'c7', nombre: 'Turismo Rural La Rioja S.L.', nif: 'B26345678',
@@ -55,6 +61,7 @@ export const clientes: Cliente[] = [
     tamano: 'micropyme', certificadoDigital: 'FNMT-RCM', caducidadCertificado: new Date('2025-07-20'),
     contacto: 'Elena Navarrete', email: 'elena@turismorioja.es', telefono: '941 234 567',
     fechaAlta: new Date('2024-01-15'),
+    cumplimientoHacienda: 'ok', cumplimientoSS: 'ok',
   },
   {
     id: 'c8', nombre: 'Construcciones Levante 2000 S.A.', nif: 'A03123456',
@@ -62,6 +69,7 @@ export const clientes: Cliente[] = [
     tamano: 'pyme', certificadoDigital: 'FNMT-RCM', caducidadCertificado: new Date('2025-10-31'),
     contacto: 'Francisco López', email: 'flopez@construlevante.es', telefono: '968 345 678',
     fechaAlta: new Date('2024-02-28'),
+    cumplimientoHacienda: 'revisar', cumplimientoSS: 'ok',
   },
   {
     id: 'c9', nombre: 'Centro Educativo Innovación S.L.', nif: 'B41678901',
@@ -69,6 +77,7 @@ export const clientes: Cliente[] = [
     tamano: 'pyme', certificadoDigital: 'Camerfirma', caducidadCertificado: new Date('2026-01-10'),
     contacto: 'Isabel Reyes', email: 'ireyes@centroinnovacion.es', telefono: '954 789 012',
     fechaAlta: new Date('2024-03-10'),
+    cumplimientoHacienda: 'ok', cumplimientoSS: 'ok',
   },
   {
     id: 'c10', nombre: 'Distribuciones Vasco-Navarras S.A.', nif: 'A20456789',
@@ -76,6 +85,7 @@ export const clientes: Cliente[] = [
     tamano: 'gran_empresa', certificadoDigital: 'Izenpe', caducidadCertificado: new Date('2025-08-15'),
     contacto: 'Iñaki Zubicaray', email: 'izubicaray@vasconavarras.es', telefono: '944 567 890',
     fechaAlta: new Date('2023-06-01'),
+    cumplimientoHacienda: 'ok', cumplimientoSS: 'ok',
   },
 ]
 
@@ -305,6 +315,7 @@ export const expedientes: Expediente[] = [
     fechaSolicitud: new Date('2024-03-05'), numeroOficial: 'TURISME-2024-00234',
     importeSolicitado: 35000, importeConcedido: 0, gestorId: 'g1',
     fechaVencimiento: d(5),
+    fechaSubsanacion: d(10),
     documentos: [
       { id: 'd11', expedienteId: 'e5', tipo: 'Certificado sostenibilidad', nombreArchivo: 'cert_sostenibilidad.pdf', fechaSubida: new Date('2024-03-05'), estado: 'rechazado', tamanio: '1.5 MB' },
       { id: 'd12', expedienteId: 'e5', tipo: 'Planos establecimiento', nombreArchivo: 'planos_hosteleria.pdf', fechaSubida: new Date('2024-03-05'), estado: 'validado', tamanio: '7.8 MB' },
@@ -632,5 +643,42 @@ export const alertas: Alerta[] = [
     id: 'a8', expedienteId: 'e1', tipo: 'certificado_caducado',
     fechaDisparo: d(-45), mensaje: 'Certificado digital de Tech Innovate BCN caducó hace 45 días',
     estado: 'vista', diasRestantes: -45,
+  },
+]
+
+// Mock presupuestos for expediente e4 (JUSTIFICACION) — 3 proveedores
+export const presupuestos: Presupuesto[] = [
+  {
+    id: 'p1',
+    expedienteId: 'e4',
+    proveedorNombre: 'Servicios Técnicos Horizonte S.L.',
+    proveedorCif: 'B28123456',
+    importe: 42000,
+    estado: 'recibido',
+    fechaSolicitud: d(-20),
+    fechaRecepcion: d(-12),
+    descripcion: 'Servicios de consultoría social y gestión de programas para mayores.',
+    notas: 'Oferta más económica. Buenas referencias.',
+  },
+  {
+    id: 'p2',
+    expedienteId: 'e4',
+    proveedorNombre: 'Consultora Solidaria Ibérica S.A.',
+    proveedorCif: 'A28987654',
+    importe: 55000,
+    estado: 'recibido',
+    fechaSolicitud: d(-20),
+    fechaRecepcion: d(-10),
+    descripcion: 'Programa integral de apoyo a personas mayores y discapacidad.',
+    notas: 'Mayor experiencia acreditada, pero precio más elevado.',
+  },
+  {
+    id: 'p3',
+    expedienteId: 'e4',
+    proveedorNombre: 'AsociaServicios Comunidad Madrid S.C.',
+    proveedorCif: 'F28345678',
+    estado: 'pendiente',
+    fechaSolicitud: d(-15),
+    descripcion: 'Pendiente de recibir presupuesto formal.',
   },
 ]

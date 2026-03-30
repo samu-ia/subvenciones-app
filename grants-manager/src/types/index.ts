@@ -47,6 +47,8 @@ export interface Cliente {
   email: string
   telefono: string
   fechaAlta: Date
+  cumplimientoHacienda: 'ok' | 'revisar' | 'pendiente'
+  cumplimientoSS: 'ok' | 'revisar' | 'pendiente'
 }
 
 export interface Convocatoria {
@@ -105,6 +107,20 @@ export interface Expediente {
   documentos: Documento[]
   historial: CambioEstado[]
   fechaVencimiento?: Date
+  fechaSubsanacion?: Date
+}
+
+export interface Presupuesto {
+  id: string
+  expedienteId: string
+  proveedorNombre: string
+  proveedorCif: string
+  importe?: number
+  estado: 'pendiente' | 'recibido' | 'seleccionado' | 'rechazado'
+  fechaSolicitud: Date
+  fechaRecepcion?: Date
+  descripcion?: string
+  notas?: string
 }
 
 export interface Alerta {

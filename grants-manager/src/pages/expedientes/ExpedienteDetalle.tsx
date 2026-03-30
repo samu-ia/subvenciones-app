@@ -7,17 +7,31 @@ import { Button } from '../../components/ui/Button'
 import { useAppStore } from '../../store'
 import {
   ArrowLeft, FileText, MessageSquare, Clock, Upload,
-  CheckCircle, XCircle, AlertTriangle, ChevronRight, ChevronDown
+  CheckCircle, XCircle, AlertTriangle, ChevronRight, ChevronDown,
+  Plus, DollarSign
 } from 'lucide-react'
 import { clsx } from 'clsx'
-import { ESTADO_COLORS, ESTADO_LABELS, type EstadoExpediente } from '../../types'
+import { ESTADO_COLORS, ESTADO_LABELS, type EstadoExpediente, type Presupuesto } from '../../types'
 
 const TODOS_ESTADOS: EstadoExpediente[] = [
   'DETECCION', 'EVALUACION', 'PREPARACION', 'PRESENTADA',
   'SUBSANACION', 'CONCEDIDA', 'JUSTIFICACION', 'CERRADA', 'DENEGADA',
 ]
 
-const TABS = ['Datos generales', 'Documentos', 'Notas', 'Historial'] as const
+
+const TIMELINE_LABELS: Record<string, string> = {
+  DETECCION: 'Detección',
+  EVALUACION: 'Evaluación',
+  PREPARACION: 'Preparación',
+  PRESENTADA: 'Presentada',
+  SUBSANACION: 'Subsanación',
+  EVALUACION_ADMIN: 'Eval. Admin',
+  CONCEDIDA: 'Concedida',
+  JUSTIFICACION: 'Justificación',
+  COBRO: 'Cobro',
+}
+
+const TABS = ['Datos generales', 'Documentos', 'Presupuestos', 'Notas', 'Historial'] as const
 
 // A14 — descripciones llanas de estado para el historial
 const ESTADO_DESC: Record<string, string> = {
@@ -36,14 +50,75 @@ const ESTADO_DESC: Record<string, string> = {
 const DOC_FILTROS = ['Todos', 'Pendientes', 'Subidos', 'Validados'] as const
 type DocFiltro = typeof DOC_FILTROS[number]
 
+// Phase-aware document checklist
+const DOCS_POR_FASE: Record<string, string[]> = {
+  DETECCION: ['CIF empresa', 'Memoria descriptiva del proyecto', 'Presupuesto estimado'],
+  EVALUACION: [
+    'Certificado Hacienda corriente de pago',
+    'Certificado Seguridad Social',
+    'Cuentas anuales últimos 2 años',
+    '3 presupuestos de proveedores',
+  ],
+  PREPARACION: [
+    'Formulario oficial cumplimentado',
+    'Memoria técnica completa',
+    'Presupuesto desglosado por partidas',
+  ],
+  PRESENTADA: ['Justificante de presentación', 'Número de registro asignado'],
+  SUBSANACION: [
+    'Responder requerimiento en 10 días hábiles',
+    'Documentos solicitados por la administración',
+  ],
+  EVALUACION_ADMIN: [],
+  CONCEDIDA: ['Aceptar resolución de concesión', 'Iniciar ejecución del proyecto'],
+  JUSTIFICACION: [
+    'Facturas definitivas (no proforma)',
+    'Justificantes de pago (extracto bancario)',
+    'Acta de recepción del proveedor',
+    'Informe final de ejecución',
+    'Fotografías si aplica',
+  ],
+  COBRO: ['Datos bancarios IBAN actualizados'],
+}
+
+// Calculate business days remaining (exclude weekends)
+function diasHabilesRestantes(fecha: Date): number {
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+  const objetivo = new Date(fecha)
+  objetivo.setHours(0, 0, 0, 0)
+
+  let count = 0
+  const current = new Date(hoy)
+  const direction = objetivo >= hoy ? 1 : -1
+
+  while (current.getTime() !== objetivo.getTime()) {
+    current.setDate(current.getDate() + direction)
+    const day = current.getDay()
+    if (day !== 0 && day !== 6) count++
+  }
+
+  return direction > 0 ? count : -count
+}
+
 export function ExpedienteDetalle() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { expedientes, clientes, convocatorias, gestores, addHistorialEntry, updateExpedienteEstado, addNota } = useAppStore()
+  const {
+    expedientes, clientes, convocatorias, gestores,
+    addHistorialEntry, updateExpedienteEstado, addNota,
+    presupuestos, addPresupuesto, updatePresupuestoEstado,
+  } = useAppStore()
   const [tab, setTab] = useState<typeof TABS[number]>('Datos generales')
   const [nota, setNota] = useState('')
   const [docFiltro, setDocFiltro] = useState<DocFiltro>('Todos') // D16
   const [showEstadoMenu, setShowEstadoMenu] = useState(false)
+  const [showAddPresupuesto, setShowAddPresupuesto] = useState(false)
+  const [newPresupuesto, setNewPresupuesto] = useState({
+    proveedorNombre: '',
+    proveedorCif: '',
+    descripcion: '',
+  })
 
   const exp = expedientes.find((e) => e.id === id)
   if (!exp) return (
@@ -55,6 +130,7 @@ export function ExpedienteDetalle() {
   const cliente = clientes.find((c) => c.id === exp.clienteId)
   const conv = convocatorias.find((c) => c.idBdns === exp.convocatoriaId)
   const gestor = gestores.find((g) => g.id === exp.gestorId)
+  const expPresupuestos = presupuestos.filter((p) => p.expedienteId === exp.id)
 
   const formatEur = (n: number) =>
     new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
@@ -78,6 +154,17 @@ export function ExpedienteDetalle() {
   // C04 — documentos pendientes
   const docsPendientes = exp.documentos.filter((d) => d.estado === 'pendiente').length
 
+  // Phase checklist — check which required docs might already be uploaded
+  const docsRequeridos = DOCS_POR_FASE[exp.estado] ?? []
+  const docsNombres = exp.documentos.map((d) => (d.tipo + ' ' + d.nombreArchivo).toLowerCase())
+  const docsCheck = docsRequeridos.map((req) => {
+    const keywords = req.toLowerCase().split(' ').filter((w) => w.length > 3)
+    const matched = keywords.some((kw) => docsNombres.some((dn) => dn.includes(kw))) &&
+      exp.documentos.some((d) => d.estado === 'validado' || d.estado === 'subido')
+    return { texto: req, ok: matched }
+  })
+  const docsListos = docsCheck.filter((d) => d.ok).length
+
   // D24 — registrar revisión
   const handleRegistrarRevision = () => {
     addHistorialEntry(exp.id, 'Revisado por Gestor', 'Gestor')
@@ -98,6 +185,33 @@ export function ExpedienteDetalle() {
     setNota('')
   }
 
+  // Add presupuesto
+  const handleAddPresupuesto = () => {
+    if (!newPresupuesto.proveedorNombre.trim()) return
+    addPresupuesto({
+      id: `p${Date.now()}`,
+      expedienteId: exp.id,
+      proveedorNombre: newPresupuesto.proveedorNombre.trim(),
+      proveedorCif: newPresupuesto.proveedorCif.trim(),
+      descripcion: newPresupuesto.descripcion.trim() || undefined,
+      estado: 'pendiente',
+      fechaSolicitud: new Date(),
+    })
+    setNewPresupuesto({ proveedorNombre: '', proveedorCif: '', descripcion: '' })
+    setShowAddPresupuesto(false)
+  }
+
+  // Subsanación: días hábiles
+  const diasHabiles = exp.fechaSubsanacion ? diasHabilesRestantes(exp.fechaSubsanacion) : null
+
+  // Presupuestos stats
+  const presupuestosRecibidos = expPresupuestos.filter((p) => p.estado === 'recibido' || p.estado === 'seleccionado')
+  const presupuestoSeleccionado = expPresupuestos.find((p) => p.estado === 'seleccionado')
+
+  // Compliance
+  const haciendaOk = cliente?.cumplimientoHacienda === 'ok'
+  const ssOk = cliente?.cumplimientoSS === 'ok'
+
   return (
     <>
       <Navbar
@@ -110,8 +224,35 @@ export function ExpedienteDetalle() {
         }
       />
       <div className="flex-1 overflow-y-auto">
+        {/* C — SUBSANACIÓN BANNER */}
+        {exp.estado === 'SUBSANACION' && (
+          <div className="bg-red-50 border-b-2 border-red-400 px-6 py-4">
+            <div className="flex items-start gap-3">
+              <span className="text-xl flex-shrink-0">⚠️</span>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-red-800">
+                  SUBSANACIÓN ACTIVA — Tienes {diasHabiles !== null ? `${diasHabiles} días hábiles` : '10 días hábiles'} para responder
+                </p>
+                <p className="text-xs text-red-700 mt-1">
+                  La administración ha detectado deficiencias en tu solicitud.
+                  Revisa los documentos requeridos y sube las correcciones antes del{' '}
+                  {exp.fechaSubsanacion
+                    ? exp.fechaSubsanacion.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
+                    : 'plazo indicado'}.
+                </p>
+              </div>
+              <button
+                onClick={() => setTab('Documentos')}
+                className="text-xs font-semibold text-red-700 hover:text-red-900 whitespace-nowrap border border-red-300 rounded-lg px-3 py-1.5 hover:bg-red-100 transition-colors flex-shrink-0"
+              >
+                Ver qué falta →
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* C04 — banner documentos pendientes */}
-        {docsPendientes > 0 && (
+        {docsPendientes > 0 && exp.estado !== 'SUBSANACION' && (
           <div className="bg-yellow-50 border-b border-yellow-200 px-6 py-3 flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <span className="text-base">📋</span>
@@ -188,6 +329,19 @@ export function ExpedienteDetalle() {
                 Concedido: {formatEur(exp.importeConcedido)}
               </span>
             )}
+            {/* D — Compliance pill */}
+            {cliente && (
+              <span className={clsx(
+                'text-xs px-2 py-1 rounded font-medium flex items-center gap-1',
+                haciendaOk && ssOk
+                  ? 'text-emerald-700 bg-emerald-50'
+                  : 'text-orange-700 bg-orange-50'
+              )}>
+                {haciendaOk ? '✓ Hacienda OK' : '⚠️ Revisar Hacienda'}
+                {' · '}
+                {ssOk ? '✓ SS OK' : '⚠️ Revisar SS'}
+              </span>
+            )}
           </div>
         </div>
 
@@ -206,6 +360,11 @@ export function ExpedienteDetalle() {
                 )}
               >
                 {t}
+                {t === 'Presupuestos' && expPresupuestos.length > 0 && (
+                  <span className="ml-1.5 text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full">
+                    {expPresupuestos.length}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -216,6 +375,12 @@ export function ExpedienteDetalle() {
 
             {tab === 'Datos generales' && (
               <div className="space-y-5">
+                {/* E — Timeline stepper */}
+                <Card padding="md">
+                  <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">Progreso del expediente</h3>
+                  <PhaseTimeline currentEstado={exp.estado} />
+                </Card>
+
                 {/* A08-A09 — tarjeta grande importe concedido */}
                 {exp.importeConcedido > 0 && (
                   <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 flex items-center gap-4">
@@ -328,90 +493,149 @@ export function ExpedienteDetalle() {
             )}
 
             {tab === 'Documentos' && (
-              <Card padding="none">
-                <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-3">
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900">Documentos</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      {exp.documentos.filter((d) => d.estado === 'validado').length} validados ·{' '}
-                      {exp.documentos.filter((d) => d.estado === 'pendiente').length} pendientes
-                    </p>
-                  </div>
-                  {/* D16 — filtros de estado de documentos */}
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {DOC_FILTROS.map((f) => (
-                      <button
-                        key={f}
-                        onClick={() => setDocFiltro(f)}
-                        className={clsx(
-                          'px-3 py-1 rounded-full text-xs font-medium transition-colors',
-                          docFiltro === f ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        )}
-                      >
-                        {f}
-                      </button>
-                    ))}
-                  </div>
-                  <Button size="sm" icon={<Upload size={14} />}>Subir documento</Button>
-                </div>
-                {docsFiltrados.length === 0 ? (
-                  <div className="text-center py-12 text-sm text-slate-400">
-                    {docFiltro === 'Todos' ? 'No hay documentos adjuntos' : `No hay documentos en estado "${docFiltro}"`}
-                  </div>
-                ) : (
-                  <div className="divide-y divide-slate-100">
-                    {docsFiltrados.map((doc) => {
-                      const st = DOC_ESTADO[doc.estado]
-                      return (
-                        <div
-                          key={doc.id}
+              <div className="space-y-4">
+                {/* B — Phase-aware document checklist */}
+                {docsRequeridos.length > 0 && (
+                  <Card padding="md">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-slate-900">Documentos requeridos en esta fase</h3>
+                      <span className={clsx(
+                        'text-xs font-medium px-2 py-0.5 rounded-full',
+                        docsListos === docsRequeridos.length
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-orange-100 text-orange-700'
+                      )}>
+                        {docsListos}/{docsRequeridos.length} documentos clave listos
+                      </span>
+                    </div>
+                    <ul className="space-y-2">
+                      {docsCheck.map(({ texto, ok }, i) => (
+                        <li key={i} className="flex items-center gap-2.5">
+                          <div className={clsx(
+                            'w-4 h-4 rounded flex items-center justify-center flex-shrink-0',
+                            ok ? 'bg-emerald-500' : 'bg-slate-200'
+                          )}>
+                            {ok && <CheckCircle size={11} className="text-white" />}
+                          </div>
+                          <span className={clsx('text-xs', ok ? 'text-slate-600 line-through' : 'text-slate-800')}>
+                            {texto}
+                          </span>
+                          {!ok && (
+                            <span className="text-xs text-orange-500 font-medium ml-auto">Pendiente</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                    {exp.estado === 'SUBSANACION' && (
+                      <div className="mt-3 pt-3 border-t border-red-100 bg-red-50 -mx-4 -mb-4 px-4 pb-4 rounded-b-xl">
+                        <p className="text-xs text-red-700 font-medium">
+                          ⚠️ Tienes {diasHabiles !== null ? `${diasHabiles} días hábiles` : 'plazo limitado'} para responder. Sube los documentos corregidos.
+                        </p>
+                      </div>
+                    )}
+                  </Card>
+                )}
+
+                <Card padding="none">
+                  <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-900">Documentos</h3>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {exp.documentos.filter((d) => d.estado === 'validado').length} validados ·{' '}
+                        {exp.documentos.filter((d) => d.estado === 'pendiente').length} pendientes
+                      </p>
+                    </div>
+                    {/* D16 — filtros de estado de documentos */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {DOC_FILTROS.map((f) => (
+                        <button
+                          key={f}
+                          onClick={() => setDocFiltro(f)}
                           className={clsx(
-                            'flex items-center gap-4 px-5 py-3 hover:bg-slate-50 transition-colors border-l-4',
-                            // D16 — borde color según estado
-                            doc.estado === 'pendiente' ? 'border-l-red-400' :
-                            doc.estado === 'validado' ? 'border-l-emerald-400' :
-                            doc.estado === 'rechazado' ? 'border-l-red-600' :
-                            'border-l-transparent'
+                            'px-3 py-1 rounded-full text-xs font-medium transition-colors',
+                            docFiltro === f ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                           )}
                         >
-                          <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-500 flex-shrink-0">
-                            <FileText size={15} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-900">{doc.tipo}</p>
-                            <p className="text-xs text-slate-400 truncate">
-                              {doc.nombreArchivo || 'Sin archivo'}{doc.tamanio ? ` · ${doc.tamanio}` : ''}
-                            </p>
-                            {/* D16 — label pendiente en rojo */}
-                            {doc.estado === 'pendiente' && (
-                              <p className="text-xs text-red-600 font-medium mt-0.5">⚠️ Pendiente</p>
+                          {f}
+                        </button>
+                      ))}
+                    </div>
+                    <Button size="sm" icon={<Upload size={14} />}>Subir documento</Button>
+                  </div>
+                  {docsFiltrados.length === 0 ? (
+                    <div className="text-center py-12 text-sm text-slate-400">
+                      {docFiltro === 'Todos' ? 'No hay documentos adjuntos' : `No hay documentos en estado "${docFiltro}"`}
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-100">
+                      {docsFiltrados.map((doc) => {
+                        const st = DOC_ESTADO[doc.estado]
+                        return (
+                          <div
+                            key={doc.id}
+                            className={clsx(
+                              'flex items-center gap-4 px-5 py-3 hover:bg-slate-50 transition-colors border-l-4',
+                              // D16 — borde color según estado
+                              doc.estado === 'pendiente' ? 'border-l-red-400' :
+                              doc.estado === 'validado' ? 'border-l-emerald-400' :
+                              doc.estado === 'rechazado' ? 'border-l-red-600' :
+                              'border-l-transparent'
                             )}
-                            {/* A11-A12 — rechazado: instrucción */}
-                            {doc.estado === 'rechazado' && (
-                              <p className="text-xs text-red-600 mt-0.5">
-                                ⚠️ Este documento fue rechazado. Por favor sube una versión corregida.
+                          >
+                            <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-500 flex-shrink-0">
+                              <FileText size={15} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-slate-900">{doc.tipo}</p>
+                              <p className="text-xs text-slate-400 truncate">
+                                {doc.nombreArchivo || 'Sin archivo'}{doc.tamanio ? ` · ${doc.tamanio}` : ''}
+                              </p>
+                              {/* D16 — label pendiente en rojo */}
+                              {doc.estado === 'pendiente' && (
+                                <p className="text-xs text-red-600 font-medium mt-0.5">⚠️ Pendiente</p>
+                              )}
+                              {/* A11-A12 — rechazado: instrucción */}
+                              {doc.estado === 'rechazado' && (
+                                <p className="text-xs text-red-600 mt-0.5">
+                                  ⚠️ Este documento fue rechazado. Por favor sube una versión corregida.
+                                </p>
+                              )}
+                            </div>
+                            {doc.fechaSubida.getFullYear() > 1970 && (
+                              <p className="text-xs text-slate-400 flex-shrink-0">
+                                {doc.fechaSubida.toLocaleDateString('es-ES')}
                               </p>
                             )}
+                            <span className={clsx('flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium flex-shrink-0', st.color)}>
+                              {st.icon} {st.label}
+                            </span>
+                            {(doc.estado === 'pendiente' || doc.estado === 'rechazado') && (
+                              <Button size="sm" variant="secondary" icon={<Upload size={12} />}>
+                                {doc.estado === 'rechazado' ? 'Subir nuevo' : 'Subir'}
+                              </Button>
+                            )}
                           </div>
-                          {doc.fechaSubida.getFullYear() > 1970 && (
-                            <p className="text-xs text-slate-400 flex-shrink-0">
-                              {doc.fechaSubida.toLocaleDateString('es-ES')}
-                            </p>
-                          )}
-                          <span className={clsx('flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium flex-shrink-0', st.color)}>
-                            {st.icon} {st.label}
-                          </span>
-                          {(doc.estado === 'pendiente' || doc.estado === 'rechazado') && (
-                            <Button size="sm" variant="secondary" icon={<Upload size={12} />}>
-                              {doc.estado === 'rechazado' ? 'Subir nuevo' : 'Subir'}
-                            </Button>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </Card>
+                        )
+                      })}
+                    </div>
+                  )}
+                </Card>
+              </div>
+            )}
+
+            {tab === 'Presupuestos' && (
+              <PresupuestosTab
+                presupuestos={expPresupuestos}
+                presupuestosRecibidos={presupuestosRecibidos}
+                presupuestoSeleccionado={presupuestoSeleccionado}
+                showAddPresupuesto={showAddPresupuesto}
+                setShowAddPresupuesto={setShowAddPresupuesto}
+                newPresupuesto={newPresupuesto}
+                setNewPresupuesto={setNewPresupuesto}
+                handleAddPresupuesto={handleAddPresupuesto}
+                updatePresupuestoEstado={updatePresupuestoEstado}
+                formatEur={formatEur}
+              />
             )}
 
             {tab === 'Notas' && (
@@ -520,5 +744,318 @@ export function ExpedienteDetalle() {
         </div>
       </div>
     </>
+  )
+}
+
+// ===== E — Phase Timeline Component =====
+function PhaseTimeline({ currentEstado }: { currentEstado: EstadoExpediente }) {
+  const phases: EstadoExpediente[] = [
+    'DETECCION', 'EVALUACION', 'PREPARACION', 'PRESENTADA',
+    'CONCEDIDA', 'JUSTIFICACION',
+  ]
+
+  // Map SUBSANACION as overlapping PRESENTADA
+  const subsanacionActive = currentEstado === 'SUBSANACION'
+  const effectiveEstado = subsanacionActive ? 'PRESENTADA' : currentEstado
+
+  const currentIdx = phases.indexOf(effectiveEstado)
+  const isDenegada = currentEstado === 'DENEGADA'
+  const isCerrada = currentEstado === 'CERRADA'
+
+  return (
+    <div className="w-full">
+      {(isDenegada || isCerrada) && (
+        <div className={clsx(
+          'mb-3 px-3 py-2 rounded-lg text-xs font-medium',
+          isDenegada ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-600'
+        )}>
+          {isDenegada ? '✗ Solicitud denegada' : '✓ Expediente cerrado'}
+        </div>
+      )}
+      <div className="flex items-start gap-0 overflow-x-auto pb-2">
+        {phases.map((phase, idx) => {
+          const isCompleted = idx < currentIdx
+          const isCurrent = idx === currentIdx && !isDenegada && !isCerrada
+          const isFuture = idx > currentIdx || isDenegada || isCerrada
+
+          const color = ESTADO_COLORS[phase] ?? '#94A3B8'
+
+          return (
+            <div key={phase} className="flex items-start flex-1 min-w-0">
+              <div className="flex flex-col items-center flex-1 min-w-0">
+                {/* connector line before */}
+                <div className="flex items-center w-full">
+                  {idx > 0 && (
+                    <div
+                      className="h-0.5 flex-1"
+                      style={{ backgroundColor: isCompleted || isCurrent ? color : '#E2E8F0' }}
+                    />
+                  )}
+                  {/* dot */}
+                  <div
+                    className={clsx(
+                      'w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 border-2 transition-all',
+                      isCompleted ? 'border-transparent' :
+                      isCurrent ? 'border-transparent shadow-md' :
+                      'border-slate-200 bg-white'
+                    )}
+                    style={{
+                      backgroundColor: isCompleted ? color : isCurrent ? color : undefined,
+                    }}
+                  >
+                    {isCompleted && <CheckCircle size={14} className="text-white" />}
+                    {isCurrent && (
+                      subsanacionActive && phase === 'PRESENTADA'
+                        ? <span className="text-white text-xs font-bold">!</span>
+                        : <div className="w-2.5 h-2.5 rounded-full bg-white" />
+                    )}
+                    {isFuture && <div className="w-2 h-2 rounded-full bg-slate-300" />}
+                  </div>
+                  {/* connector line after */}
+                  {idx < phases.length - 1 && (
+                    <div
+                      className="h-0.5 flex-1"
+                      style={{ backgroundColor: isCompleted ? color : '#E2E8F0' }}
+                    />
+                  )}
+                </div>
+                {/* label */}
+                <p
+                  className={clsx(
+                    'text-center mt-1.5 px-0.5',
+                    'text-xs leading-tight',
+                    isCurrent ? 'font-semibold text-slate-900' :
+                    isCompleted ? 'text-slate-400' :
+                    'text-slate-300'
+                  )}
+                  style={{ fontSize: '10px', maxWidth: '64px' }}
+                >
+                  {TIMELINE_LABELS[phase]}
+                  {subsanacionActive && phase === 'PRESENTADA' && (
+                    <span className="block text-orange-500 font-bold" style={{ fontSize: '9px' }}>Subsanación</span>
+                  )}
+                </p>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ===== A — Presupuestos Tab Component =====
+interface PresupuestosTabProps {
+  presupuestos: Presupuesto[]
+  presupuestosRecibidos: Presupuesto[]
+  presupuestoSeleccionado: Presupuesto | undefined
+  showAddPresupuesto: boolean
+  setShowAddPresupuesto: (v: boolean) => void
+  newPresupuesto: { proveedorNombre: string; proveedorCif: string; descripcion: string }
+  setNewPresupuesto: (v: { proveedorNombre: string; proveedorCif: string; descripcion: string }) => void
+  handleAddPresupuesto: () => void
+  updatePresupuestoEstado: (id: string, estado: Presupuesto['estado']) => void
+  formatEur: (n: number) => string
+}
+
+function PresupuestosTab({
+  presupuestos,
+  presupuestosRecibidos,
+  presupuestoSeleccionado,
+  showAddPresupuesto,
+  setShowAddPresupuesto,
+  newPresupuesto,
+  setNewPresupuesto,
+  handleAddPresupuesto,
+  updatePresupuestoEstado,
+  formatEur,
+}: PresupuestosTabProps) {
+  const PRESUPUESTO_COLORS: Record<Presupuesto['estado'], string> = {
+    pendiente: 'text-orange-600 bg-orange-50 border-orange-200',
+    recibido: 'text-blue-600 bg-blue-50 border-blue-200',
+    seleccionado: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+    rechazado: 'text-slate-400 bg-slate-50 border-slate-200',
+  }
+  const PRESUPUESTO_LABEL: Record<Presupuesto['estado'], string> = {
+    pendiente: 'Pendiente',
+    recibido: 'Recibido',
+    seleccionado: 'Seleccionado',
+    rechazado: 'Rechazado',
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Status banner */}
+      <div className={clsx(
+        'rounded-xl px-4 py-3 flex items-center justify-between gap-4',
+        presupuestoSeleccionado
+          ? 'bg-emerald-50 border border-emerald-200'
+          : presupuestosRecibidos.length >= 3
+          ? 'bg-emerald-50 border border-emerald-200'
+          : 'bg-blue-50 border border-blue-200'
+      )}>
+        <div className="flex items-center gap-2">
+          {presupuestoSeleccionado ? (
+            <>
+              <CheckCircle size={16} className="text-emerald-500 flex-shrink-0" />
+              <p className="text-sm font-medium text-emerald-800">
+                Proveedor seleccionado: <strong>{presupuestoSeleccionado.proveedorNombre}</strong>
+                {presupuestoSeleccionado.importe !== undefined && (
+                  <span className="ml-2 font-bold">{formatEur(presupuestoSeleccionado.importe)}</span>
+                )}
+              </p>
+            </>
+          ) : presupuestosRecibidos.length >= 3 ? (
+            <>
+              <CheckCircle size={16} className="text-emerald-500 flex-shrink-0" />
+              <p className="text-sm font-medium text-emerald-800">
+                ✓ Tienes {presupuestosRecibidos.length} presupuestos — puedes seleccionar el ganador
+              </p>
+            </>
+          ) : (
+            <>
+              <DollarSign size={16} className="text-blue-500 flex-shrink-0" />
+              <p className="text-sm font-medium text-blue-800">
+                Necesitas 3 presupuestos de proveedores distintos
+                <span className="ml-2 text-blue-600 font-normal">
+                  ({presupuestosRecibidos.length}/3 recibidos)
+                </span>
+              </p>
+            </>
+          )}
+        </div>
+        {!presupuestoSeleccionado && (
+          <button
+            onClick={() => setShowAddPresupuesto(true)}
+            className="flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:text-blue-900 whitespace-nowrap border border-blue-300 rounded-lg px-3 py-1.5 hover:bg-blue-100 transition-colors flex-shrink-0"
+          >
+            <Plus size={12} />
+            Solicitar presupuesto
+          </button>
+        )}
+      </div>
+
+      {/* Add presupuesto form */}
+      {showAddPresupuesto && (
+        <Card padding="md">
+          <h3 className="text-sm font-semibold text-slate-900 mb-3">Solicitar nuevo presupuesto</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-slate-500 font-medium">Nombre del proveedor *</label>
+              <input
+                type="text"
+                className="mt-1 w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                placeholder="Nombre empresa proveedor"
+                value={newPresupuesto.proveedorNombre}
+                onChange={(e) => setNewPresupuesto({ ...newPresupuesto, proveedorNombre: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 font-medium">CIF del proveedor</label>
+              <input
+                type="text"
+                className="mt-1 w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                placeholder="B12345678"
+                value={newPresupuesto.proveedorCif}
+                onChange={(e) => setNewPresupuesto({ ...newPresupuesto, proveedorCif: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 font-medium">Descripción del servicio</label>
+              <input
+                type="text"
+                className="mt-1 w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                placeholder="Descripción breve del servicio"
+                value={newPresupuesto.descripcion}
+                onChange={(e) => setNewPresupuesto({ ...newPresupuesto, descripcion: e.target.value })}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" size="sm" onClick={() => setShowAddPresupuesto(false)}>Cancelar</Button>
+              <Button size="sm" disabled={!newPresupuesto.proveedorNombre.trim()} onClick={handleAddPresupuesto}>
+                Solicitar
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Presupuestos list */}
+      {presupuestos.length === 0 ? (
+        <div className="text-center py-12 text-sm text-slate-400">
+          No hay presupuestos solicitados aún
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {presupuestos.map((p) => (
+            <Card key={p.id} padding="md">
+              <div className="flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <p className="text-sm font-semibold text-slate-900">{p.proveedorNombre}</p>
+                    {p.proveedorCif && (
+                      <span className="text-xs font-mono text-slate-400">{p.proveedorCif}</span>
+                    )}
+                    <span className={clsx(
+                      'text-xs font-medium px-2 py-0.5 rounded-full border',
+                      PRESUPUESTO_COLORS[p.estado]
+                    )}>
+                      {PRESUPUESTO_LABEL[p.estado]}
+                    </span>
+                    {p.importe !== undefined && (
+                      <span className="text-sm font-bold text-slate-900">{formatEur(p.importe)}</span>
+                    )}
+                  </div>
+                  {p.descripcion && (
+                    <p className="text-xs text-slate-500 mb-1">{p.descripcion}</p>
+                  )}
+                  {p.notas && (
+                    <p className="text-xs text-slate-400 italic">{p.notas}</p>
+                  )}
+                  <div className="flex items-center gap-3 mt-2 text-xs text-slate-400">
+                    <span>Solicitado: {p.fechaSolicitud.toLocaleDateString('es-ES')}</span>
+                    {p.fechaRecepcion && (
+                      <span>Recibido: {p.fechaRecepcion.toLocaleDateString('es-ES')}</span>
+                    )}
+                  </div>
+                </div>
+                {/* Action buttons */}
+                {p.estado !== 'rechazado' && p.estado !== 'seleccionado' && (
+                  <div className="flex flex-col gap-1.5 flex-shrink-0">
+                    {p.estado === 'pendiente' && (
+                      <button
+                        onClick={() => updatePresupuestoEstado(p.id, 'recibido')}
+                        className="text-xs font-medium text-blue-600 hover:text-blue-800 border border-blue-200 rounded-lg px-2.5 py-1.5 hover:bg-blue-50 transition-colors whitespace-nowrap"
+                      >
+                        Marcar recibido
+                      </button>
+                    )}
+                    {p.estado === 'recibido' && !presupuestoSeleccionado && (
+                      <button
+                        onClick={() => updatePresupuestoEstado(p.id, 'seleccionado')}
+                        className="text-xs font-medium text-emerald-600 hover:text-emerald-800 border border-emerald-200 rounded-lg px-2.5 py-1.5 hover:bg-emerald-50 transition-colors whitespace-nowrap"
+                      >
+                        Seleccionar
+                      </button>
+                    )}
+                    <button
+                      onClick={() => updatePresupuestoEstado(p.id, 'rechazado')}
+                      className="text-xs font-medium text-red-500 hover:text-red-700 border border-red-100 rounded-lg px-2.5 py-1.5 hover:bg-red-50 transition-colors whitespace-nowrap"
+                    >
+                      Rechazar
+                    </button>
+                  </div>
+                )}
+                {p.estado === 'seleccionado' && (
+                  <div className="flex-shrink-0">
+                    <CheckCircle size={20} className="text-emerald-500" />
+                  </div>
+                )}
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
