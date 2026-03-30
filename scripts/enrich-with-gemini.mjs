@@ -74,6 +74,35 @@ Devuelve ÚNICAMENTE un objeto JSON válido y completo sin texto antes ni despu�
   "confidence_score": 0.85
 }`;
 
+// ── JSON parser robusto ────────────────────────────────────────────────────────
+function extraerJSON(raw) {
+  const t = raw.trim();
+  try { return JSON.parse(t); } catch {}
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence) { try { return JSON.parse(fence[1].trim()); } catch {} }
+  const obj = extraerBalanceado(t, '{', '}');
+  if (obj) { try { return JSON.parse(obj); } catch {} }
+  const limpio = t.replace(/,\s*([}\]])/g, '$1').replace(/\/\/[^\n]*/g, '').trim();
+  const objL = extraerBalanceado(limpio, '{', '}');
+  if (objL) { try { return JSON.parse(objL); } catch {} }
+  throw new Error(`Sin JSON válido. Inicio: ${raw.slice(0, 200)}`);
+}
+function extraerBalanceado(text, open, close) {
+  const start = text.indexOf(open);
+  if (start === -1) return null;
+  let depth = 0, inString = false, escape = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (escape) { escape = false; continue; }
+    if (ch === '\\' && inString) { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === open) depth++;
+    else if (ch === close) { depth--; if (depth === 0) return text.slice(start, i + 1); }
+  }
+  return null;
+}
+
 // ── Gemini PDF call ─────────────────────────────────────────────────────────────
 async function analizarPdfConGemini(bdnsId, apiKey) {
   // Correct BDNS PDF download URL (discovered from Angular app JS bundle)
@@ -131,13 +160,9 @@ async function analizarPdfConGemini(bdnsId, apiKey) {
 
   // Parsear JSON
   try {
-    const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-    const candidate = (fenceMatch ? fenceMatch[1] : raw).trim();
-    const jsonMatch = candidate.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('Sin JSON en respuesta');
-    return { ok: true, data: JSON.parse(jsonMatch[0]) };
+    return { ok: true, data: extraerJSON(raw) };
   } catch (e) {
-    return { ok: false, error: `Parse JSON: ${e.message}. Raw: ${raw.slice(0, 150)}` };
+    return { ok: false, error: `Parse JSON: ${e.message}` };
   }
 }
 

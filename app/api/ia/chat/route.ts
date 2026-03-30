@@ -1,26 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import OpenAI from 'openai';
+import { getOrCreateToolConfig, getProviderConfig } from '@/lib/db/ia-config';
+import { createProvider } from '@/lib/ai/providers/factory';
+import { withRetry } from '@/lib/utils/ai-retry';
+import type { Message } from '@/lib/ai/providers/base';
 
-const getOpenAI = () => {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return null;
-  return new OpenAI({ apiKey });
-};
+// ─── Seleccionar proveedor con fallback a variables de entorno ────────────────
+
+async function resolveProvider(userId: string) {
+  // 1. Config en DB (prioridad: anthropic → google → openai)
+  for (const prov of ['anthropic', 'google', 'openai'] as const) {
+    const dbConfig = await getProviderConfig(userId, prov);
+    if (dbConfig?.enabled && dbConfig.api_key) {
+      return createProvider({ provider: prov, apiKey: dbConfig.api_key, enabled: true });
+    }
+  }
+
+  // 2. Variables de entorno (fallback cuando no hay config en DB)
+  if (process.env.ANTHROPIC_API_KEY) {
+    return createProvider({ provider: 'anthropic', apiKey: process.env.ANTHROPIC_API_KEY, enabled: true });
+  }
+  if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
+    return createProvider({
+      provider: 'google',
+      apiKey: (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY)!,
+      enabled: true,
+    });
+  }
+  if (process.env.OPENAI_API_KEY && !process.env.OPENAI_API_KEY.includes('tu_openai')) {
+    return createProvider({ provider: 'openai', apiKey: process.env.OPENAI_API_KEY, enabled: true });
+  }
+
+  return null;
+}
+
+// ─── POST /api/ia/chat ────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
   try {
-    // VULN-01: Verificar autenticación antes de procesar
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
-    const openai = getOpenAI();
-    if (!openai) {
+    const provider = await resolveProvider(user.id);
+    if (!provider) {
       return NextResponse.json(
-        { error: 'API de OpenAI no configurada. Configura OPENAI_API_KEY en ajustes del expediente.' },
+        { error: 'No hay proveedor de IA configurado. Ve a Ajustes → IA y añade una API key de Anthropic o Google.' },
         { status: 503 }
       );
     }
@@ -29,227 +56,184 @@ export async function POST(request: NextRequest) {
 
     if (!contextoId || !contextoTipo || !mensaje) {
       return NextResponse.json(
-        { error: 'Faltan parámetros requeridos' },
+        { error: 'Faltan parámetros: contextoId, contextoTipo, mensaje' },
         { status: 400 }
       );
     }
 
-    // Recopilar contexto
+    // Config de herramienta (modelo, temperatura, system prompt personalizado)
+    const toolConfig = await getOrCreateToolConfig(user.id, 'notebook');
+
+    // Contexto del expediente/reunión
     const contexto = await recopilarContexto(supabase, contextoId, contextoTipo, documentosReferenciados);
 
-    // Construir prompt con contexto
-    const systemPrompt = construirSystemPrompt(contexto, contextoTipo);
-    
-    // Construir historial de mensajes
-    const messages: any[] = [
-      { role: 'system', content: systemPrompt },
-      ...historial.map((h: any) => ({
-        role: h.role,
-        content: h.content
+    // System prompt: config del usuario + contexto dinámico del expediente
+    const systemPrompt = (toolConfig.systemPrompt ?? '') + '\n\n' + buildContextSection(contexto);
+
+    // Historial de mensajes
+    const messages: Message[] = [
+      ...(historial ?? []).map((h: { role: string; content: string }) => ({
+        role: h.role as 'user' | 'assistant',
+        content: h.content,
       })),
-      { role: 'user', content: mensaje }
+      { role: 'user', content: mensaje },
     ];
 
-    // Llamar a OpenAI
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
-      messages,
-      temperature: 0.7,
-      max_tokens: 1500
-    });
+    // Llamada con retry automático ante errores transitorios
+    const result = await withRetry(() =>
+      provider.complete(messages, {
+        model: toolConfig.model || 'claude-sonnet-4-6',
+        temperature: toolConfig.temperature ?? 0.7,
+        maxTokens: toolConfig.maxTokens ?? 2048,
+        systemPrompt,
+      })
+    );
 
-    const respuesta = completion.choices[0]?.message?.content || 'No pude generar una respuesta.';
-
-    // Guardar interacción en BD
-    await supabase.from('ia_interacciones').insert({
+    // Guardar interacción (no bloqueante)
+    supabase.from('ia_interacciones').insert({
       tipo: 'chat',
       contexto_id: contextoId,
       contexto_tipo: contextoTipo,
       prompt: mensaje,
-      respuesta: respuesta,
+      respuesta: result.content,
       documentos_usados: documentosReferenciados || [],
-      modelo: 'gpt-4-turbo-preview',
-      tokens_usados: completion.usage?.total_tokens || 0
-    });
+      modelo: result.model,
+      tokens_usados: result.tokensUsed,
+    }).then();
 
-    // Detectar si la respuesta es un documento largo
-    const sugerirDocumento = respuesta.length > 500 && (
-      mensaje.toLowerCase().includes('genera') ||
-      mensaje.toLowerCase().includes('crea') ||
-      mensaje.toLowerCase().includes('redacta')
-    );
+    const sugerirDocumento =
+      result.content.length > 500 &&
+      /genera|crea|redacta|elabora|prepara/i.test(mensaje);
 
     return NextResponse.json({
-      respuesta,
+      respuesta: result.content,
       sugerirDocumento,
       nombreSugerido: detectarNombreDocumento(mensaje),
-      tokensUsados: completion.usage?.total_tokens || 0
+      tokensUsados: result.tokensUsed,
+      modelo: result.model,
+      proveedor: result.provider,
     });
-
-  } catch (error: any) {
-    console.error('Error en /api/ia/chat:', error);
-    return NextResponse.json(
-      { error: error.message || 'Error al procesar la solicitud' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Error al procesar la solicitud';
+    console.error('[/api/ia/chat]', error);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
 async function recopilarContexto(
-  supabase: any,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   contextoId: string,
   contextoTipo: string,
   documentosReferenciados?: string[]
 ) {
-  const contexto: any = {
-    tipo: contextoTipo
-  };
+  const contexto: Record<string, unknown> = { tipo: contextoTipo };
 
   if (contextoTipo === 'reunion') {
-    // Obtener datos de la reunión
     const { data: reunion } = await supabase
       .from('reuniones')
-      .select('*, cliente:cliente_nif(nombre_normalizado, nif, email_normalizado)')
+      .select('titulo, tipo, estado, objetivo, notas, cliente:cliente_nif(nombre_normalizado, nif, actividad)')
       .eq('id', contextoId)
       .single();
-
-    if (reunion) {
-      contexto.reunion = {
-        titulo: reunion.titulo,
-        tipo: reunion.tipo,
-        estado: reunion.estado,
-        fecha: reunion.fecha_programada,
-        objetivo: reunion.objetivo,
-        notas: reunion.notas,
-        cliente: reunion.cliente?.[0]
-      };
-    }
-  } else if (contextoTipo === 'expediente') {
-    // Obtener datos del expediente
+    if (reunion) contexto.reunion = reunion;
+  } else {
     const { data: expediente } = await supabase
       .from('expediente')
-      .select('*, cliente:nif(nombre_normalizado, nif, email_normalizado, actividad)')
+      .select('numero_bdns, estado, cliente:nif(nombre_normalizado, nif, actividad, tamano_empresa, ciudad)')
       .eq('id', contextoId)
       .single();
-
-    if (expediente) {
-      contexto.expediente = {
-        numero_bdns: expediente.numero_bdns,
-        estado: expediente.estado,
-        cliente: expediente.cliente?.[0]
-      };
-    }
+    if (expediente) contexto.expediente = expediente;
   }
 
-  // Obtener documentos
-  let query = supabase
+  let docsQuery = supabase
     .from('documentos')
-    .select('id, nombre, contenido, tipo_documento');
+    .select('id, nombre, contenido, tipo_documento')
+    .eq(contextoTipo === 'reunion' ? 'reunion_id' : 'expediente_id', contextoId)
+    .order('orden');
 
-  if (contextoTipo === 'reunion') {
-    query = query.eq('reunion_id', contextoId);
-  } else {
-    query = query.eq('expediente_id', contextoId);
+  if (documentosReferenciados?.length) {
+    docsQuery = docsQuery.in('id', documentosReferenciados);
   }
 
-  // Si hay documentos referenciados específicamente, filtrar
-  if (documentosReferenciados && documentosReferenciados.length > 0) {
-    query = query.in('id', documentosReferenciados);
-  }
-
-  const { data: documentos } = await query;
+  const { data: documentos } = await docsQuery;
   contexto.documentos = documentos || [];
 
-  // Obtener archivos (solo metadata, no contenido completo)
   const { data: archivos } = await supabase
     .from('archivos')
-    .select('nombre, mime_type, texto_extraido')
-    .eq(contextoTipo === 'reunion' ? 'reunion_id' : 'expediente_id', contextoId);
-
+    .select('nombre, texto_extraido')
+    .eq(contextoTipo === 'reunion' ? 'reunion_id' : 'expediente_id', contextoId)
+    .not('texto_extraido', 'is', null)
+    .limit(5);
   contexto.archivos = archivos || [];
 
   return contexto;
 }
 
-function construirSystemPrompt(contexto: any, contextoTipo: string) {
-  const tipo = contextoTipo === 'reunion' ? 'reunión' : 'expediente';
-  
-  let prompt = `Eres un asistente IA especializado en gestión de subvenciones y ayudas públicas.
-Estás ayudando con una ${tipo}.
+function buildContextSection(contexto: Record<string, unknown>): string {
+  const lines: string[] = ['---', 'CONTEXTO:'];
 
-`;
+  const exp = contexto.expediente as Record<string, unknown> | undefined;
+  const reunion = contexto.reunion as Record<string, unknown> | undefined;
+  const clienteArr = (exp?.cliente ?? reunion?.cliente) as Record<string, unknown>[] | undefined;
+  const cliente = clienteArr?.[0];
 
-  if (contexto.reunion) {
-    prompt += `CONTEXTO DE LA REUNIÓN:
-- Título: ${contexto.reunion.titulo || 'Sin título'}
-- Tipo: ${contexto.reunion.tipo || 'No especificado'}
-- Estado: ${contexto.reunion.estado || 'pendiente'}
-- Cliente: ${contexto.reunion.cliente?.nombre_normalizado || 'Sin cliente'}
-- Objetivo: ${contexto.reunion.objetivo || 'No definido'}
-`;
-    if (contexto.reunion.notas) {
-      prompt += `- Notas actuales: ${contexto.reunion.notas.substring(0, 500)}...\n`;
+  if (cliente) {
+    lines.push(`Cliente: ${cliente.nombre_normalizado} (NIF: ${cliente.nif})`);
+    if (cliente.actividad) lines.push(`Actividad: ${cliente.actividad}`);
+    if (cliente.tamano_empresa) lines.push(`Tamaño empresa: ${cliente.tamano_empresa}`);
+    if (cliente.ciudad) lines.push(`Ubicación: ${cliente.ciudad}`);
+  }
+
+  if (exp?.numero_bdns) lines.push(`BDNS: ${exp.numero_bdns}`);
+  if (exp?.estado) lines.push(`Estado: ${exp.estado}`);
+
+  if (reunion) {
+    const r = reunion as Record<string, unknown>;
+    if (r.titulo) lines.push(`Reunión: ${r.titulo}`);
+    if (r.objetivo) lines.push(`Objetivo: ${r.objetivo}`);
+    if (r.notas) lines.push(`Notas: ${String(r.notas).substring(0, 300)}`);
+  }
+
+  const docs = contexto.documentos as Array<Record<string, unknown>>;
+  if (docs?.length) {
+    lines.push('', 'DOCUMENTOS:');
+    for (const doc of docs) {
+      lines.push(`[${doc.id}] ${doc.nombre} (${doc.tipo_documento ?? 'sin tipo'})`);
+      if (doc.contenido) {
+        lines.push(String(doc.contenido).substring(0, 500) + '…');
+      }
     }
   }
 
-  if (contexto.expediente) {
-    prompt += `CONTEXTO DEL EXPEDIENTE:
-- BDNS: ${contexto.expediente.numero_bdns || 'Sin número'}
-- Estado: ${contexto.expediente.estado}
-- Cliente: ${contexto.expediente.cliente?.nombre_normalizado || 'Sin cliente'}
-- Actividad: ${contexto.expediente.cliente?.actividad || 'No especificada'}
-`;
+  const archivos = contexto.archivos as Array<Record<string, unknown>>;
+  if (archivos?.length) {
+    lines.push('', 'ARCHIVOS:');
+    for (const arch of archivos) {
+      lines.push(`${arch.nombre}: ${String(arch.texto_extraido ?? '').substring(0, 600)}…`);
+    }
   }
 
-  if (contexto.documentos && contexto.documentos.length > 0) {
-    prompt += `\nDOCUMENTOS DISPONIBLES:\n`;
-    contexto.documentos.forEach((doc: any) => {
-      prompt += `- ${doc.nombre} (${doc.tipo_documento || 'sin tipo'})\n`;
-      if (doc.contenido) {
-        prompt += `  Contenido: ${doc.contenido.substring(0, 300)}...\n`;
-      }
-    });
-  }
-
-  if (contexto.archivos && contexto.archivos.length > 0) {
-    prompt += `\nARCHIVOS ADJUNTOS:\n`;
-    contexto.archivos.forEach((archivo: any) => {
-      prompt += `- ${archivo.nombre}\n`;
-      if (archivo.texto_extraido) {
-        prompt += `  Contenido:\n${archivo.texto_extraido}\n`;
-      } else {
-        prompt += `  (sin texto extraído aún)\n`;
-      }
-    });
-  }
-
-  prompt += `\nINSTRUCCIONES:
-- Responde de forma clara, concisa y profesional
-- Usa la información del contexto para dar respuestas precisas
-- Si no tienes información suficiente, dilo claramente
-- Sugiere próximos pasos o acciones cuando sea relevante
-- Si te piden generar documentos, crea contenido estructurado y profesional
-`;
-
-  return prompt;
+  lines.push('---');
+  return lines.join('\n');
 }
 
 function detectarNombreDocumento(mensaje: string): string {
-  const palabrasClave: { [key: string]: string } = {
-    'resumen': 'Resumen',
-    'checklist': 'Checklist',
-    'email': 'Email',
-    'memoria': 'Memoria',
-    'informe': 'Informe',
-    'análisis': 'Análisis',
-    'búsqueda': 'Búsqueda profunda'
+  const kw: Record<string, string> = {
+    resumen: 'Resumen ejecutivo',
+    checklist: 'Checklist',
+    email: 'Email',
+    memoria: 'Memoria del proyecto',
+    informe: 'Informe',
+    análisis: 'Análisis',
+    análisi: 'Análisis',
+    búsqueda: 'Búsqueda profunda',
+    cronograma: 'Cronograma',
+    presupuesto: 'Presupuesto desglosado',
   };
-
-  for (const [palabra, nombre] of Object.entries(palabrasClave)) {
-    if (mensaje.toLowerCase().includes(palabra)) {
-      return nombre;
-    }
+  const lower = mensaje.toLowerCase();
+  for (const [palabra, nombre] of Object.entries(kw)) {
+    if (lower.includes(palabra)) return nombre;
   }
-
   return 'Documento IA';
 }

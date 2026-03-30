@@ -87,6 +87,41 @@ function log(fase, bdnsId, msg, level = 'info') {
   console.log(`${icon} [${fase.padEnd(16)}] ${bdnsId ? `#${bdnsId} ` : ''}${msg}`);
 }
 
+/**
+ * Extrae JSON de respuestas de LLM de forma robusta.
+ * Maneja: JSON directo, bloques ```json, objetos embebidos en texto, trailing commas.
+ */
+function extraerJSON(raw) {
+  const t = raw.trim();
+  try { return JSON.parse(t); } catch {}
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence) { try { return JSON.parse(fence[1].trim()); } catch {} }
+  const obj = extraerBalanceado(t, '{', '}');
+  if (obj) { try { return JSON.parse(obj); } catch {} }
+  const arr = extraerBalanceado(t, '[', ']');
+  if (arr) { try { return JSON.parse(arr); } catch {} }
+  const limpio = t.replace(/,\s*([}\]])/g, '$1').replace(/\/\/[^\n]*/g, '').trim();
+  const objL = extraerBalanceado(limpio, '{', '}');
+  if (objL) { try { return JSON.parse(objL); } catch {} }
+  throw new Error(`Sin JSON válido. Inicio: ${raw.slice(0, 200)}`);
+}
+
+function extraerBalanceado(text, open, close) {
+  const start = text.indexOf(open);
+  if (start === -1) return null;
+  let depth = 0, inString = false, escape = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (escape) { escape = false; continue; }
+    if (ch === '\\' && inString) { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === open) depth++;
+    else if (ch === close) { depth--; if (depth === 0) return text.slice(start, i + 1); }
+  }
+  return null;
+}
+
 // ─── Obtener API Key Gemini ────────────────────────────────────────────────────
 
 async function getGeminiKey() {
@@ -268,11 +303,7 @@ async function analizarPdfConGemini(pdfBuffer, apiKey, contexto = '', intentos =
       const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
       if (!raw) throw new Error('Gemini respuesta vacía');
 
-      const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-      const candidate = (fenceMatch ? fenceMatch[1] : raw).trim();
-      const jsonMatch = candidate.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error(`Sin JSON en respuesta: ${raw.slice(0, 200)}`);
-      return JSON.parse(jsonMatch[0]);
+      return extraerJSON(raw);
     } catch (err) {
       lastErr = err;
       if (intento < intentos && (err.name === 'TimeoutError' || err.message?.includes('fetch'))) {
