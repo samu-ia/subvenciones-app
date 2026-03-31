@@ -66,15 +66,18 @@ function sha256hex(buffer) {
 function extraerJSON(raw) {
   const t = raw.trim();
   try { return JSON.parse(t); } catch {}
-  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fence) { try { return JSON.parse(fence[1].trim()); } catch {} }
+  // Buscar el objeto JSON usando índice directo — más robusto que regex con multiline
+  const start = t.indexOf('{');
+  const end = t.lastIndexOf('}');
+  if (start !== -1 && end !== -1 && end > start) {
+    try { return JSON.parse(t.slice(start, end + 1)); } catch {}
+    // Intento limpiando trailing commas
+    const limpio = t.slice(start, end + 1).replace(/,\s*([}\]])/g, '$1').replace(/\/\/[^\n]*/g, '');
+    try { return JSON.parse(limpio); } catch {}
+  }
+  // Fallback: extraer objeto balanceado
   const obj = extraerBalanceado(t, '{', '}');
   if (obj) { try { return JSON.parse(obj); } catch {} }
-  const arr = extraerBalanceado(t, '[', ']');
-  if (arr) { try { return JSON.parse(arr); } catch {} }
-  const limpio = t.replace(/,\s*([}\]])/g, '$1').replace(/\/\/[^\n]*/g, '').trim();
-  const objL = extraerBalanceado(limpio, '{', '}');
-  if (objL) { try { return JSON.parse(objL); } catch {} }
   throw new Error(`Sin JSON válido. Inicio: ${raw.slice(0, 200)}`);
 }
 
@@ -506,8 +509,9 @@ async function analizarPdfConGemini(pdfBuffer, apiKey, bdnsId, intentos = 3) {
     systemInstruction: { parts: [{ text: SYSTEM_PROMPT_15 }] },
     generationConfig: {
       temperature: 0.05,
-      maxOutputTokens: 8192,
+      maxOutputTokens: 16384,
       topP: 0.95,
+      responseMimeType: 'application/json',
     },
   };
 
