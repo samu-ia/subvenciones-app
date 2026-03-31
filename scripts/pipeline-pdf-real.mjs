@@ -680,7 +680,7 @@ async function procesarConvocatoria(conv, apiKey, semaforo) {
       updated_at: new Date().toISOString(),
     };
 
-    // También actualizar campos principales de la tabla si Gemini los extrajo
+    // Campos desde Gemini PDF
     if (campos.importe_maximo != null) update.importe_maximo = campos.importe_maximo;
     if (campos.fecha_fin_solicitud) update.plazo_fin = campos.fecha_fin_solicitud;
     if (campos.porcentaje_ayuda != null) update.porcentaje_financiacion = campos.porcentaje_ayuda;
@@ -691,6 +691,40 @@ async function procesarConvocatoria(conv, apiKey, semaforo) {
       } else {
         update.ambito_geografico = 'autonomico';
         update.comunidad_autonoma = loc;
+      }
+    }
+
+    // Enriquecer con campos del API oficial BDNS (más fiables que el PDF para estos campos)
+    if (detalle) {
+      // presupuestoTotal si Gemini no extrajo importe
+      if (update.importe_maximo == null && detalle.presupuestoTotal) {
+        update.presupuesto_total = detalle.presupuestoTotal;
+      }
+      // Fechas de solicitud desde el API (más fiables que PDF)
+      if (detalle.fechaFinSolicitud && !update.plazo_fin) {
+        update.plazo_fin = detalle.fechaFinSolicitud.split('T')[0];
+      }
+      if (detalle.fechaInicioSolicitud && !update.plazo_inicio) {
+        update.plazo_inicio = detalle.fechaInicioSolicitud.split('T')[0];
+      }
+      // URL oficial (sede electrónica)
+      if (detalle.sedeElectronica) {
+        update.url_oficial = detalle.sedeElectronica;
+      }
+      // Tipos de beneficiario y sectores desde el API
+      const bens = (detalle.tiposBeneficiarios ?? []).map(b => b.descripcion).filter(Boolean);
+      if (bens.length) update.tipos_beneficiario = bens;
+      const sects = (detalle.sectores ?? []).map(s => s.descripcion ?? s.codigo).filter(Boolean);
+      if (sects.length) update.sectores_actividad = sects;
+      // Regiones desde el API → comunidad_autonoma
+      if (!update.comunidad_autonoma) {
+        const regNames = (detalle.regiones ?? []).map(r => r.descripcion).filter(Boolean);
+        if (regNames.length && !regNames.some(r => r.includes('ES - ESPAÑA'))) {
+          update.comunidad_autonoma = regNames[0];
+          update.ambito_geografico = 'autonomico';
+        } else if (regNames.some(r => r.includes('ES - ESPAÑA'))) {
+          update.ambito_geografico = 'nacional';
+        }
       }
     }
 
