@@ -245,8 +245,25 @@ function enriquecerConCamposExtraidos(subvencion: SubvencionMatchProfile): Subve
   }
   enriq.sectores = sectoresActuales;
 
-  // Tipo empresa desde beneficiarios_tipo (si no hay tipos_empresa normalizados)
-  if (ce.beneficiarios_tipo && !(enriq.tipos_empresa?.length)) {
+  // Tipo empresa desde tipos_beneficiario_api (API oficial BDNS — más fiable que PDF)
+  if (Array.isArray(ce.tipos_beneficiario_api) && !(enriq.tipos_empresa?.length)) {
+    const tiposApi = ce.tipos_beneficiario_api as string[];
+    const tipos: Array<{ tipo: string; excluido: boolean }> = [];
+    for (const t of tiposApi) {
+      const tu = t.toUpperCase();
+      if (tu.includes('PYME') || tu.includes('PERSONAS FÍSICAS QUE DESARROLLAN')) {
+        tipos.push({ tipo: 'pyme', excluido: false });
+        tipos.push({ tipo: 'autonomo', excluido: false });
+      } else if (tu.includes('GRAN EMPRESA')) {
+        tipos.push({ tipo: 'grande', excluido: false });
+      } else if (tu.includes('PERSONAS JURÍDICAS QUE NO DESARROLLAN')) {
+        tipos.push({ tipo: 'asociacion', excluido: false });
+      }
+      // SIN INFORMACION ESPECIFICA (id=5) → no añadir restricción
+    }
+    if (tipos.length) enriq.tipos_empresa = tipos;
+  } else if (ce.beneficiarios_tipo && !(enriq.tipos_empresa?.length)) {
+    // Fallback: beneficiarios_tipo del PDF
     const TIPO_MAP: Record<string, string> = {
       'autónomos': 'autonomo', 'autonomos': 'autonomo', 'autónomo': 'autonomo',
       'micropyme': 'micropyme', 'microempresa': 'micropyme',
