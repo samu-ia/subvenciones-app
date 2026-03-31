@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
 
   // Filtrar convocatorias abiertas o próximas
   const activas = (matches ?? []).filter(m => {
-    const s = m.subvencion as Record<string, unknown> | null;
+    const s = (Array.isArray(m.subvencion) ? m.subvencion[0] : m.subvencion) as Record<string, unknown> | null;
     if (!s) return false;
     const estado = s.estado_convocatoria as string | null;
     const plazo = s.plazo_fin ? new Date(s.plazo_fin as string) : null;
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
 
   // Cálculos de potencial
   const importes = activas.map(m => {
-    const s = m.subvencion as Record<string, unknown> | null;
+    const s = (Array.isArray(m.subvencion) ? m.subvencion[0] : m.subvencion) as Record<string, unknown> | null;
     const importe = Number(s?.importe_maximo ?? 0);
     const pct = Number(s?.porcentaje_financiacion ?? 50) / 100;
     // Estimación conservadora: 30% probabilidad de concesión × importe máximo × porcentaje financiación

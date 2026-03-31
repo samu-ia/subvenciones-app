@@ -14,12 +14,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth/helpers';
 import { persistirEstadoCalculado } from '@/lib/subvenciones/estado-calculator';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export const maxDuration = 300; // 5 minutos
 
 const BATCH_SIZE = 50;
 
-async function ejecutarRefresh(supabase: ReturnType<typeof import('@supabase/supabase-js')['createClient']>) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function ejecutarRefresh(supabase: SupabaseClient<any>) {
   const inicio = Date.now();
 
   // Obtener todas las subvenciones con estado que puede cambiar

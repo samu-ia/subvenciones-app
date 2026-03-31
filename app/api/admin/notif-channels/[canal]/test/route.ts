@@ -32,7 +32,7 @@ export async function POST(
 
   // Test payload usando la dirección del admin o la que venga en el body
   const payload = {
-    to_email: canal === 'email' ? (body.to ?? admin.email) : undefined,
+    to_email: canal === 'email' ? (body.to ?? auth.user?.email) : undefined,
     to_phone: canal === 'whatsapp' ? body.to : undefined,
     cliente_nombre: 'Empresa Demo SL',
     subvencion_titulo: 'Ayudas para la digitalización de PYMEs 2025',

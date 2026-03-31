@@ -245,12 +245,12 @@ async function handler(request: NextRequest) {
     }
   }
 
-  // Log en ingesta_log
-  await sb.from('ingesta_log').insert({
+  // Log en ingesta_log (fire and forget — no bloquea la respuesta)
+  void sb.from('ingesta_log').insert({
     pipeline: 'check-alertas',
     estado: 'ok',
     detalle: { procesados: expedientes?.length ?? 0, alertas_creadas: alertasCreadas, emails_enviados: emailsEnviados },
-  }).catch(() => {});
+  });
 
   return NextResponse.json({
     ok: true,
