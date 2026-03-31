@@ -275,12 +275,24 @@ function buildPrompt(tipo: string, contexto: Record<string, unknown>, promptCust
 
   const clienteInfo = [
     cliente ? `EMPRESA: ${cliente.nombre_normalizado} (NIF: ${cliente.nif})` : '',
-    einforma?.cnae ? `CNAE: ${einforma.cnae}` : (cliente?.actividad ? `Actividad: ${cliente.actividad}` : ''),
-    einforma?.forma_juridica ? `Forma jurídica: ${einforma.forma_juridica}` : '',
-    einforma?.empleados ? `Empleados: ${einforma.empleados}` : (cliente?.tamano_empresa ? `Tamaño: ${cliente.tamano_empresa}` : ''),
-    einforma?.ventas ? `Facturación aprox.: ${Number(einforma.ventas).toLocaleString('es-ES')} €` : '',
-    einforma?.fecha_constitucion ? `Año constitución: ${new Date(einforma.fecha_constitucion as string).getFullYear()}` : '',
-    cliente?.ciudad || einforma?.localidad ? `Localización: ${einforma?.localidad ?? cliente?.ciudad}` : '',
+    einforma?.cnae
+      ? `CNAE: ${einforma.cnae}`
+      : (cliente?.cnae_codigo ? `CNAE: ${cliente.cnae_codigo}${cliente.cnae_descripcion ? ` — ${cliente.cnae_descripcion}` : ''}` : ''),
+    einforma?.forma_juridica
+      ? `Forma jurídica: ${einforma.forma_juridica}`
+      : (cliente?.forma_juridica ? `Forma jurídica: ${cliente.forma_juridica}` : ''),
+    einforma?.empleados
+      ? `Empleados: ${einforma.empleados}`
+      : (cliente?.num_empleados ? `Empleados: ${cliente.num_empleados}` : (cliente?.tamano_empresa ? `Tamaño: ${cliente.tamano_empresa}` : '')),
+    einforma?.ventas
+      ? `Facturación aprox.: ${Number(einforma.ventas).toLocaleString('es-ES')} €`
+      : (cliente?.facturacion_anual ? `Facturación aprox.: ${Number(cliente.facturacion_anual).toLocaleString('es-ES')} €` : ''),
+    einforma?.fecha_constitucion
+      ? `Año constitución: ${new Date(einforma.fecha_constitucion as string).getFullYear()}`
+      : (cliente?.anos_antiguedad ? `Antigüedad: ${cliente.anos_antiguedad} años` : ''),
+    einforma?.localidad
+      ? `Localización: ${einforma.localidad}`
+      : (cliente?.comunidad_autonoma ? `Localización: ${cliente.comunidad_autonoma}${cliente.provincia ? `, ${cliente.provincia}` : ''}` : ''),
   ].filter(Boolean).join('\n');
 
   const subvencionInfo = subvencion ? [
@@ -465,8 +477,8 @@ async function recopilarContexto(
 
   const table = contextoTipo === 'reunion' ? 'reuniones' : 'expediente';
   const clienteJoin = contextoTipo === 'reunion'
-    ? 'cliente:cliente_nif(nombre_normalizado, nif, actividad, tamano_empresa, ciudad)'
-    : 'cliente:nif(nombre_normalizado, nif, actividad, tamano_empresa, ciudad)';
+    ? 'cliente:cliente_nif(nombre_normalizado, nif, actividad, tamano_empresa, ciudad, cnae_codigo, cnae_descripcion, num_empleados, facturacion_anual, anos_antiguedad, forma_juridica, comunidad_autonoma, provincia)'
+    : 'cliente:nif(nombre_normalizado, nif, actividad, tamano_empresa, ciudad, cnae_codigo, cnae_descripcion, num_empleados, facturacion_anual, anos_antiguedad, forma_juridica, comunidad_autonoma, provincia)';
 
   const { data } = await supabase
     .from(table)

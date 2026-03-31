@@ -589,6 +589,19 @@ function normalizarBeneficiarioTipo(val) {
   return val; // devolver tal cual si no matchea
 }
 
+// Mapea el array tipos_beneficiario_api del BDNS a nuestro enum de beneficiarios_tipo
+function normalizarBeneficiarioTipoDesdeApi(bens) {
+  const joined = bens.join(' ').toLowerCase();
+  // Orden: más restrictivo primero
+  if (joined.includes('microempresa') || joined.includes('micro')) return 'micropyme';
+  if (joined.includes('pyme') || joined.includes('pequeña') || joined.includes('mediana') || joined.includes('personas físicas que desarrollan')) return 'pyme';
+  if (joined.includes('gran empresa') || joined.includes('grandes empresas')) return 'gran_empresa';
+  if (joined.includes('autónom') || joined.includes('autonomo') || joined.includes('personas físicas que no desarrollan')) return 'autónomos';
+  // Mezclas: si hay PYME + gran empresa, usar 'pyme' (más restrictivo como target)
+  if (joined.includes('empresa')) return 'pyme';
+  return null;
+}
+
 function normalizarFecha(val) {
   if (!val) return null;
   // Ya en formato ISO
@@ -747,6 +760,10 @@ async function procesarConvocatoria(conv, apiKey, semaforo) {
         const camposExistentes = update.campos_extraidos ?? {};
         if (bens.length) camposExistentes.tipos_beneficiario_api = bens;
         if (sects.length) camposExistentes.sectores_api = sects;
+        // Si Gemini no extrajo beneficiarios_tipo, derivarlo desde el API
+        if (!camposExistentes.beneficiarios_tipo && bens.length) {
+          camposExistentes.beneficiarios_tipo = normalizarBeneficiarioTipoDesdeApi(bens);
+        }
         update.campos_extraidos = camposExistentes;
       }
       // Regiones desde el API → comunidad_autonoma
