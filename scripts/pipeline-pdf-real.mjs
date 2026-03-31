@@ -159,61 +159,102 @@ async function listarConvocatorias(fechaDesde, fechaHasta) {
   return todas;
 }
 
-// Obtener detalle de una convocatoria BDNS (bases_reguladoras, urls extra)
-async function fetchBdnsDetalle(bdnsId) {
-  const urls = [
-    `${BDNS_BASE}/convocatorias/${bdnsId}`,
-    `${BDNS_BASE}/convocatorias/detalle/${bdnsId}`,
-  ];
+// ─── Detalle completo BDNS (endpoint oficial descubierto en el bundle Angular) ──
+//
+// Endpoint real: GET /api/convocatorias?numConv={bdns_id}&vpd=GE
+// Devuelve: { id, codigoBDNS, documentos[], urlBasesReguladoras, presupuestoTotal,
+//             fechaInicioSolicitud, fechaFinSolicitud, tiposBeneficiarios[], sectores[], ... }
+// Los documentos tienen: { id, descripcion, nombreFic, long, datMod }
+// Para descargar un doc: GET /api/convocatorias/documentos?idDocumento={doc.id}&vpd=GE
+// Para el extracto PDF: GET /api/convocatorias/pdf?id={conv.id}&vpd=GE  ← id INTERNO, no bdns_id
 
-  for (const url of urls) {
-    try {
-      const res = await fetch(url, {
-        headers: { Accept: 'application/json', 'User-Agent': 'AyudaPyme/2.0' },
-        signal: AbortSignal.timeout(15000),
-      });
-      if (!res.ok) continue;
+async function fetchBdnsDetalle(bdnsId) {
+  // 1. Endpoint principal: detalle completo con documentos embebidos
+  try {
+    const res = await fetch(
+      `${BDNS_BASE}/convocatorias?numConv=${bdnsId}&vpd=GE`,
+      { headers: { Accept: 'application/json', 'User-Agent': 'AyudaPyme/2.0' }, signal: AbortSignal.timeout(15000) }
+    );
+    if (res.ok) {
       const data = await res.json();
-      return data;
-    } catch { /* siguiente */ }
-  }
+      if (data && data.id) return data; // tiene id interno → detalle válido
+    }
+  } catch { /* fallback */ }
+
+  // 2. Fallback: búsqueda por numeroConvocatoria
+  try {
+    const res = await fetch(
+      `${BDNS_BASE}/convocatorias/busqueda?numeroConvocatoria=${bdnsId}`,
+      { headers: { Accept: 'application/json', 'User-Agent': 'AyudaPyme/2.0' }, signal: AbortSignal.timeout(15000) }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const item = data.content?.[0] ?? (Array.isArray(data) ? data[0] : null);
+      if (item?.id) return item;
+    }
+  } catch { /* siguiente */ }
+
   return null;
 }
 
 // ─── Búsqueda inteligente del PDF real ─────────────────────────────────────────
+//
+// Estrategia (en orden de prioridad):
+//   1. Documentos adjuntos en el detalle BDNS — el texto oficial de la convocatoria
+//      (usando /api/convocatorias/documentos?idDocumento={doc.id}&vpd=GE)
+//   2. urlBasesReguladoras del detalle BDNS (PDF externo de bases reguladoras)
+//   3. Extracto BDNS con el id INTERNO correcto (/api/convocatorias/pdf?id={conv.id}&vpd=GE)
+//   4. Scrape de la página web de infosubvenciones como último recurso
 
-/**
- * Estrategia de búsqueda del PDF real (en orden de prioridad):
- *   1. Campo 'bases_reguladoras' del detalle BDNS (PDF de la convocatoria oficial)
- *   2. Campo 'convocatoria_url' / 'urlPdf' del detalle BDNS
- *   3. URL directa del extracto BDNS: /api/convocatorias/pdf?id={bdnsId}&vpd=GE
- *   4. Scrape de www.infosubvenciones.es/bdnstrans/GE/es/convocatoria/{bdnsId}
- */
 async function buscarPdfReal(bdnsId, detalle) {
   const intentos = [];
 
-  // 1. bases_reguladoras del detalle BDNS
-  const basesUrl = detalle?.basesReguladoras ?? detalle?.bases_reguladoras
-    ?? detalle?.urlBasesReguladoras ?? detalle?.urlBases;
+  // 1. Documentos adjuntos — el más valioso: texto oficial de la convocatoria
+  //    Elegir el doc en castellano (o el primero disponible) con mayor tamaño
+  const docs = Array.isArray(detalle?.documentos) ? detalle.documentos : [];
+  const docsCastellano = docs
+    .filter(d => d.id && d.nombreFic)
+    .sort((a, b) => {
+      // Priorizar: texto en castellano > mayor tamaño
+      const aCast = /castellan|español|texto/i.test(a.descripcion ?? '') ? 1 : 0;
+      const bCast = /castellan|español|texto/i.test(b.descripcion ?? '') ? 1 : 0;
+      if (bCast !== aCast) return bCast - aCast;
+      return (b.long ?? 0) - (a.long ?? 0);
+    });
+
+  for (const doc of docsCastellano.slice(0, 3)) {
+    intentos.push({
+      url: `${BDNS_BASE}/convocatorias/documentos?idDocumento=${doc.id}&vpd=GE`,
+      fuente: `doc_bdns:${doc.descripcion ?? doc.nombreFic}`,
+      prioridad: 1,
+    });
+  }
+
+  // 2. urlBasesReguladoras del detalle (PDF externo de las bases reguladoras)
+  const basesUrl = detalle?.urlBasesReguladoras ?? detalle?.basesReguladoras
+    ?? detalle?.bases_reguladoras ?? detalle?.urlBases;
   if (basesUrl && basesUrl.startsWith('http')) {
-    intentos.push({ url: basesUrl, fuente: 'bases_reguladoras', prioridad: 1 });
+    intentos.push({ url: basesUrl, fuente: 'bases_reguladoras', prioridad: 2 });
   }
 
-  // 2. convocatoria_url / urlPdf del detalle
-  const convUrl = detalle?.urlPdf ?? detalle?.urlConvocatoria ?? detalle?.convocatoria_url
-    ?? detalle?.enlaceConvocatoria;
-  if (convUrl && convUrl.startsWith('http') && convUrl !== basesUrl) {
-    intentos.push({ url: convUrl, fuente: 'convocatoria_url', prioridad: 2 });
-  }
-
-  // 3. URL directa del extracto BDNS (siempre funciona para la mayoría)
+  // 3. Extracto BDNS con id INTERNO correcto (no usar bdns_id aquí)
+  //    detalle.id es el id interno; si no lo tenemos, usar bdns_id como fallback
+  const internalId = detalle?.id ?? bdnsId;
   intentos.push({
-    url: `https://www.infosubvenciones.es/bdnstrans/api/convocatorias/pdf?id=${bdnsId}&vpd=GE`,
+    url: `${BDNS_BASE}/convocatorias/pdf?id=${internalId}&vpd=GE`,
     fuente: 'extracto_bdns',
     prioridad: 3,
   });
+  // Fallback con bdns_id si el id interno es diferente
+  if (String(internalId) !== String(bdnsId)) {
+    intentos.push({
+      url: `${BDNS_BASE}/convocatorias/pdf?id=${bdnsId}&vpd=GE`,
+      fuente: 'extracto_bdns_num',
+      prioridad: 4,
+    });
+  }
 
-  // Intentar descargar en orden de prioridad
+  // Ordenar y probar
   intentos.sort((a, b) => a.prioridad - b.prioridad);
 
   for (const intento of intentos) {
@@ -232,7 +273,7 @@ async function buscarPdfReal(bdnsId, detalle) {
     }
   }
 
-  return null; // No se encontró PDF
+  return null;
 }
 
 async function intentarDescargarPdf(url, bdnsId) {

@@ -200,10 +200,33 @@ async function listarTodasConvocatorias(fechaDesde, fechaHasta) {
 
 // ─── PDF Download ──────────────────────────────────────────────────────────────
 
-const PDF_URLS = {
-  extracto: (bdnsId) => `https://www.infosubvenciones.es/bdnstrans/api/convocatorias/pdf?id=${bdnsId}&vpd=GE`,
-  web: (bdnsId) => `https://www.infosubvenciones.es/bdnstrans/GE/es/convocatorias/${bdnsId}/extracto`,
-};
+// Endpoint descubierto en el bundle Angular de infosubvenciones.es:
+//   GET /api/convocatorias?numConv={bdns_id}&vpd=GE
+//   → { id (interno), codigoBDNS, documentos[], urlBasesReguladoras, ... }
+//   GET /api/convocatorias/documentos?idDocumento={doc.id}&vpd=GE
+//   → descarga el documento individual
+//   GET /api/convocatorias/pdf?id={conv.id_interno}&vpd=GE
+//   → extracto PDF (usa id INTERNO, no bdns_id)
+const BDNS_DETAIL_URL = (bdnsId) =>
+  `${BDNS_BASE}/convocatorias?numConv=${bdnsId}&vpd=GE`;
+const BDNS_DOC_URL = (docId) =>
+  `${BDNS_BASE}/convocatorias/documentos?idDocumento=${docId}&vpd=GE`;
+const BDNS_PDF_URL = (internalId) =>
+  `${BDNS_BASE}/convocatorias/pdf?id=${internalId}&vpd=GE`;
+
+async function fetchBdnsDetalle(bdnsId) {
+  try {
+    const res = await fetch(BDNS_DETAIL_URL(bdnsId), {
+      headers: { Accept: 'application/json', 'User-Agent': 'AyudaPyme-Bot/2.0' },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.id) return data;
+    }
+  } catch { /* fallback */ }
+  return null;
+}
 
 async function descargarPdf(url) {
   const res = await fetch(url, {
@@ -461,25 +484,48 @@ async function faseDescarga(ctx) {
 
   const { bdnsId, subvencionId, conv } = ctx;
 
-  // Construir lista de URLs a intentar
-  const urls = [
-    { url: PDF_URLS.extracto(bdnsId), tipo: 'extracto' },
-  ];
-  if (conv?.urlPdf) urls.push({ url: conv.urlPdf, tipo: 'convocatoria' });
-  if (conv?.urlConvocatoria && conv.urlConvocatoria !== conv?.urlPdf) {
-    urls.push({ url: conv.urlConvocatoria, tipo: 'bases_reguladoras' });
+  // 1. Obtener detalle completo del BDNS — incluye documentos adjuntos y id interno
+  const detalle = await fetchBdnsDetalle(bdnsId);
+  const internalId = detalle?.id ?? bdnsId;
+
+  // 2. Construir lista de fuentes en orden de prioridad
+  const urls = [];
+
+  // a) Documentos adjuntos oficiales (texto en castellano primero, luego por tamaño)
+  const docsAdjuntos = (detalle?.documentos ?? [])
+    .filter(d => d.id && d.nombreFic)
+    .sort((a, b) => {
+      const aCast = /castellan|español|texto/i.test(a.descripcion ?? '') ? 1 : 0;
+      const bCast = /castellan|español|texto/i.test(b.descripcion ?? '') ? 1 : 0;
+      return bCast !== aCast ? bCast - aCast : (b.long ?? 0) - (a.long ?? 0);
+    });
+  for (const doc of docsAdjuntos.slice(0, 2)) {
+    urls.push({ url: BDNS_DOC_URL(doc.id), tipo: 'convocatoria', desc: doc.descripcion });
   }
+
+  // b) Bases reguladoras externas
+  const basesUrl = detalle?.urlBasesReguladoras;
+  if (basesUrl && basesUrl.startsWith('http')) {
+    urls.push({ url: basesUrl, tipo: 'bases_reguladoras' });
+  }
+
+  // c) Extracto BDNS con id interno correcto
+  urls.push({ url: BDNS_PDF_URL(internalId), tipo: 'extracto' });
+
+  // d) URLs del conv (ingesta previa)
+  if (conv?.urlPdf) urls.push({ url: conv.urlPdf, tipo: 'convocatoria' });
 
   let pdfBuf = null;
   let pdfUrl = null;
   let pdfTipo = null;
 
-  for (const { url, tipo } of urls) {
+  for (const { url, tipo, desc } of urls) {
     const buf = await descargarPdf(url);
     if (buf) {
       pdfBuf = buf;
       pdfUrl = url;
       pdfTipo = tipo;
+      log('descarga', bdnsId, `PDF encontrado: ${desc ?? tipo} (${(buf.byteLength/1024).toFixed(0)}KB)`, 'info');
       break;
     }
   }

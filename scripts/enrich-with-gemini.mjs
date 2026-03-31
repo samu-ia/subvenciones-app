@@ -103,27 +103,85 @@ function extraerBalanceado(text, open, close) {
   return null;
 }
 
+// ── Obtener detalle BDNS con documentos adjuntos ──────────────────────────────
+//
+// Endpoint real descubierto en el bundle Angular:
+//   GET /api/convocatorias?numConv={bdns_id}&vpd=GE
+//   → { id (interno), documentos[], urlBasesReguladoras, ... }
+//   GET /api/convocatorias/documentos?idDocumento={doc.id}&vpd=GE
+//   → descarga doc individual
+//   GET /api/convocatorias/pdf?id={id_interno}&vpd=GE   ← id INTERNO, no bdns_id
+
+async function fetchDetalleBdns(bdnsId) {
+  const BDNS_BASE = 'https://www.infosubvenciones.es/bdnstrans/api';
+  try {
+    const res = await fetch(`${BDNS_BASE}/convocatorias?numConv=${bdnsId}&vpd=GE`, {
+      headers: { Accept: 'application/json', 'User-Agent': 'SubvencionesApp/1.0' },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.id) return data;
+    }
+  } catch { /* fallback silencioso */ }
+  return null;
+}
+
 // ── Gemini PDF call ─────────────────────────────────────────────────────────────
 async function analizarPdfConGemini(bdnsId, apiKey) {
-  // Correct BDNS PDF download URL (discovered from Angular app JS bundle)
-  const pdfUrl = `https://www.infosubvenciones.es/bdnstrans/api/convocatorias/pdf?id=${bdnsId}&vpd=GE`;
+  const BDNS_BASE = 'https://www.infosubvenciones.es/bdnstrans/api';
 
-  // Descargar PDF
-  let pdfBuffer;
-  try {
-    const res = await fetch(pdfUrl, {
-      headers: { 'User-Agent': 'SubvencionesApp/1.0' },
-      signal: AbortSignal.timeout(30_000),
+  // 1. Obtener detalle completo con documentos adjuntos e id interno
+  const detalle = await fetchDetalleBdns(bdnsId);
+  const internalId = detalle?.id ?? bdnsId;
+
+  // 2. Seleccionar mejor PDF: docs adjuntos → bases reguladoras → extracto
+  const sources = [];
+
+  // Documentos adjuntos (texto en castellano primero)
+  const docs = (detalle?.documentos ?? [])
+    .filter(d => d.id && d.nombreFic)
+    .sort((a, b) => {
+      const ac = /castellan|español|texto/i.test(a.descripcion ?? '') ? 1 : 0;
+      const bc = /castellan|español|texto/i.test(b.descripcion ?? '') ? 1 : 0;
+      return bc !== ac ? bc - ac : (b.long ?? 0) - (a.long ?? 0);
     });
-    if (!res.ok) return { ok: false, error: `PDF HTTP ${res.status}` };
-    const ct = res.headers.get('content-type') ?? '';
-    if (ct.includes('html')) return { ok: false, error: `PDF devolvió HTML (bdns_id inválido?)` };
-    pdfBuffer = await res.arrayBuffer();
-  } catch (e) {
-    return { ok: false, error: `Descarga: ${e.message}` };
+  for (const doc of docs.slice(0, 2)) {
+    sources.push(`${BDNS_BASE}/convocatorias/documentos?idDocumento=${doc.id}&vpd=GE`);
+  }
+  if (detalle?.urlBasesReguladoras?.startsWith('http')) {
+    sources.push(detalle.urlBasesReguladoras);
+  }
+  // Extracto con id interno correcto
+  sources.push(`${BDNS_BASE}/convocatorias/pdf?id=${internalId}&vpd=GE`);
+  // Fallback con bdns_id numérico si distinto
+  if (String(internalId) !== String(bdnsId)) {
+    sources.push(`${BDNS_BASE}/convocatorias/pdf?id=${bdnsId}&vpd=GE`);
   }
 
+  // 3. Descargar el primer PDF válido
+  let pdfBuffer = null;
+  let usedSource = '';
+  for (const url of sources) {
+    try {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'SubvencionesApp/1.0' },
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (!res.ok) continue;
+      const ct = res.headers.get('content-type') ?? '';
+      if (ct.includes('html') || ct.includes('text/plain')) continue;
+      const buf = await res.arrayBuffer();
+      if (buf.byteLength < 500) continue;
+      pdfBuffer = buf;
+      usedSource = url;
+      break;
+    } catch { /* siguiente */ }
+  }
+
+  if (!pdfBuffer) return { ok: false, error: 'No se encontró PDF en ninguna fuente' };
   if (pdfBuffer.byteLength < 500) return { ok: false, error: 'PDF demasiado pequeño' };
+  console.log(`  PDF: ${(pdfBuffer.byteLength/1024).toFixed(0)}KB desde ${usedSource.split('/api/')[1]?.slice(0,50) ?? usedSource.slice(-40)}`);
 
   // Gemini con PDF inline
   const base64 = Buffer.from(pdfBuffer).toString('base64');
