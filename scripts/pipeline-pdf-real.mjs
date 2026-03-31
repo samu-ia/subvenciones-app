@@ -116,12 +116,16 @@ async function getGeminiKey() {
 
 async function fetchBdnsPagina(fechaDesde, fechaHasta, pagina = 0, tamanio = 50) {
   const strategies = [
+    // Endpoint oficial con filtros PYME (tipo 3=PYME+autónomos, 5=sin info) + solo subvenciones
     () => fetch(`${BDNS_BASE}/convocatorias/busqueda?` + new URLSearchParams({
-      pageNumber: pagina, pageSize: tamanio,
-      fechaConvocatoria: `${fechaDesde}:${fechaHasta}`,
+      vpd: 'GE', page: pagina, pageSize: tamanio,
+      fechaDesde, fechaHasta,
+      tiposBeneficiario: '3,5',
+      instrumentos: '1',
     }), { headers: { Accept: 'application/json', 'User-Agent': 'AyudaPyme/2.0' }, signal: AbortSignal.timeout(20000) }),
-    () => fetch(`${BDNS_BASE}/convocatorias?` + new URLSearchParams({
-      page: pagina, size: tamanio,
+    // Fallback sin filtros
+    () => fetch(`${BDNS_BASE}/convocatorias/busqueda?` + new URLSearchParams({
+      vpd: 'GE', page: pagina, pageSize: tamanio,
       fechaDesde, fechaHasta,
     }), { headers: { Accept: 'application/json', 'User-Agent': 'AyudaPyme/2.0' }, signal: AbortSignal.timeout(20000) }),
   ];
@@ -814,16 +818,13 @@ async function main() {
     convocatorias = [{ bdns_id: BDNS_ID }];
 
   } else if (MODO_ALL) {
-    // Buscar todas sin procesar
-    const { data } = await sb.from('subvenciones')
-      .select('bdns_id')
-      .or('pdf_procesado.eq.false,pdf_procesado.is.null')
-      .not('bdns_id', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(10000);
+    // Buscar todas sin procesar (o todas si --forzar)
+    let q = sb.from('subvenciones').select('bdns_id').not('bdns_id', 'is', null).order('created_at', { ascending: false }).limit(10000);
+    if (!FORZAR) q = q.or('pdf_procesado.eq.false,pdf_procesado.is.null');
+    const { data } = await q;
 
     convocatorias = data ?? [];
-    console.log(`📋 Modo all: ${convocatorias.length} subvenciones sin PDF procesado`);
+    console.log(`📋 Modo all${FORZAR ? ' (forzar todos)' : ''}: ${convocatorias.length} subvenciones`);
 
   } else {
     // Modo por fechas: fetch de BDNS API

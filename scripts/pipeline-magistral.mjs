@@ -144,18 +144,33 @@ async function getGeminiKey() {
 
 const BDNS_BASE = 'https://www.infosubvenciones.es/bdnstrans/api';
 
+// Tipos de beneficiario BDNS (catálogo oficial):
+//   3 = PYME Y PERSONAS FÍSICAS QUE DESARROLLAN ACTIVIDAD ECONÓMICA
+//   4 = GRAN EMPRESA
+//   5 = SIN INFORMACION ESPECIFICA
+// Instrumentos: 1 = SUBVENCIÓN Y ENTREGA DINERARIA SIN CONTRAPRESTACIÓN
+const TIPOS_BENEFICIARIO_PYME = '3,5'; // 3=PYME, 5=sin info (puede incluir PYMEs)
+const INSTRUMENTO_SUBVENCION = '1';    // solo subvenciones, no préstamos/garantías
+
 async function fetchBdnsPagina(fechaDesde, fechaHasta, pagina = 0, tamanio = 50) {
   const strategies = [
+    // Estrategia 1: busqueda oficial con filtros PYME + solo subvenciones
     () => fetch(`${BDNS_BASE}/convocatorias/busqueda?` + new URLSearchParams({
-      pageNumber: pagina, pageSize: tamanio,
-      fechaConvocatoria: `${fechaDesde}:${fechaHasta}`,
+      vpd: 'GE',
+      page: pagina, pageSize: tamanio,
+      fechaDesde, fechaHasta,
+      tiposBeneficiario: TIPOS_BENEFICIARIO_PYME,
+      instrumentos: INSTRUMENTO_SUBVENCION,
     }), { headers: { Accept: 'application/json', 'User-Agent': 'AyudaPyme/2.0' }, signal: AbortSignal.timeout(20000) }),
-    () => fetch(`${BDNS_BASE}/convocatorias?` + new URLSearchParams({
-      page: pagina, size: tamanio,
+    // Estrategia 2: busqueda sin filtros de tipo (todos los instrumentos)
+    () => fetch(`${BDNS_BASE}/convocatorias/busqueda?` + new URLSearchParams({
+      vpd: 'GE',
+      page: pagina, pageSize: tamanio,
       fechaDesde, fechaHasta,
     }), { headers: { Accept: 'application/json', 'User-Agent': 'AyudaPyme/2.0' }, signal: AbortSignal.timeout(20000) }),
+    // Estrategia 3: ultimas (sin filtros de fecha)
     () => fetch(`${BDNS_BASE}/convocatorias/ultimas?` + new URLSearchParams({
-      numero: tamanio, pagina,
+      vpd: 'GE', numero: tamanio, pagina,
     }), { headers: { Accept: 'application/json', 'User-Agent': 'AyudaPyme/2.0' }, signal: AbortSignal.timeout(20000) }),
   ];
 
