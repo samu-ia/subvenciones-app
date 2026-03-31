@@ -141,7 +141,8 @@ function inferirCCA(nivel1, nivel2) {
 }
 
 async function insertarSubvencion(item, detalle) {
-  const bdns_id = String(item.id || item.numeroConvocatoria);
+  // IMPORTANTE: usar numeroConvocatoria (código BDNS) como bdns_id, NO el id interno
+  const bdns_id = String(item.numeroConvocatoria || item.id);
   const titulo = item.descripcion || item.descripcionLeng || 'Sin título';
   const organismo = item.nivel3 || item.nivel2 || null;
   const ambito = inferirAmbito(item.nivel1, item.nivel2);

@@ -169,7 +169,7 @@ async function listarConvocatorias(fechaDesde, fechaHasta) {
 // Para el extracto PDF: GET /api/convocatorias/pdf?id={conv.id}&vpd=GE  ← id INTERNO, no bdns_id
 
 async function fetchBdnsDetalle(bdnsId) {
-  // 1. Endpoint principal: detalle completo con documentos embebidos
+  // 1. Endpoint principal: GET /convocatorias?numConv={bdnsId}  (necesita codigoBDNS/numeroConvocatoria)
   try {
     const res = await fetch(
       `${BDNS_BASE}/convocatorias?numConv=${bdnsId}&vpd=GE`,
@@ -181,18 +181,43 @@ async function fetchBdnsDetalle(bdnsId) {
     }
   } catch { /* fallback */ }
 
-  // 2. Fallback: búsqueda por numeroConvocatoria
-  try {
-    const res = await fetch(
-      `${BDNS_BASE}/convocatorias/busqueda?numeroConvocatoria=${bdnsId}`,
-      { headers: { Accept: 'application/json', 'User-Agent': 'AyudaPyme/2.0' }, signal: AbortSignal.timeout(15000) }
-    );
-    if (res.ok) {
-      const data = await res.json();
-      const item = data.content?.[0] ?? (Array.isArray(data) ? data[0] : null);
-      if (item?.id) return item;
-    }
-  } catch { /* siguiente */ }
+  // 2. Si el ID parece ser un id INTERNO (>900000 y falló el numConv), buscar su numeroConvocatoria
+  //    El seed script almacenó el id interno en bdns_id por error — aquí lo corregimos
+  const numericId = parseInt(bdnsId, 10);
+  if (numericId > 900000) {
+    try {
+      // Buscar en paginas recientes de busqueda hasta encontrar este id interno
+      for (let page = 0; page < 20; page++) {
+        const res = await fetch(
+          `${BDNS_BASE}/convocatorias/busqueda?vpd=GE&pageSize=200&page=${page}`,
+          { headers: { Accept: 'application/json', 'User-Agent': 'AyudaPyme/2.0' }, signal: AbortSignal.timeout(15000) }
+        );
+        if (!res.ok) break;
+        const data = await res.json();
+        const items = data.content ?? [];
+        if (items.length === 0) break;
+
+        const match = items.find(i => i.id === numericId);
+        if (match) {
+          // Encontramos el numeroConvocatoria real — ahora obtener el detalle completo
+          const detRes = await fetch(
+            `${BDNS_BASE}/convocatorias?numConv=${match.numeroConvocatoria}&vpd=GE`,
+            { headers: { Accept: 'application/json', 'User-Agent': 'AyudaPyme/2.0' }, signal: AbortSignal.timeout(15000) }
+          );
+          if (detRes.ok) {
+            const det = await detRes.json();
+            if (det?.id) return det;
+          }
+          // Si falla el detalle, devolver el item de busqueda con el id interno asignado
+          return { ...match, id: numericId };
+        }
+
+        // Optimización: si los IDs del bloque ya son menores que nuestro objetivo, parar
+        const minId = Math.min(...items.map(i => i.id));
+        if (minId < numericId - 2000) break;
+      }
+    } catch { /* siguiente */ }
+  }
 
   return null;
 }
@@ -711,11 +736,15 @@ async function procesarConvocatoria(conv, apiKey, semaforo) {
       if (detalle.sedeElectronica) {
         update.url_oficial = detalle.sedeElectronica;
       }
-      // Tipos de beneficiario y sectores desde el API
+      // Tipos de beneficiario y sectores van en campos_extraidos (JSONB)
       const bens = (detalle.tiposBeneficiarios ?? []).map(b => b.descripcion).filter(Boolean);
-      if (bens.length) update.tipos_beneficiario = bens;
       const sects = (detalle.sectores ?? []).map(s => s.descripcion ?? s.codigo).filter(Boolean);
-      if (sects.length) update.sectores_actividad = sects;
+      if (bens.length || sects.length) {
+        const camposExistentes = update.campos_extraidos ?? {};
+        if (bens.length) camposExistentes.tipos_beneficiario_api = bens;
+        if (sects.length) camposExistentes.sectores_api = sects;
+        update.campos_extraidos = camposExistentes;
+      }
       // Regiones desde el API → comunidad_autonoma
       if (!update.comunidad_autonoma) {
         const regNames = (detalle.regiones ?? []).map(r => r.descripcion).filter(Boolean);
