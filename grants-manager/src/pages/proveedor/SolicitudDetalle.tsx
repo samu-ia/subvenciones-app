@@ -5,10 +5,11 @@ import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import {
   ArrowLeft, CheckCircle, FileText, Euro, Clock,
-  AlertTriangle, ChevronRight, Download, Info, Upload,
+  AlertTriangle, ChevronRight, Download, Info, Upload, Sparkles, Loader2,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { ESTADO_LABELS } from '../../types'
+import { generateGrantContext, type GeneratedGrantContext } from '../../lib/generateGrantContext'
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
@@ -170,7 +171,39 @@ export function SolicitudDetalle() {
   const convocatoria = expediente ? convocatorias.find((c) => c.idBdns === expediente.convocatoriaId) : undefined
   const cliente = expediente ? clientes.find((c) => c.id === expediente.clienteId) : undefined
 
-  const ctx = expediente ? getGrantContext(expediente.convocatoriaId) : undefined
+  const hardcodedCtx = expediente ? getGrantContext(expediente.convocatoriaId) : undefined
+  const isGeneric = !expediente || !(expediente.convocatoriaId in {
+    '731245': 1, '731890': 1, '893737': 1, '894201': 1,
+  })
+
+  // AI-generated context state
+  const [aiCtx, setAiCtx] = useState<GeneratedGrantContext | null>(null)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
+
+  const ctx = aiCtx ?? hardcodedCtx
+
+  // Trigger AI generation for generic grants
+  useEffect(() => {
+    if (!isGeneric || !convocatoria || aiCtx || aiLoading) return
+    setAiLoading(true)
+    setAiError(null)
+    generateGrantContext({
+      idBdns: convocatoria.idBdns,
+      nombre: convocatoria.nombre,
+      organismo: convocatoria.organismo,
+      tipo: convocatoria.tipo,
+      importeMax: convocatoria.importeMax,
+      porcentajeSubvencionable: convocatoria.porcentajeSubvencionable,
+      descripcion: convocatoria.descripcion,
+    })
+      .then((result) => {
+        setAiCtx(result)
+        setLines(result.partidas.map((p) => ({ ...p, unidades: '', precioUnitario: '' })))
+      })
+      .catch((e) => setAiError(e.message ?? 'Error generando contexto'))
+      .finally(() => setAiLoading(false))
+  }, [isGeneric, convocatoria])
 
   // Form state
   const [importe, setImporte] = useState('')
@@ -200,13 +233,45 @@ export function SolicitudDetalle() {
     }
   }, [totalLines])
 
-  if (!pres || !expediente || !convocatoria || !cliente || !ctx) {
+  if (!pres || !expediente || !convocatoria || !cliente) {
     return (
       <div className="min-h-screen bg-indigo-50/40 flex items-center justify-center">
         <div className="text-center">
           <p className="text-slate-500 mb-4">Solicitud no encontrada.</p>
           <Button onClick={() => navigate('/proveedor')}>Volver al portal</Button>
         </div>
+      </div>
+    )
+  }
+
+  // Loading state while AI generates context
+  if (isGeneric && aiLoading) {
+    return (
+      <div className="min-h-screen bg-indigo-50/40 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-14 h-14 bg-violet-100 rounded-2xl flex items-center justify-center mx-auto">
+            <Sparkles size={24} className="text-violet-600 animate-pulse" />
+          </div>
+          <div>
+            <p className="font-semibold text-slate-800">Analizando la convocatoria...</p>
+            <p className="text-sm text-slate-500 mt-1">Claude está generando el contexto específico para esta subvención</p>
+          </div>
+          <Loader2 size={20} className="text-violet-400 animate-spin mx-auto" />
+        </div>
+      </div>
+    )
+  }
+
+  // AI error fallback — show generic content
+  if (isGeneric && aiError && !ctx) {
+    return (
+      <div className="min-h-screen bg-indigo-50/40 flex items-center justify-center p-6">
+        <Card className="max-w-md w-full p-6 text-center space-y-3">
+          <AlertTriangle size={28} className="text-amber-400 mx-auto" />
+          <p className="font-semibold text-slate-800">No se pudo generar el contexto</p>
+          <p className="text-sm text-slate-500">{aiError}</p>
+          <Button onClick={() => { setAiError(null); setAiLoading(false) }}>Reintentar</Button>
+        </Card>
       </div>
     )
   }
@@ -333,6 +398,9 @@ export function SolicitudDetalle() {
     )
   }
 
+  // If ctx is still not available (edge case), render nothing
+  if (!ctx) return null
+
   return (
     <div className="min-h-screen bg-indigo-50/40">
       {/* Header */}
@@ -365,6 +433,12 @@ export function SolicitudDetalle() {
             <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
               <Info size={14} className="text-indigo-500" />
               Información de la subvención
+              {ctx && 'generadoPorIA' in ctx && (
+                <span className="ml-auto flex items-center gap-1 text-xs font-medium text-violet-600 bg-violet-50 border border-violet-200 px-2 py-0.5 rounded-full">
+                  <Sparkles size={10} />
+                  Contexto generado por IA
+                </span>
+              )}
             </h3>
             <div className="space-y-2">
               <p className="text-base font-bold text-slate-900">{convocatoria.nombre}</p>

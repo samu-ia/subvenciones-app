@@ -5,7 +5,7 @@ import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import {
   Bell, Briefcase, CheckCircle, Clock, Euro, Star,
-  ChevronRight, AlertTriangle, FileText, Upload,
+  ChevronRight, AlertTriangle, FileText, Upload, Sparkles,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 
@@ -114,6 +114,8 @@ function getGrantContext(convocatoriaId: string) {
     tipoPlantilla: 'general' as TipoPlantilla,
   }
 }
+
+const HARDCODED_IDS = new Set(['731245', '731890', '893737', '894201'])
 
 export function PortalProveedor() {
   const navigate = useNavigate()
@@ -268,7 +270,15 @@ export function PortalProveedor() {
                       {/* Left: grant & PYME info */}
                       <div className="space-y-4">
                         <div>
-                          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Subvención</p>
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Subvención</p>
+                            {convocatoria && !HARDCODED_IDS.has(convocatoria.idBdns) && (
+                              <span className="flex items-center gap-1 text-xs font-medium text-violet-600 bg-violet-50 border border-violet-200 px-1.5 py-0.5 rounded-full">
+                                <Sparkles size={9} />
+                                IA
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm font-semibold text-slate-800">{convocatoria?.nombre}</p>
                           <p className="text-xs text-slate-500 mt-0.5">{convocatoria?.organismo}</p>
                           <div className="flex gap-4 mt-2">
