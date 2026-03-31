@@ -848,7 +848,8 @@ async function main() {
     const hasta = new Date();
     const desde = new Date();
     desde.setDate(desde.getDate() - DIAS);
-    const fmt = d => d.toISOString().split('T')[0];
+    // BDNS API requires DD/MM/YYYY format (ISO YYYY-MM-DD returns 400)
+    const fmt = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
 
     const raw = await listarConvocatorias(fmt(desde), fmt(hasta));
     convocatorias = raw.map(c => ({
