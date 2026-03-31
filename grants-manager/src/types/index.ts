@@ -115,7 +115,10 @@ export interface Presupuesto {
   expedienteId: string
   proveedorNombre: string
   proveedorCif: string
+  email?: string
+  telefono?: string
   importe?: number
+  plazoDias?: number
   estado: 'pendiente' | 'recibido' | 'seleccionado' | 'rechazado'
   fechaSolicitud: Date
   fechaRecepcion?: Date

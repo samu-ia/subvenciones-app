@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/Button'
 import { useAppStore } from '../../store'
 import {
   ArrowLeft, FileText, MessageSquare, Clock, Upload,
-  CheckCircle, XCircle, AlertTriangle, ChevronRight, ChevronDown,
+  CheckCircle, XCircle, AlertTriangle, AlertCircle, ChevronRight, ChevronDown,
   Plus, DollarSign, Printer, Info, Sparkles,
 } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -107,7 +107,7 @@ export function ExpedienteDetalle() {
   const {
     expedientes, clientes, convocatorias, gestores,
     addHistorialEntry, updateExpedienteEstado, addNota,
-    presupuestos, addPresupuesto, updatePresupuestoEstado,
+    presupuestos, addPresupuesto, updatePresupuestoEstado, updatePresupuestoDetalles,
     showToast, toastMessage, clearToast,
   } = useAppStore()
   const [tab, setTab] = useState<typeof TABS[number]>('Datos generales')
@@ -122,6 +122,8 @@ export function ExpedienteDetalle() {
   const [newPresupuesto, setNewPresupuesto] = useState({
     proveedorNombre: '',
     proveedorCif: '',
+    email: '',
+    telefono: '',
     descripcion: '',
   })
 
@@ -399,11 +401,13 @@ El proyecto aportará un incremento de facturación estimado en 120.000€ en lo
       expedienteId: exp.id,
       proveedorNombre: newPresupuesto.proveedorNombre.trim(),
       proveedorCif: newPresupuesto.proveedorCif.trim(),
+      email: newPresupuesto.email.trim() || undefined,
+      telefono: newPresupuesto.telefono.trim() || undefined,
       descripcion: newPresupuesto.descripcion.trim() || undefined,
       estado: 'pendiente',
       fechaSolicitud: new Date(),
     })
-    setNewPresupuesto({ proveedorNombre: '', proveedorCif: '', descripcion: '' })
+    setNewPresupuesto({ proveedorNombre: '', proveedorCif: '', email: '', telefono: '', descripcion: '' })
     setShowAddPresupuesto(false)
   }
 
@@ -940,6 +944,7 @@ El proyecto aportará un incremento de facturación estimado en 120.000€ en lo
                 setNewPresupuesto={setNewPresupuesto}
                 handleAddPresupuesto={handleAddPresupuesto}
                 updatePresupuestoEstado={updatePresupuestoEstado}
+                updatePresupuestoDetalles={updatePresupuestoDetalles}
                 formatEur={formatEur}
               />
             )}
@@ -1191,10 +1196,11 @@ interface PresupuestosTabProps {
   presupuestoSeleccionado: Presupuesto | undefined
   showAddPresupuesto: boolean
   setShowAddPresupuesto: (v: boolean) => void
-  newPresupuesto: { proveedorNombre: string; proveedorCif: string; descripcion: string }
-  setNewPresupuesto: (v: { proveedorNombre: string; proveedorCif: string; descripcion: string }) => void
+  newPresupuesto: { proveedorNombre: string; proveedorCif: string; email: string; telefono: string; descripcion: string }
+  setNewPresupuesto: (v: { proveedorNombre: string; proveedorCif: string; email: string; telefono: string; descripcion: string }) => void
   handleAddPresupuesto: () => void
   updatePresupuestoEstado: (id: string, estado: Presupuesto['estado']) => void
+  updatePresupuestoDetalles: (id: string, importe: number, plazoDias: number, notas: string) => void
   formatEur: (n: number) => string
 }
 
@@ -1208,192 +1214,340 @@ function PresupuestosTab({
   setNewPresupuesto,
   handleAddPresupuesto,
   updatePresupuestoEstado,
+  updatePresupuestoDetalles,
   formatEur,
 }: PresupuestosTabProps) {
-  const PRESUPUESTO_COLORS: Record<Presupuesto['estado'], string> = {
-    pendiente: 'text-orange-600 bg-orange-50 border-orange-200',
-    recibido: 'text-blue-600 bg-blue-50 border-blue-200',
-    seleccionado: 'text-emerald-700 bg-emerald-50 border-emerald-200',
-    rechazado: 'text-slate-400 bg-slate-50 border-slate-200',
-  }
-  const PRESUPUESTO_LABEL: Record<Presupuesto['estado'], string> = {
-    pendiente: 'Pendiente',
-    recibido: 'Recibido',
-    seleccionado: 'Seleccionado',
-    rechazado: 'Rechazado',
-  }
+  // Track which card is expanded for "marcar recibido" details form
+  const [receivingId, setReceivingId] = useState<string | null>(null)
+  const [receiveForm, setReceiveForm] = useState({ importe: '', plazoDias: '', notas: '' })
+
+  const pendientes = presupuestos.filter((p) => p.estado === 'pendiente')
+  const rechazados = presupuestos.filter((p) => p.estado === 'rechazado')
+
+  // For comparison: sort received by price (cheapest first)
+  const recibidosOrdenados = [...presupuestosRecibidos].sort((a, b) => {
+    if (a.importe === undefined) return 1
+    if (b.importe === undefined) return -1
+    return a.importe - b.importe
+  })
+  const minImporte = recibidosOrdenados.find((p) => p.importe !== undefined)?.importe
+
+  const inputCls = 'w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-900/10'
 
   return (
-    <div className="space-y-4">
-      {/* Status banner */}
-      <div className={clsx(
-        'rounded-xl px-4 py-3 flex items-center justify-between gap-4',
-        presupuestoSeleccionado
-          ? 'bg-emerald-50 border border-emerald-200'
-          : presupuestosRecibidos.length >= 3
-          ? 'bg-emerald-50 border border-emerald-200'
-          : 'bg-blue-50 border border-blue-200'
-      )}>
-        <div className="flex items-center gap-2">
-          {presupuestoSeleccionado ? (
-            <>
-              <CheckCircle size={16} className="text-emerald-500 flex-shrink-0" />
-              <p className="text-sm font-medium text-emerald-800">
-                Proveedor seleccionado: <strong>{presupuestoSeleccionado.proveedorNombre}</strong>
-                {presupuestoSeleccionado.importe !== undefined && (
-                  <span className="ml-2 font-bold">{formatEur(presupuestoSeleccionado.importe)}</span>
-                )}
-              </p>
-            </>
-          ) : presupuestosRecibidos.length >= 3 ? (
-            <>
-              <CheckCircle size={16} className="text-emerald-500 flex-shrink-0" />
-              <p className="text-sm font-medium text-emerald-800">
-                ✓ Tienes {presupuestosRecibidos.length} presupuestos — puedes seleccionar el ganador
-              </p>
-            </>
-          ) : (
-            <>
-              <DollarSign size={16} className="text-blue-500 flex-shrink-0" />
-              <p className="text-sm font-medium text-blue-800">
-                Necesitas 3 presupuestos de proveedores distintos
-                <span className="ml-2 text-blue-600 font-normal">
-                  ({presupuestosRecibidos.length}/3 recibidos)
-                </span>
-              </p>
-            </>
+    <div className="space-y-5">
+
+      {/* ── Header: stats + action ── */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="text-center px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-200">
+            <p className="text-lg font-bold text-slate-800">{presupuestos.length}</p>
+            <p className="text-xs text-slate-400">Solicitados</p>
+          </div>
+          <div className="text-center px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-lg font-bold text-blue-700">{presupuestosRecibidos.length}</p>
+            <p className="text-xs text-blue-400">Recibidos</p>
+          </div>
+          <div className="text-center px-3 py-1.5 bg-orange-50 rounded-lg border border-orange-200">
+            <p className="text-lg font-bold text-orange-600">{pendientes.length}</p>
+            <p className="text-xs text-orange-400">Pendientes</p>
+          </div>
+          {presupuestoSeleccionado && (
+            <div className="text-center px-3 py-1.5 bg-emerald-50 rounded-lg border border-emerald-200">
+              <p className="text-xs font-bold text-emerald-700 truncate max-w-28">{presupuestoSeleccionado.proveedorNombre}</p>
+              <p className="text-xs text-emerald-400">Seleccionado</p>
+            </div>
           )}
         </div>
         {!presupuestoSeleccionado && (
-          <button
-            onClick={() => setShowAddPresupuesto(true)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:text-blue-900 whitespace-nowrap border border-blue-300 rounded-lg px-3 py-1.5 hover:bg-blue-100 transition-colors flex-shrink-0"
-          >
-            <Plus size={12} />
+          <Button size="sm" onClick={() => setShowAddPresupuesto(true)} icon={<Plus size={13} />}>
             Solicitar presupuesto
-          </button>
+          </Button>
         )}
       </div>
 
-      {/* Add presupuesto form */}
+      {/* ── Compliance notice ── */}
+      {!presupuestoSeleccionado && presupuestosRecibidos.length < 3 && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
+          <AlertCircle size={13} className="flex-shrink-0" />
+          La mayoría de convocatorias exigen <strong className="mx-1">mínimo 3 presupuestos</strong> de proveedores distintos para justificar la elección.
+          <span className="ml-auto font-semibold">{presupuestosRecibidos.length}/3 recibidos</span>
+        </div>
+      )}
+
+      {/* ── Add presupuesto form ── */}
       {showAddPresupuesto && (
-        <Card padding="md">
-          <h3 className="text-sm font-semibold text-slate-900 mb-3">Solicitar nuevo presupuesto</h3>
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs text-slate-500 font-medium">Nombre del proveedor *</label>
-              <input
-                type="text"
-                className="mt-1 w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-                placeholder="Nombre empresa proveedor"
+        <Card padding="md" className="border border-slate-200">
+          <h3 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <Plus size={14} className="text-slate-500" />
+            Solicitar presupuesto a proveedor
+          </h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <label className="text-xs text-slate-500 font-medium">Empresa proveedora *</label>
+              <input type="text" className={clsx('mt-1', inputCls)} placeholder="Nombre empresa instaladora o consultora"
                 value={newPresupuesto.proveedorNombre}
                 onChange={(e) => setNewPresupuesto({ ...newPresupuesto, proveedorNombre: e.target.value })}
               />
             </div>
             <div>
-              <label className="text-xs text-slate-500 font-medium">CIF del proveedor</label>
-              <input
-                type="text"
-                className="mt-1 w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-                placeholder="B12345678"
+              <label className="text-xs text-slate-500 font-medium">CIF / NIF</label>
+              <input type="text" className={clsx('mt-1', inputCls)} placeholder="B12345678"
                 value={newPresupuesto.proveedorCif}
                 onChange={(e) => setNewPresupuesto({ ...newPresupuesto, proveedorCif: e.target.value })}
               />
             </div>
             <div>
-              <label className="text-xs text-slate-500 font-medium">Descripción del servicio</label>
-              <input
-                type="text"
-                className="mt-1 w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-                placeholder="Descripción breve del servicio"
+              <label className="text-xs text-slate-500 font-medium">Teléfono de contacto</label>
+              <input type="tel" className={clsx('mt-1', inputCls)} placeholder="600 000 000"
+                value={newPresupuesto.telefono}
+                onChange={(e) => setNewPresupuesto({ ...newPresupuesto, telefono: e.target.value })}
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="text-xs text-slate-500 font-medium">Email de contacto</label>
+              <input type="email" className={clsx('mt-1', inputCls)} placeholder="comercial@empresa.es"
+                value={newPresupuesto.email}
+                onChange={(e) => setNewPresupuesto({ ...newPresupuesto, email: e.target.value })}
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="text-xs text-slate-500 font-medium">Descripción del trabajo a presupuestar</label>
+              <textarea className={clsx('mt-1 resize-none', inputCls)} rows={2}
+                placeholder="Describe el trabajo: tipo de instalación, superficie, potencia, modelo orientativo..."
                 value={newPresupuesto.descripcion}
                 onChange={(e) => setNewPresupuesto({ ...newPresupuesto, descripcion: e.target.value })}
               />
             </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" size="sm" onClick={() => setShowAddPresupuesto(false)}>Cancelar</Button>
-              <Button size="sm" disabled={!newPresupuesto.proveedorNombre.trim()} onClick={handleAddPresupuesto}>
-                Solicitar
-              </Button>
-            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100">
+            <Button variant="secondary" size="sm" onClick={() => setShowAddPresupuesto(false)}>Cancelar</Button>
+            <Button size="sm" disabled={!newPresupuesto.proveedorNombre.trim()} onClick={handleAddPresupuesto}>
+              Registrar solicitud
+            </Button>
           </div>
         </Card>
       )}
 
-      {/* Presupuestos list */}
-      {presupuestos.length === 0 ? (
-        <div className="text-center py-12 text-sm text-slate-400">
-          No hay presupuestos solicitados aún
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {presupuestos.map((p) => (
-            <Card key={p.id} padding="md">
-              <div className="flex items-start gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <p className="text-sm font-semibold text-slate-900">{p.proveedorNombre}</p>
-                    {p.proveedorCif && (
-                      <span className="text-xs font-mono text-slate-400">{p.proveedorCif}</span>
-                    )}
-                    <span className={clsx(
-                      'text-xs font-medium px-2 py-0.5 rounded-full border',
-                      PRESUPUESTO_COLORS[p.estado]
+      {/* ── Comparison table (≥2 received) ── */}
+      {recibidosOrdenados.length >= 2 && (
+        <div>
+          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 flex items-center gap-2">
+            <DollarSign size={12} />
+            Comparativa de presupuestos recibidos
+          </h4>
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500">Empresa</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-slate-500">Importe</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-slate-500">Plazo</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500">Notas</th>
+                  <th className="px-4 py-2.5"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {recibidosOrdenados.map((p, idx) => {
+                  const isCheapest = p.importe !== undefined && p.importe === minImporte && presupuestosRecibidos.filter(x => x.importe !== undefined).length > 1
+                  const isSelected = p.estado === 'seleccionado'
+                  return (
+                    <tr key={p.id} className={clsx(
+                      'transition-colors',
+                      isSelected ? 'bg-emerald-50' : isCheapest ? 'bg-green-50/60' : 'bg-white hover:bg-slate-50'
                     )}>
-                      {PRESUPUESTO_LABEL[p.estado]}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          {idx === 0 && !isSelected && (
+                            <span className="text-xs font-bold text-green-600 bg-green-100 px-1.5 py-0.5 rounded">↓ más bajo</span>
+                          )}
+                          {isSelected && (
+                            <CheckCircle size={14} className="text-emerald-500 flex-shrink-0" />
+                          )}
+                          <div>
+                            <p className="font-semibold text-slate-800">{p.proveedorNombre}</p>
+                            {p.proveedorCif && <p className="text-xs text-slate-400 font-mono">{p.proveedorCif}</p>}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {p.importe !== undefined ? (
+                          <span className={clsx('font-bold', isCheapest ? 'text-green-700 text-base' : 'text-slate-800')}>
+                            {formatEur(p.importe)}
+                          </span>
+                        ) : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-right text-slate-600">
+                        {p.plazoDias ? `${p.plazoDias} días` : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-500 max-w-40 truncate">{p.notas ?? '—'}</td>
+                      <td className="px-4 py-3">
+                        {!isSelected && !presupuestoSeleccionado && (
+                          <button
+                            onClick={() => updatePresupuestoEstado(p.id, 'seleccionado')}
+                            className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 border border-emerald-200 rounded-lg px-2.5 py-1.5 hover:bg-emerald-50 transition-colors whitespace-nowrap"
+                          >
+                            Seleccionar
+                          </button>
+                        )}
+                        {isSelected && (
+                          <span className="text-xs font-semibold text-emerald-600">Seleccionado</span>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Pending list ── */}
+      {pendientes.length > 0 && (
+        <div>
+          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Pendientes de respuesta</h4>
+          <div className="space-y-2">
+            {pendientes.map((p) => (
+              <div key={p.id} className="border border-slate-200 rounded-xl overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 bg-white">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-bold text-orange-600">{p.proveedorNombre.charAt(0)}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-800 truncate">{p.proveedorNombre}</p>
+                      <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400">
+                        {p.proveedorCif && <span className="font-mono">{p.proveedorCif}</span>}
+                        {p.email && <span>· {p.email}</span>}
+                        {p.telefono && <span>· {p.telefono}</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-xs text-orange-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full font-medium">
+                      Pendiente
                     </span>
-                    {p.importe !== undefined && (
-                      <span className="text-sm font-bold text-slate-900">{formatEur(p.importe)}</span>
-                    )}
-                  </div>
-                  {p.descripcion && (
-                    <p className="text-xs text-slate-500 mb-1">{p.descripcion}</p>
-                  )}
-                  {p.notas && (
-                    <p className="text-xs text-slate-400 italic">{p.notas}</p>
-                  )}
-                  <div className="flex items-center gap-3 mt-2 text-xs text-slate-400">
-                    <span>Solicitado: {p.fechaSolicitud.toLocaleDateString('es-ES')}</span>
-                    {p.fechaRecepcion && (
-                      <span>Recibido: {p.fechaRecepcion.toLocaleDateString('es-ES')}</span>
-                    )}
-                  </div>
-                </div>
-                {/* Action buttons */}
-                {p.estado !== 'rechazado' && p.estado !== 'seleccionado' && (
-                  <div className="flex flex-col gap-1.5 flex-shrink-0">
-                    {p.estado === 'pendiente' && (
-                      <button
-                        onClick={() => updatePresupuestoEstado(p.id, 'recibido')}
-                        className="text-xs font-medium text-blue-600 hover:text-blue-800 border border-blue-200 rounded-lg px-2.5 py-1.5 hover:bg-blue-50 transition-colors whitespace-nowrap"
-                      >
-                        Marcar recibido
-                      </button>
-                    )}
-                    {p.estado === 'recibido' && !presupuestoSeleccionado && (
-                      <button
-                        onClick={() => updatePresupuestoEstado(p.id, 'seleccionado')}
-                        className="text-xs font-medium text-emerald-600 hover:text-emerald-800 border border-emerald-200 rounded-lg px-2.5 py-1.5 hover:bg-emerald-50 transition-colors whitespace-nowrap"
-                      >
-                        Seleccionar
-                      </button>
-                    )}
+                    <button
+                      onClick={() => { setReceivingId(p.id === receivingId ? null : p.id); setReceiveForm({ importe: '', plazoDias: '', notas: '' }) }}
+                      className="text-xs font-medium text-blue-600 hover:text-blue-800 border border-blue-200 rounded-lg px-2.5 py-1.5 hover:bg-blue-50 transition-colors"
+                    >
+                      Registrar recibido
+                    </button>
                     <button
                       onClick={() => updatePresupuestoEstado(p.id, 'rechazado')}
-                      className="text-xs font-medium text-red-500 hover:text-red-700 border border-red-100 rounded-lg px-2.5 py-1.5 hover:bg-red-50 transition-colors whitespace-nowrap"
+                      className="text-xs text-slate-400 hover:text-red-500 transition-colors"
                     >
-                      Rechazar
+                      ✕
                     </button>
                   </div>
-                )}
-                {p.estado === 'seleccionado' && (
-                  <div className="flex-shrink-0">
-                    <CheckCircle size={20} className="text-emerald-500" />
+                </div>
+
+                {/* Inline form to register received details */}
+                {receivingId === p.id && (
+                  <div className="px-4 py-3 bg-blue-50 border-t border-blue-100">
+                    <p className="text-xs font-semibold text-blue-700 mb-2">Registrar datos del presupuesto recibido</p>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-xs text-slate-500">Importe total (€) *</label>
+                        <input type="number" min="0" step="100" className={clsx('mt-1', inputCls)} placeholder="0"
+                          value={receiveForm.importe}
+                          onChange={(e) => setReceiveForm({ ...receiveForm, importe: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-500">Plazo ejecución (días)</label>
+                        <input type="number" min="1" className={clsx('mt-1', inputCls)} placeholder="30"
+                          value={receiveForm.plazoDias}
+                          onChange={(e) => setReceiveForm({ ...receiveForm, plazoDias: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-500">Notas</label>
+                        <input type="text" className={clsx('mt-1', inputCls)} placeholder="Observaciones..."
+                          value={receiveForm.notas}
+                          onChange={(e) => setReceiveForm({ ...receiveForm, notas: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2 mt-2">
+                      <Button variant="secondary" size="sm" onClick={() => setReceivingId(null)}>Cancelar</Button>
+                      <Button size="sm"
+                        disabled={!receiveForm.importe || parseFloat(receiveForm.importe) <= 0}
+                        onClick={() => {
+                          updatePresupuestoDetalles(p.id, parseFloat(receiveForm.importe), parseInt(receiveForm.plazoDias) || 0, receiveForm.notas)
+                          setReceivingId(null)
+                        }}
+                      >
+                        Guardar
+                      </Button>
+                    </div>
                   </div>
+                )}
+
+                {p.descripcion && (
+                  <div className="px-4 py-2 bg-slate-50 border-t border-slate-100">
+                    <p className="text-xs text-slate-500">{p.descripcion}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Received (single, before comparison threshold) ── */}
+      {recibidosOrdenados.length === 1 && (
+        <div>
+          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Recibido</h4>
+          {recibidosOrdenados.map((p) => (
+            <Card key={p.id} padding="md" className={clsx('border', p.estado === 'seleccionado' ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200')}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    {p.estado === 'seleccionado' && <CheckCircle size={14} className="text-emerald-500" />}
+                    <p className="text-sm font-semibold text-slate-800">{p.proveedorNombre}</p>
+                    {p.importe !== undefined && (
+                      <span className="text-base font-bold text-slate-900 ml-1">{formatEur(p.importe)}</span>
+                    )}
+                    {p.plazoDias && (
+                      <span className="text-xs text-slate-500">· {p.plazoDias} días</span>
+                    )}
+                  </div>
+                  {p.notas && <p className="text-xs text-slate-400">{p.notas}</p>}
+                </div>
+                {p.estado === 'recibido' && !presupuestoSeleccionado && (
+                  <Button size="sm" onClick={() => updatePresupuestoEstado(p.id, 'seleccionado')}>
+                    Seleccionar
+                  </Button>
                 )}
               </div>
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* ── Rejected ── */}
+      {rechazados.length > 0 && (
+        <details className="text-xs text-slate-400">
+          <summary className="cursor-pointer hover:text-slate-600 select-none">
+            {rechazados.length} descartado{rechazados.length !== 1 ? 's' : ''}
+          </summary>
+          <div className="mt-2 space-y-1">
+            {rechazados.map((p) => (
+              <div key={p.id} className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg">
+                <span className="line-through text-slate-400">{p.proveedorNombre}</span>
+                {p.importe !== undefined && <span>{formatEur(p.importe)}</span>}
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+
+      {/* ── Empty state ── */}
+      {presupuestos.length === 0 && (
+        <div className="text-center py-12 text-sm text-slate-400">
+          No hay presupuestos solicitados aún. Usa el botón de arriba para solicitar el primero.
         </div>
       )}
     </div>
