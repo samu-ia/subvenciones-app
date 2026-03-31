@@ -33,7 +33,10 @@
     "prospectar": "node scripts/prospectar.mjs",
     "deep-review": "node scripts/deep-review.mjs",
     "loop": "node scripts/agent-loop.mjs",
-    "loop:watch": "node scripts/agent-loop.mjs --watch"
+    "loop:watch": "node scripts/agent-loop.mjs --watch",
+    "improve": "node scripts/self-improve.mjs",
+    "improve:watch": "node scripts/keep-alive.mjs",
+    "improve:dry": "node scripts/self-improve.mjs --dry"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.41",
