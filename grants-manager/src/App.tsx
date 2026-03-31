@@ -31,6 +31,7 @@ function App() {
             <Route path="/nueva-subvencion" element={<NuevaSubvencion />} />
             <Route path="/proveedor" element={<PortalProveedor />} />
             <Route path="/proveedor/solicitud/:presupuestoId" element={<SolicitudDetalle />} />
+            <Route path="/subvenciones" element={<Navigate to="/convocatorias" replace />} />
           </Routes>
         </PageWrapper>
       </BrowserRouter>

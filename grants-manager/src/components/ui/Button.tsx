@@ -18,6 +18,7 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
+      type="button"
       {...props}
       className={clsx(
         'inline-flex items-center gap-2 font-medium rounded-lg transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed',
