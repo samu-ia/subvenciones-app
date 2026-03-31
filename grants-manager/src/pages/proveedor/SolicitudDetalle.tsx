@@ -5,7 +5,7 @@ import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import {
   ArrowLeft, CheckCircle, FileText, Euro, Clock,
-  AlertTriangle, ChevronRight, Download, Info,
+  AlertTriangle, ChevronRight, Download, Info, Upload,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { ESTADO_LABELS } from '../../types'
@@ -24,12 +24,14 @@ function diasHasta(fecha: Date): number {
   return Math.ceil((target.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24))
 }
 
+type TipoPlantilla = 'digitalizacion' | 'formacion' | 'general' | 'energia_calor' | 'energia_fv'
+
 const GRANT_CONTEXT: Record<string, {
   necesidad: string
   subvencionable: string[]
   noSubvencionable: string[]
   docsRequeridos: string[]
-  tipoPlantilla: 'digitalizacion' | 'formacion' | 'general'
+  tipoPlantilla: TipoPlantilla
   partidas: Array<{ partida: string; descripcion: string }>
 }> = {
   '731245': {
@@ -42,7 +44,7 @@ const GRANT_CONTEXT: Record<string, {
       'Certificado estar al corriente de pagos SS y AEAT',
       'Referencias de proyectos similares (recomendado)',
     ],
-    tipoPlantilla: 'digitalizacion',
+    tipoPlantilla: 'digitalizacion' as TipoPlantilla,
     partidas: [
       { partida: 'Software', descripcion: 'Licencia software gestión stock (1 año)' },
       { partida: 'Hardware', descripcion: 'Terminal POS + lector códigos de barras' },
@@ -59,12 +61,75 @@ const GRANT_CONTEXT: Record<string, {
       'Presupuesto desglosado por solución digital',
       'Acreditación como Agente Digitalizador Red.es',
     ],
-    tipoPlantilla: 'digitalizacion',
+    tipoPlantilla: 'digitalizacion' as TipoPlantilla,
     partidas: [
       { partida: 'Presencia en internet', descripcion: 'Página web + SEO básico (12 meses)' },
       { partida: 'CRM', descripcion: 'Software CRM (licencia 12 meses)' },
       { partida: 'Factura electrónica', descripcion: 'Solución factura electrónica (12 meses)' },
       { partida: 'Formación', descripcion: 'Sesiones de formación incluidas' },
+    ],
+  },
+  '893737': {
+    necesidad: 'Sustitución del sistema de climatización por bomba de calor aerotérmica de alta eficiencia (SCOP ≥ 3,5). Requiere memoria técnica justificativa INEGA con tabla mensual de ahorro energético (kWh/año) y reducción de emisiones CO₂ (kg/año).',
+    subvencionable: [
+      'Bomba de calor aerotérmica de alta eficiencia (SCOP ≥ 3,5)',
+      'Instalación y puesta en marcha certificada',
+      'Proyecto técnico e ingeniería (visado colegial)',
+      'Adaptaciones del sistema de distribución calor/frío',
+    ],
+    noSubvencionable: [
+      'IVA (salvo entidades exentas)',
+      'Gastos de mantenimiento posterior a la instalación',
+      'Obras civiles no vinculadas directamente al equipo',
+    ],
+    docsRequeridos: [
+      'Memoria técnica justificativa INEGA (obligatorio)',
+      'Tabla mensual ahorro kWh/año + reducción kg CO₂/año',
+      'Ficha técnica del equipo (fabricante, con SCOP y modelo)',
+      'Presupuesto detallado por partidas (firmado)',
+      'Informe técnico firmado por técnico competente',
+      'Oferta del instalador con nº de oferta y fecha',
+    ],
+    tipoPlantilla: 'energia_calor' as TipoPlantilla,
+    partidas: [
+      { partida: 'Equipo', descripcion: 'Bomba de calor aerotérmica (modelo + nº oferta instalador)' },
+      { partida: 'Instalación hidráulica', descripcion: 'Adaptación circuito hidráulico y conexiones' },
+      { partida: 'Sistema eléctrico', descripcion: 'Cuadro eléctrico y protecciones' },
+      { partida: 'Ingeniería', descripcion: 'Proyecto técnico y memoria justificativa INEGA' },
+      { partida: 'Puesta en marcha', descripcion: 'Configuración, pruebas y certificación' },
+    ],
+  },
+  '894201': {
+    necesidad: 'Ampliación de instalación fotovoltaica de autoconsumo (≤100 kWp). Requiere proyecto técnico completo visado por ingeniero colegiado: memoria, cálculos, planos, fichas técnicas, plan de seguridad y presupuesto detallado.',
+    subvencionable: [
+      'Módulos fotovoltaicos y estructura de soporte',
+      'Inversor/string inverter y protecciones CC/CA',
+      'Cableado DC/AC y obra eléctrica asociada',
+      'Equipos de medida, monitorización y telegestión',
+      'Ingeniería: proyecto técnico completo visado',
+    ],
+    noSubvencionable: [
+      'Baterías de almacenamiento (línea de convocatoria diferente)',
+      'IVA (salvo entidades exentas)',
+      'Tramitación administrativa y tasas de licencias',
+    ],
+    docsRequeridos: [
+      'Proyecto técnico visado: memoria + cálculos + planos (obligatorio)',
+      'Fichas técnicas de módulos FV e inversor',
+      'Plan de seguridad y salud (obligatorio)',
+      'Plan de gestión de residuos',
+      'Presupuesto detallado por partidas (firmado)',
+      'Estimación de producción anual (kWh/año)',
+    ],
+    tipoPlantilla: 'energia_fv' as TipoPlantilla,
+    partidas: [
+      { partida: 'Módulos FV', descripcion: 'Paneles fotovoltaicos (ud × precio/panel)' },
+      { partida: 'Estructura soporte', descripcion: 'Estructura de montaje coplanar/inclinada' },
+      { partida: 'Inversor', descripcion: 'Inversor trifásico + protecciones CC y CA' },
+      { partida: 'Equipos de medida', descripcion: 'Contador bidireccional y telegestión' },
+      { partida: 'Protecciones eléctricas', descripcion: 'Cuadro AC, fusibles, descargadores sobretensión' },
+      { partida: 'Cableado', descripcion: 'Conductor DC y AC, bandejas, tubería protectora' },
+      { partida: 'Instalación', descripcion: 'Montaje, conexionado y puesta en marcha' },
     ],
   },
 }
@@ -79,7 +144,7 @@ function getGrantContext(convocatoriaId: string) {
       'Declaración responsable',
       'Certificado corriente de pago AEAT y SS',
     ],
-    tipoPlantilla: 'general' as const,
+    tipoPlantilla: 'general' as TipoPlantilla,
     partidas: [
       { partida: 'Servicio principal', descripcion: 'Descripción del servicio principal' },
       { partida: 'Materiales', descripcion: 'Materiales necesarios' },
@@ -113,6 +178,9 @@ export function SolicitudDetalle() {
   const [notasForm, setNotasForm] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [errors, setErrors] = useState<{ importe?: string; plazo?: string }>({})
+
+  // Document upload state (filename → uploaded)
+  const [uploadedDocs, setUploadedDocs] = useState<Record<string, string>>({})
 
   // Budget lines state
   const [lines, setLines] = useState<BudgetLine[]>(
@@ -181,6 +249,22 @@ export function SolicitudDetalle() {
         'Formación presencial,Horas de formación presencial,,0,0\n' +
         'Material didáctico,Materiales por alumno,,0,0\n' +
         'Certificación,Emisión certificados,,0,0\n'
+    } else if (tipo === 'energia_calor') {
+      csv +=
+        'Equipo,Bomba de calor aerotérmica (modelo + nº oferta),,0,0\n' +
+        'Instalación hidráulica,Adaptación circuito hidráulico y conexiones,,0,0\n' +
+        'Sistema eléctrico,Cuadro eléctrico y protecciones,,0,0\n' +
+        'Ingeniería,Proyecto técnico y memoria justificativa INEGA,,0,0\n' +
+        'Puesta en marcha,Configuración pruebas y certificación,,0,0\n'
+    } else if (tipo === 'energia_fv') {
+      csv +=
+        'Módulos FV,Paneles fotovoltaicos (ud × precio/panel),,0,0\n' +
+        'Estructura soporte,Estructura de montaje coplanar/inclinada,,0,0\n' +
+        'Inversor,Inversor trifásico + protecciones CC y CA,,0,0\n' +
+        'Equipos de medida,Contador bidireccional y telegestión,,0,0\n' +
+        'Protecciones eléctricas,Cuadro AC fusibles descargadores,,0,0\n' +
+        'Cableado,Conductor DC y AC bandejas tubería protectora,,0,0\n' +
+        'Instalación,Montaje conexionado y puesta en marcha,,0,0\n'
     } else {
       csv +=
         'Servicio principal,Descripción detallada del servicio,,0,0\n' +
@@ -461,6 +545,75 @@ export function SolicitudDetalle() {
               >
                 Usar este total como importe del presupuesto ({fmt(totalLines)})
               </button>
+            )}
+          </Card>
+
+          {/* Document upload section */}
+          <Card className="p-5">
+            <h3 className="text-sm font-semibold text-slate-700 mb-1 flex items-center gap-2">
+              <Upload size={14} className="text-indigo-500" />
+              Documentación técnica
+            </h3>
+            <p className="text-xs text-slate-400 mb-4">
+              Adjunta los documentos requeridos. El gestor no puede tramitar la subvención sin la documentación completa.
+            </p>
+            <div className="space-y-2">
+              {ctx.docsRequeridos.map((doc, i) => {
+                const key = `doc_${i}`
+                const uploaded = uploadedDocs[key]
+                return (
+                  <div key={key} className={clsx(
+                    'flex items-center justify-between rounded-lg px-3 py-2.5 border',
+                    uploaded ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'
+                  )}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      {uploaded ? (
+                        <CheckCircle size={14} className="text-emerald-500 flex-shrink-0" />
+                      ) : (
+                        <div className={clsx(
+                          'w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0',
+                          i === 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-500'
+                        )}>
+                          {i + 1}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className={clsx('text-xs truncate', uploaded ? 'text-emerald-700 font-medium' : 'text-slate-700')}>
+                          {doc}
+                        </p>
+                        {uploaded && (
+                          <p className="text-xs text-slate-400 truncate">{uploaded}</p>
+                        )}
+                      </div>
+                    </div>
+                    <label className={clsx(
+                      'ml-3 flex-shrink-0 cursor-pointer text-xs px-2.5 py-1 rounded-md font-medium transition-colors',
+                      uploaded
+                        ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                        : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                    )}>
+                      {uploaded ? 'Cambiar' : 'Subir'}
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            setUploadedDocs(prev => ({ ...prev, [key]: file.name }))
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                )
+              })}
+            </div>
+            {Object.keys(uploadedDocs).length > 0 && (
+              <p className="mt-3 text-xs text-emerald-600 flex items-center gap-1">
+                <CheckCircle size={12} />
+                {Object.keys(uploadedDocs).length} de {ctx.docsRequeridos.length} documentos subidos
+              </p>
             )}
           </Card>
         </div>

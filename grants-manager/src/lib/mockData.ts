@@ -87,6 +87,14 @@ export const clientes: Cliente[] = [
     fechaAlta: new Date('2023-06-01'),
     cumplimientoHacienda: 'ok', cumplimientoSS: 'ok',
   },
+  {
+    id: 'c11', nombre: 'Balneario Río Pambre S.L.', nif: 'B27123456',
+    sector: 'Hostelería', cnae: '9604', comunidadAutonoma: 'Galicia',
+    tamano: 'pyme', certificadoDigital: 'FNMT-RCM', caducidadCertificado: new Date('2026-11-30'),
+    contacto: 'José Rodríguez', email: 'jose@balnearioriop.es', telefono: '982 456 789',
+    fechaAlta: new Date('2026-01-20'),
+    cumplimientoHacienda: 'ok', cumplimientoSS: 'ok',
+  },
 ]
 
 export const convocatorias: Convocatoria[] = [
@@ -224,6 +232,24 @@ export const convocatorias: Convocatoria[] = [
     importeMax: 60000, porcentajeSubvencionable: 65,
     urlSede: 'https://www.euskadi.eus', requisitos: ['Empresa de economía social', 'Domicilio en Euskadi', 'Creación de empleo'],
     descripcion: 'Apoyo a iniciativas de emprendimiento social y cooperativas en el País Vasco.',
+  },
+  {
+    idBdns: '893737', nombre: 'IN417Y — Ahorro y eficiencia energética en hostelería',
+    organismo: 'INEGA — Instituto Enerxético de Galicia', tipo: 'autonomica',
+    fechaApertura: new Date('2026-01-15'), fechaCierre: new Date('2026-07-31'),
+    fechaJustificacion: new Date('2027-03-31'),
+    importeMax: 80000, porcentajeSubvencionable: 60,
+    urlSede: 'https://sede.xunta.gal', requisitos: ['Empresa en Galicia', 'Actividad hostelera o turística', 'Ahorro energético > 20%'],
+    descripcion: 'Ayudas INEGA para mejora de la eficiencia energética en establecimientos del sector hostelero. Incluye bombas de calor de alta eficiencia y sistemas de climatización con recuperación de calor.',
+  },
+  {
+    idBdns: '894201', nombre: 'IN421T — Autoconsumo fotovoltaico para PYME (Galicia)',
+    organismo: 'INEGA — Instituto Enerxético de Galicia', tipo: 'autonomica',
+    fechaApertura: new Date('2026-02-01'), fechaCierre: new Date('2026-09-30'),
+    fechaJustificacion: new Date('2027-06-30'),
+    importeMax: 100000, porcentajeSubvencionable: 40,
+    urlSede: 'https://sede.xunta.gal', requisitos: ['Empresa o autónomo en Galicia', 'Instalación < 100 kWp', 'Proyecto técnico visado'],
+    descripcion: 'Subvenciones INEGA para instalaciones de autoconsumo fotovoltaico en PYMEs gallegas. Requiere proyecto técnico completo (memoria, cálculos, planos, fichas técnicas) firmado por técnico colegiado.',
   },
 ]
 
@@ -601,6 +627,32 @@ export const expedientes: Expediente[] = [
       { id: 'h52', estadoAnterior: 'CONCEDIDA', estadoNuevo: 'JUSTIFICACION', fecha: d(-35), usuario: 'Laura Martínez' },
     ],
   },
+  {
+    id: 'e26', clienteId: 'c11', convocatoriaId: '893737', estado: 'PREPARACION',
+    fechaSolicitud: new Date('2026-02-10'), numeroOficial: '',
+    importeSolicitado: 43098, importeConcedido: 0, gestorId: 'g1',
+    fechaVencimiento: d(90),
+    documentos: [],
+    notas: [
+      { id: 'n_e26_1', texto: 'Solicitud enviada a instalador para bomba de calor ES M40 R290 (INEGA IN417Y).', fecha: d(-6), autor: 'Laura Martínez' },
+    ],
+    historial: [
+      { id: 'h_e26_1', estadoAnterior: null, estadoNuevo: 'PREPARACION', fecha: d(-6), usuario: 'Laura Martínez' },
+    ],
+  },
+  {
+    id: 'e27', clienteId: 'c11', convocatoriaId: '894201', estado: 'PREPARACION',
+    fechaSolicitud: new Date('2026-02-10'), numeroOficial: '',
+    importeSolicitado: 32900, importeConcedido: 0, gestorId: 'g1',
+    fechaVencimiento: d(90),
+    documentos: [],
+    notas: [
+      { id: 'n_e27_1', texto: 'Solicitud enviada a instalador para ampliación FV 40kW — 90 paneles AIKO (INEGA IN421T).', fecha: d(-4), autor: 'Laura Martínez' },
+    ],
+    historial: [
+      { id: 'h_e27_1', estadoAnterior: null, estadoNuevo: 'PREPARACION', fecha: d(-4), usuario: 'Laura Martínez' },
+    ],
+  },
 ]
 
 export const alertas: Alerta[] = [
@@ -713,6 +765,25 @@ export const presupuestos: Presupuesto[] = [
     descripcion: 'Implementación Kit Digital: CRM + página web + factura electrónica.',
     notas: 'Proyecto en ejecución. Entrega prevista fin de mes.',
   },
+  // Solicitudes de proyectos energéticos (INEGA) para el Portal Proveedor
+  {
+    id: 'p7',
+    expedienteId: 'e26',
+    proveedorNombre: 'Sistemas Digitales Norte S.L.',
+    proveedorCif: 'B12345678',
+    estado: 'pendiente',
+    fechaSolicitud: d(-2),
+    descripcion: 'Solicitud de proyecto técnico y presupuesto: bomba de calor aerotérmica alta eficiencia (INEGA IN417Y). Requiere memoria técnica justificativa con tabla de ahorro kWh/año y reducción CO₂.',
+  },
+  {
+    id: 'p8',
+    expedienteId: 'e27',
+    proveedorNombre: 'Sistemas Digitales Norte S.L.',
+    proveedorCif: 'B12345678',
+    estado: 'pendiente',
+    fechaSolicitud: d(-1),
+    descripcion: 'Solicitud de proyecto técnico y presupuesto: ampliación instalación fotovoltaica 40 kWp (INEGA IN421T). Requiere proyecto técnico completo visado por técnico colegiado.',
+  },
 ]
 
 // Mock proveedor data
@@ -722,7 +793,7 @@ export const mockProveedor = {
   cif: 'B12345678',
   contacto: 'Marta Iglesias',
   email: 'marta@sdnorte.es',
-  especialidades: ['Digitalización', 'Formación', 'Software ERP'],
+  especialidades: ['Digitalización', 'Eficiencia Energética', 'Instalaciones FV', 'Software ERP'],
   zona: 'Norte (Galicia, Asturias, Cantabria)',
   valoracion: 4.8,
   expedientesCompletados: 12,

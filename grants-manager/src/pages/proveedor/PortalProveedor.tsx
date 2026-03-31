@@ -24,12 +24,14 @@ function diasHasta(fecha: Date): number {
 }
 
 // Per-grant contextual info for the portal cards
+type TipoPlantilla = 'digitalizacion' | 'formacion' | 'general' | 'energia_calor' | 'energia_fv'
+
 const GRANT_CONTEXT: Record<string, {
   necesidad: string
   subvencionable: string[]
   noSubvencionable: string[]
   docsRequeridos: string[]
-  tipoPlantilla: 'digitalizacion' | 'formacion' | 'general'
+  tipoPlantilla: TipoPlantilla
 }> = {
   '731245': {
     necesidad: 'Digitalización del sistema de gestión de stock y punto de venta. Incluye formación al personal.',
@@ -40,7 +42,7 @@ const GRANT_CONTEXT: Record<string, {
       'Declaración responsable capacidad técnica',
       'Certificado estar al corriente pagos SS',
     ],
-    tipoPlantilla: 'digitalizacion',
+    tipoPlantilla: 'digitalizacion' as TipoPlantilla,
   },
   '731890': {
     necesidad: 'Implementación de soluciones digitales: presencia en internet, gestión de clientes (CRM) y factura electrónica.',
@@ -51,7 +53,51 @@ const GRANT_CONTEXT: Record<string, {
       'Presupuesto desglosado por solución digital',
       'Acreditación como Agente Digitalizador',
     ],
-    tipoPlantilla: 'digitalizacion',
+    tipoPlantilla: 'digitalizacion' as TipoPlantilla,
+  },
+
+  '893737': {
+    necesidad: 'Sustitución del sistema de climatización por bomba de calor aerotérmica de alta eficiencia (SCOP ≥ 3,5). Requiere memoria técnica justificativa INEGA con tabla mensual de ahorro energético (kWh/año) y reducción CO₂.',
+    subvencionable: [
+      'Bomba de calor aerotérmica de alta eficiencia (SCOP ≥ 3,5)',
+      'Instalación y puesta en marcha certificada',
+      'Proyecto técnico e ingeniería (visado colegial)',
+    ],
+    noSubvencionable: [
+      'IVA (salvo entidades exentas)',
+      'Gastos de mantenimiento posterior',
+      'Obras civiles no vinculadas al equipo',
+    ],
+    docsRequeridos: [
+      'Memoria técnica justificativa INEGA (obligatorio)',
+      'Tabla mensual ahorro kWh/año + reducción kg CO₂/año',
+      'Ficha técnica del equipo (fabricante)',
+      'Presupuesto detallado por partidas (firmado)',
+      'Informe técnico visado por técnico competente',
+    ],
+    tipoPlantilla: 'energia_calor' as TipoPlantilla,
+  },
+  '894201': {
+    necesidad: 'Ampliación de instalación fotovoltaica de autoconsumo (≤100 kWp). Requiere proyecto técnico completo visado por ingeniero colegiado: memoria, cálculos, planos, fichas técnicas, plan de seguridad.',
+    subvencionable: [
+      'Módulos fotovoltaicos y estructura de soporte',
+      'Inversor y protecciones CC/CA',
+      'Cableado DC/AC y equipos de medida',
+      'Proyecto técnico completo visado',
+    ],
+    noSubvencionable: [
+      'Baterías de almacenamiento (línea diferente)',
+      'IVA (salvo entidades exentas)',
+      'Tasas de tramitación administrativa',
+    ],
+    docsRequeridos: [
+      'Proyecto técnico visado: memoria + cálculos + planos (obligatorio)',
+      'Fichas técnicas de módulos FV e inversor',
+      'Plan de seguridad y salud (obligatorio)',
+      'Presupuesto detallado por partidas (firmado)',
+      'Estimación de producción anual (kWh/año)',
+    ],
+    tipoPlantilla: 'energia_fv' as TipoPlantilla,
   },
 }
 
@@ -65,7 +111,7 @@ function getGrantContext(convocatoriaId: string) {
       'Declaración responsable',
       'Certificado corriente de pago AEAT y SS',
     ],
-    tipoPlantilla: 'general' as const,
+    tipoPlantilla: 'general' as TipoPlantilla,
   }
 }
 
@@ -451,7 +497,7 @@ export function PortalProveedor() {
 }
 
 // CSV download utility
-function downloadPlantilla(tipo: 'digitalizacion' | 'formacion' | 'general', nombreSubvencion: string) {
+function downloadPlantilla(tipo: TipoPlantilla, nombreSubvencion: string) {
   let csv = ''
   const header = 'Partida,Descripción,Unidades,Precio unitario,Total\n'
 
@@ -466,6 +512,22 @@ function downloadPlantilla(tipo: 'digitalizacion' | 'formacion' | 'general', nom
       'Formación presencial,Horas de formación presencial,,0,0\n' +
       'Material didáctico,Materiales por alumno,,0,0\n' +
       'Certificación,Emisión certificados,,0,0\n'
+  } else if (tipo === 'energia_calor') {
+    csv = header +
+      'Equipo,Bomba de calor aerotérmica (modelo + nº oferta),,0,0\n' +
+      'Instalación hidráulica,Adaptación circuito hidráulico y conexiones,,0,0\n' +
+      'Sistema eléctrico,Cuadro eléctrico y protecciones,,0,0\n' +
+      'Ingeniería,Proyecto técnico y memoria justificativa INEGA,,0,0\n' +
+      'Puesta en marcha,Configuración pruebas y certificación,,0,0\n'
+  } else if (tipo === 'energia_fv') {
+    csv = header +
+      'Módulos FV,Paneles fotovoltaicos (ud × precio/panel),,0,0\n' +
+      'Estructura soporte,Estructura de montaje coplanar/inclinada,,0,0\n' +
+      'Inversor,Inversor trifásico + protecciones CC y CA,,0,0\n' +
+      'Equipos de medida,Contador bidireccional y telegestión,,0,0\n' +
+      'Protecciones eléctricas,Cuadro AC fusibles descargadores,,0,0\n' +
+      'Cableado,Conductor DC y AC bandejas tubería protectora,,0,0\n' +
+      'Instalación,Montaje conexionado y puesta en marcha,,0,0\n'
   } else {
     csv = header +
       'Servicio principal,Descripción detallada del servicio,,0,0\n' +
