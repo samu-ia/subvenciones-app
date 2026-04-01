@@ -390,7 +390,7 @@ export default function ChatsPage() {
 
     try {
       let body: FormData | string;
-      let headers: Record<string, string> = {};
+      const headers: Record<string, string> = {};
 
       if (archivo) {
         const fd = new FormData();

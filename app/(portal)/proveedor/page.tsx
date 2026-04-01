@@ -118,10 +118,6 @@ export default function PortalProveedorPage() {
   const [tab, setTab] = useState<'expedientes' | 'presupuestos' | 'contratos'>('expedientes');
   const [savingDisponible, setSavingDisponible] = useState(false);
 
-  useEffect(() => {
-    cargar();
-  }, []);
-
   async function cargar() {
     setLoading(true);
     const supabase = createClient();
@@ -173,6 +169,11 @@ export default function PortalProveedorPage() {
     })));
     setLoading(false);
   }
+
+  useEffect(() => {
+    cargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function toggleDisponible() {
     if (!proveedor) return;
