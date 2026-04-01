@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Search, Plus } from 'lucide-react';
 
 interface Cliente {
@@ -21,38 +21,29 @@ interface Cliente {
 
 export default function ClientesPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [filteredClientes, setFilteredClientes] = useState<Cliente[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch('/api/clientes')
       .then(r => r.json())
-      .then((data: Cliente[]) => {
-        const lista = Array.isArray(data) ? data : [];
-        setClientes(lista);
-        setFilteredClientes(lista);
-      })
+      .then((data: Cliente[]) => { setClientes(Array.isArray(data) ? data : []); })
       .catch(e => console.error('Error cargando clientes:', e))
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
-    if (!searchTerm) {
-      setFilteredClientes(clientes);
-    } else {
-      const q = searchTerm.toLowerCase();
-      const filtered = clientes.filter(c =>
-        c.nombre_empresa?.toLowerCase().includes(q) ||
-        c.nombre_normalizado?.toLowerCase().includes(q) ||
-        c.nif?.toLowerCase().includes(q) ||
-        c.actividad?.toLowerCase().includes(q) ||
-        c.cnae_descripcion?.toLowerCase().includes(q) ||
-        c.ciudad?.toLowerCase().includes(q) ||
-        c.comunidad_autonoma?.toLowerCase().includes(q)
-      );
-      setFilteredClientes(filtered);
-    }
+  const filteredClientes = useMemo(() => {
+    if (!searchTerm) return clientes;
+    const q = searchTerm.toLowerCase();
+    return clientes.filter(c =>
+      c.nombre_empresa?.toLowerCase().includes(q) ||
+      c.nombre_normalizado?.toLowerCase().includes(q) ||
+      c.nif?.toLowerCase().includes(q) ||
+      c.actividad?.toLowerCase().includes(q) ||
+      c.cnae_descripcion?.toLowerCase().includes(q) ||
+      c.ciudad?.toLowerCase().includes(q) ||
+      c.comunidad_autonoma?.toLowerCase().includes(q)
+    );
   }, [searchTerm, clientes]);
 
   const tamanoBadge = (t: string | null) => {
