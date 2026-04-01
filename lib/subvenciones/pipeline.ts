@@ -132,7 +132,7 @@ async function procesarConvocatoria(
   conv: BdnsConvocatoria,
   iaConfig: IaConfig | null,
   opciones: PipelineOptions,
-  logId: string,
+  _logId: string,
 ): Promise<{ resultado: 'nueva' | 'actualizada' | 'sin_cambio' | 'error'; bdnsId: string; error?: string }> {
   const bdnsId = String(conv.numeroConvocatoria);
 

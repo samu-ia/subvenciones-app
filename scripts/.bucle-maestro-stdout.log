@@ -5549,3 +5549,72 @@ El sistema no puede encontrar la ruta especificada.
 [2026-04-01 14:17:50][R89][INFO] Analizando 1 hallazgos top con Claude...
 [2026-04-01 14:17:50][R89][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
 [2026-04-01 14:18:03][R89][INFO] Fix aplicado por Claude CLI
+warning: in the working copy of 'app/(dashboard)/expedientes/[id]/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(dashboard)/proveedores/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(dashboard)/solicitudes/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(dashboard)/subvenciones-bd/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/.bucle-maestro-stdout.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/.bucle-maestro.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(dashboard)/expedientes/[id]/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(dashboard)/proveedores/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(dashboard)/solicitudes/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(dashboard)/subvenciones-bd/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/.bucle-maestro-stdout.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/.bucle-maestro.log', LF will be replaced by CRLF the next time Git touches it
+[2026-04-01 14:18:04][R89][INFO] Commit de respaldo realizado
+[2026-04-01 14:18:06][R89][INFO] Push a origin/main OK
+
+╔══════════════════════════════════════════════════════════╗
+║  RONDA 89   — INFORME FINAL  (25s)                        ║
+╠══════════════════════════════════════════════════════════╣
+║  Subvenciones: 307   | Abiertas: 165   | Matches: 3137  ║
+║  Hallazgos detectados: 1    | Acciones pipeline: 0  ║
+╠══════════════════════════════════════════════════════════╣
+║  TOP HALLAZGOS:                                           ║
+║    [p9] 41 errores TypeScript                            ║
+╚══════════════════════════════════════════════════════════╝
+
+[2026-04-01 14:18:06][R89][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)
+
+████████████████████████████████████████████████████████████
+[2026-04-01 14:21:06][R90][INFO] INICIANDO RONDA 90
+████████████████████████████████████████████████████████████
+
+════════════════════════════════════════════════════════════
+  MÓDULO 1 — Salud de BD
+════════════════════════════════════════════════════════════
+[2026-04-01 14:21:06][R90][INFO] Subvenciones: 307 | Sin PDF: 0 | Sin título: 0
+[2026-04-01 14:21:06][R90][INFO] Matches: 3137 | Sin motivo: 0
+[2026-04-01 14:21:06][R90][INFO] Expedientes: 2 | Sin fase: 0
+[2026-04-01 14:21:06][R90][INFO] Pipeline errores: 0
+[2026-04-01 14:21:07][R90][INFO] Estados convocatoria: {"abierta":165,"cerrada":35,"desconocido":48,"proxima":59}
+
+════════════════════════════════════════════════════════════
+  MÓDULO 2 — Calidad de código
+════════════════════════════════════════════════════════════
+[2026-04-01 14:21:21][R90][WARN] TypeScript: 41 errores
+El sistema no puede encontrar la ruta especificada.
+El sistema no puede encontrar la ruta especificada.
+El sistema no puede encontrar la ruta especificada.
+
+════════════════════════════════════════════════════════════
+  MÓDULO 3 — Test de APIs (Supabase directo)
+════════════════════════════════════════════════════════════
+[2026-04-01 14:21:21][R90][INFO] ✓ Query matches: 5 resultados
+[2026-04-01 14:21:21][R90][INFO] ✓ Convocatorias abiertas: 165
+[2026-04-01 14:21:21][R90][INFO] ✓ Expedientes en cobro: todos tienen importe_concedido
+[2026-04-01 14:21:22][R90][INFO] Clientes sin NIF (onboarding incompleto): 4
+[2026-04-01 14:21:22][R90][INFO] Alertas sin leer: null
+
+════════════════════════════════════════════════════════════
+  MÓDULO 4 — Mantenimiento de Pipeline
+════════════════════════════════════════════════════════════
+[2026-04-01 14:21:22][R90][INFO] Matching reciente (hace 5.5h) — skip
+[2026-04-01 14:21:22][R90][INFO] Pipeline BDNS reciente (hace 5.6h) — skip
+
+════════════════════════════════════════════════════════════
+  MÓDULO 5 — Análisis IA + Generación de mejoras
+════════════════════════════════════════════════════════════
+[2026-04-01 14:21:22][R90][INFO] Analizando 1 hallazgos top con Claude...
+[2026-04-01 14:21:22][R90][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
+[2026-04-01 14:21:35][R90][INFO] Fix aplicado por Claude CLI

@@ -166,7 +166,7 @@ export async function normalizarYGuardar(
   supabase: SupabaseClient,
   input: NormalizarInput
 ): Promise<NormalizarResult & EtapaPipelineResult> {
-  const { rawId, bdns_id, raw, ia, iaModelo, fuente } = input;
+  const { bdns_id, raw, ia } = input;
 
   try {
     const payload = construirPayloadPrincipal(input);

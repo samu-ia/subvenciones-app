@@ -364,5 +364,4 @@ export default function SubvencionFolder({
 }
 
 // Needed for spinner
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const _style = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;

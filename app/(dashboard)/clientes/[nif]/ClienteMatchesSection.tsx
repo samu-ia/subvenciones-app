@@ -203,7 +203,7 @@ function FilaMatch({ m, onEstadoChange }: {
 
 export default function ClienteMatchesSection({
   initialMatches,
-  nif,
+  nif: _nif,
 }: {
   initialMatches: MatchItem[];
   nif: string;

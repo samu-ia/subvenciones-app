@@ -13,7 +13,6 @@
 import type {
   EstadoCalculatorInput,
   EstadoCalculatorOutput,
-  EstadoConvocatoria,
 } from '@/lib/types/subvenciones-pipeline';
 
 /** Días a partir del cierre en que consideramos urgente */

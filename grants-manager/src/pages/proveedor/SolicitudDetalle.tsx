@@ -210,6 +210,7 @@ export function SolicitudDetalle() {
       })
       .catch((e) => setAiError(e.message ?? 'Error generando contexto'))
       .finally(() => setAiLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isGeneric, convocatoria])
 
   // Form state

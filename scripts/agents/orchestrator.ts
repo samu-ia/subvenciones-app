@@ -217,7 +217,7 @@ async function cleanupWorktree(worktreePath: string): Promise<void> {
   try {
     await execAsync(`git worktree remove "${worktreePath}" --force`, { cwd: ROOT });
     console.log(`Worktree eliminado: ${worktreePath}`);
-  } catch (e) {
+  } catch {
     console.warn(`No se pudo eliminar worktree: ${worktreePath}`);
   }
 }
@@ -300,7 +300,6 @@ async function runAgent(task: AgentTask): Promise<void> {
     const prompt = `# Tarea: ${title}\n\n${description}\n\n---\nAl terminar, haz commit de todos los cambios con un mensaje descriptivo. Si necesitas input humano (credenciales, decisiones de pago, accesos), usa AskUserQuestion una sola vez y explica exactamente qué necesitas y por qué.`;
 
     let fullOutput = '';
-    let lastActivity = Date.now();
 
     for await (const message of query({
       prompt,
@@ -325,7 +324,6 @@ async function runAgent(task: AgentTask): Promise<void> {
         fullOutput = message.result ?? '';
         console.log(`✅ [${agent_type}] Completado: ${title}`);
       } else if (message.type === 'assistant') {
-        lastActivity = Date.now();
         // Log progreso cada vez que el agente habla
         const textBlock = (message as { content?: { type: string; text?: string }[] }).content?.find((b) => b.type === 'text');
         if (textBlock?.text) {
