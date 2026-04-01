@@ -534,6 +534,8 @@ function PanelFicha({
   const [currentFase, setCurrentFase] = useState(expediente.fase || 'preparacion');
   const [feeEstado, setFeeEstado] = useState(expediente.fee_estado || 'no_aplica');
   const [feeSaving, setFeeSaving] = useState(false);
+  const [importeConcedido, setImporteConcedido] = useState(expediente.importe_concedido ? String(expediente.importe_concedido) : '');
+  const [importeSaving, setImporteSaving] = useState(false);
   const [fechas, setFechas] = useState({
     plazo_solicitud: expediente.plazo_solicitud?.slice(0, 10) ?? '',
     fecha_presentacion: expediente.fecha_presentacion?.slice(0, 10) ?? '',
@@ -556,6 +558,21 @@ function PanelFicha({
       });
     } finally {
       setFechasSaving(false);
+    }
+  }
+
+  async function guardarImporteConcedido() {
+    const val = parseFloat(importeConcedido.replace(/[.,\s]/g, '').replace(',', '.'));
+    if (isNaN(val) || val <= 0) return;
+    setImporteSaving(true);
+    try {
+      await fetch(`/api/expedientes/${expediente.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ importe_concedido: val }),
+      });
+    } finally {
+      setImporteSaving(false);
     }
   }
 
@@ -775,23 +792,31 @@ function PanelFicha({
       <div style={{ height: 1, background: S.border }} />
 
       {/* ── IMPORTE CONCEDIDO + FEE ───────────────────────────── */}
-      {(expediente.importe_concedido || (feeEstado && feeEstado !== 'no_aplica')) && (
+      {(['resolucion_definitiva', 'aceptacion', 'ejecucion', 'justificacion', 'cobro'].includes(currentFase) || expediente.importe_concedido || (feeEstado && feeEstado !== 'no_aplica')) && (
         <>
           <div style={{ padding: '12px 14px' }}>
             <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: S.muted, marginBottom: 10 }}>
-              Resolución económica
+              Resolución económica {importeSaving && <span style={{ color: S.teal }}>· Guardando...</span>}
             </div>
 
-            {expediente.importe_concedido && (
-              <div style={{
-                background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8,
-                padding: '10px 12px', marginBottom: 10,
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              }}>
-                <span style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 600 }}>Importe concedido</span>
-                <span style={{ fontSize: '1rem', fontWeight: 800, color: S.green }}>{fmtE(expediente.importe_concedido)}</span>
-              </div>
-            )}
+            {/* Importe concedido editable */}
+            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px', marginBottom: 10 }}>
+              <div style={{ fontSize: '0.68rem', color: '#166534', fontWeight: 600, marginBottom: 4 }}>Importe concedido (€)</div>
+              <input
+                type="number"
+                min="0"
+                step="100"
+                value={importeConcedido}
+                onChange={e => setImporteConcedido(e.target.value)}
+                onBlur={guardarImporteConcedido}
+                placeholder="0"
+                style={{
+                  width: '100%', border: 'none', background: 'transparent',
+                  fontSize: '1.1rem', fontWeight: 800, color: S.green,
+                  fontFamily: 'inherit', outline: 'none', padding: 0,
+                }}
+              />
+            </div>
 
             {feeEstado && feeEstado !== 'no_aplica' && (
               <div style={{ background: '#fff', borderRadius: 8, border: `1px solid ${S.border}`, padding: '10px 12px' }}>
