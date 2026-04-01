@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import {
   Store, Plus, Edit2, X, Check, Loader2,
-  Globe, Mail, Phone, Tag, ChevronDown, ToggleLeft, ToggleRight,
+  ToggleLeft, ToggleRight,
 } from 'lucide-react';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -36,12 +36,6 @@ const CATEGORIAS: Record<string, { label: string; color: string; bg: string }> =
 };
 
 // ─── Modal edición ─────────────────────────────────────────────────────────────
-
-const FORM_VACIO = {
-  nombre: '', categoria: 'tecnologia', descripcion: '',
-  servicios: '', web: '', contacto_email: '',
-  contacto_nombre: '', precio_referencia: '', activo: true,
-};
 
 function ModalProveedor({
   proveedor,
@@ -193,17 +187,17 @@ function ModalProveedor({
   );
 }
 
+const supabase = createClient();
+
 // ─── Página ────────────────────────────────────────────────────────────────────
 
 export default function ProveedoresPage() {
-  const supabase = createClient();
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroCat, setFiltroCat] = useState('');
   const [filtroTexto, setFiltroTexto] = useState('');
   const [modal, setModal] = useState<{ open: boolean; proveedor?: Proveedor | null }>({ open: false });
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const cargar = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase
@@ -214,7 +208,6 @@ export default function ProveedoresPage() {
     setLoading(false);
   }, []);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { cargar(); }, [cargar]);
 
   async function toggleActivo(p: Proveedor) {

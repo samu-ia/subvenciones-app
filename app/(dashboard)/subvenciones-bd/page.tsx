@@ -7,8 +7,6 @@ import {
   ChevronRight, AlertTriangle, Shield, X, RotateCcw,
   Info, Zap, ChevronDown, ChevronUp, Eye, EyeOff,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
 interface SubvencionItem {

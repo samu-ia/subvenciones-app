@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
-import { ArrowLeft, Briefcase, User, Bot, CheckSquare, Store, Check, Square, ExternalLink, Mail, RefreshCw, FileText, Receipt, Plus, X } from 'lucide-react';
+import { ArrowLeft, Briefcase, User, Bot, CheckSquare, Store, Check, Square, ExternalLink, Mail, FileText, Receipt, Plus, X } from 'lucide-react';
 import WorkspaceLayout from '@/components/workspace/WorkspaceLayout';
 import NotebookLeftPanel from '@/components/workspace/docs/NotebookLeftPanel';
 import RichTextEditor from '@/components/workspace/editor/RichTextEditor';

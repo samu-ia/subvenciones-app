@@ -417,10 +417,11 @@ function ModalDetalle({
   );
 }
 
+const supabase = createClient();
+
 // ─── Página principal ──────────────────────────────────────────────────────────
 
 export default function SolicitudesPage() {
-  const supabase = createClient();
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroEstado, setFiltroEstado] = useState('');
@@ -436,7 +437,6 @@ export default function SolicitudesPage() {
     });
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const cargar = useCallback(async () => {
     setLoading(true);
     const q = supabase
@@ -486,7 +486,6 @@ export default function SolicitudesPage() {
     setLoading(false);
   }, [filtroEstado]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { cargar(); }, [cargar]);
 
   const visible = solicitudes.filter(s => {
