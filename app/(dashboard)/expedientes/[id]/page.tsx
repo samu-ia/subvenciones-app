@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
-import { ArrowLeft, Briefcase, User, Bot, CheckSquare, Store, Check, Square, ExternalLink, Mail, FileText, Receipt, Plus, X } from 'lucide-react';
+import { ArrowLeft, Briefcase, User, Bot, CheckSquare, Store, Check, Square, ExternalLink, Mail, FileText, Receipt, Plus, X, Download } from 'lucide-react';
 import WorkspaceLayout from '@/components/workspace/WorkspaceLayout';
 import NotebookLeftPanel from '@/components/workspace/docs/NotebookLeftPanel';
 import RichTextEditor from '@/components/workspace/editor/RichTextEditor';
@@ -1307,6 +1307,31 @@ export default function ExpedienteWorkspacePage() {
     setDocumentos(docs => docs.map(d => d.id === docId ? { ...d, tipo_documento: tipo } : d));
   };
 
+  function exportarPDF(nombre: string, contenido: string) {
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(`<!DOCTYPE html><html lang="es"><head>
+      <meta charset="UTF-8">
+      <title>${nombre}</title>
+      <style>
+        body{font-family:Georgia,serif;max-width:800px;margin:40px auto;padding:0 32px;color:#1e293b;line-height:1.7;font-size:15px}
+        h1{font-size:1.7rem;color:#0d1f3c;border-bottom:2px solid #e2e8f0;padding-bottom:12px;margin-bottom:24px}
+        h2{font-size:1.25rem;color:#0d1f3c;margin-top:2rem}
+        h3{font-size:1rem;color:#334155;margin-top:1.5rem}
+        p{margin:.7rem 0}ul,ol{padding-left:1.6rem}
+        strong{color:#0d1f3c}
+        a{color:#0d9488}
+        blockquote{border-left:3px solid #0d9488;margin:1rem 0;padding:4px 16px;color:#475569}
+        @media print{body{margin:20px;padding:0 16px}button{display:none}}
+      </style>
+    </head><body>
+      <h1>${nombre}</h1>
+      ${contenido || '<p><em>Documento vacío</em></p>'}
+      <script>window.onload=()=>window.print()<\/script>
+    </body></html>`);
+    win.document.close();
+  }
+
   const handleGenerarDocumento = async (nombre: string, contenido: string, _prompt: string) => {
     const supabase = createClient();
 
@@ -1531,6 +1556,18 @@ export default function ExpedienteWorkspacePage() {
                       Guardado {lastSaved.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   )}
+                  <button
+                    onClick={() => exportarPDF(selectedDoc.nombre, docContent)}
+                    title="Exportar como PDF"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 4,
+                      padding: '3px 8px', borderRadius: 6, flexShrink: 0,
+                      border: '1px solid var(--border)', background: 'var(--background)',
+                      fontSize: '11px', color: 'var(--muted-foreground)', cursor: 'pointer',
+                    }}
+                  >
+                    <Download size={11} /> PDF
+                  </button>
                 </div>
                 <div style={{ flex: 1, overflow: 'hidden' }}>
                   <RichTextEditor
