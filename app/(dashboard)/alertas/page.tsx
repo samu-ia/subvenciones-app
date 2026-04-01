@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Bell, AlertTriangle, Clock, CheckCircle, ChevronRight, RefreshCw, Calendar } from 'lucide-react';
+import { Bell, Clock, CheckCircle, ChevronRight, RefreshCw, Calendar } from 'lucide-react';
 import type { Alerta } from '@/app/api/alertas/route';
 
 const PRIORIDAD_STYLES: Record<string, { bg: string; color: string; border: string; dot: string }> = {

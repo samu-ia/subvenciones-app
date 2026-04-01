@@ -224,7 +224,7 @@ function PanelPresupuestos({ expedienteId }: { expedienteId: string }) {
     setLoading(false);
   };
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { reload(); }, [expedienteId]);
 
   const crearPresupuesto = async () => {
@@ -619,8 +619,6 @@ function PanelFicha({
     if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K €`;
     return `${n.toLocaleString('es-ES')} €`;
   };
-  const fmtFecha = (s?: string | null) => s ? new Date(s).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : null;
-  const diasHastaFin = subvencion?.plazo_fin ? Math.ceil((new Date(subvencion.plazo_fin).getTime() - Date.now()) / 86_400_000) : null;
 
   const respuestas = solicitud?.respuestas_ia ?? [];
   const proyecto = respuestas.filter(r => r.categoria === 'proyecto');
@@ -643,8 +641,6 @@ function PanelFicha({
   // Fases principales (sin terminales) para el stepper
   const FASES_MAIN = FASES_EXPEDIENTE.slice(0, 10);
   const currentFaseIdx = FASES_MAIN.findIndex(f => f.value === currentFase);
-  const faseActual = FASES_EXPEDIENTE.find(f => f.value === currentFase);
-  const esTerminal = ['denegada', 'desistida'].includes(currentFase);
 
 
   const prop = (label: string, value: string | null | undefined) => value ? (
@@ -1029,7 +1025,6 @@ export default function ExpedienteWorkspacePage() {
   const [contextSelections, setContextSelections] = useState<Record<string, ContextMode>>({});
   const [archivoSignedUrl, setArchivoSignedUrl] = useState<string | null>(null);
   const [panelTab, setPanelTab] = useState<'ia' | 'checklist' | 'proveedores' | 'ficha' | 'contratos'>('ficha');
-  const [setupLoading, setSetupLoading] = useState(false);
   const [clienteData, setClienteData] = useState<ClienteCompleto | null>(null);
   const [subvencionData, setSubvencionData] = useState<SubvencionData | null>(null);
   const [solicitudData, setSolicitudData] = useState<SolicitudData | null>(null);
@@ -1274,7 +1269,7 @@ export default function ExpedienteWorkspacePage() {
     setDocumentos(docs => docs.map(d => d.id === docId ? { ...d, tipo_documento: tipo } : d));
   };
 
-  const handleGenerarDocumento = async (nombre: string, contenido: string, prompt: string) => {
+  const handleGenerarDocumento = async (nombre: string, contenido: string, _prompt: string) => {
     const supabase = createClient();
 
     // Modo insertar en documento existente

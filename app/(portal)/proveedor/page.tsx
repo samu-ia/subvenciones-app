@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
   LogOut, Store, Briefcase, FileText, CheckCircle,
-  Clock, Euro, AlertTriangle, Star, Globe, Mail,
+  Clock, Euro, Star,
   ChevronRight, Package, TrendingUp, RefreshCw,
 } from 'lucide-react';
 

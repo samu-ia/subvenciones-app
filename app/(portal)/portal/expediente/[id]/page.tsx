@@ -7,8 +7,8 @@ import { useMediaQuery } from '@/lib/hooks/use-media-query';
 import {
   ArrowLeft, Check, CheckCircle, Clock, Upload, Loader2,
   FileText, Send, Bot, User, Paperclip, ExternalLink,
-  AlertTriangle, CreditCard, Landmark, ChevronRight, X,
-  Building2, Zap, ArrowRight, Info,
+  AlertTriangle, CreditCard, X,
+  Building2, Zap, Info,
 } from 'lucide-react';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────

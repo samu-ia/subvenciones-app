@@ -3,8 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Database, RefreshCw, Play, CheckCircle2, Clock, AlertCircle,
-  ExternalLink, Search, Loader2, Settings, Brain, FileText,
-  ChevronRight, AlertTriangle, Shield, BarChart3, X, RotateCcw,
+  ExternalLink, Search, Loader2, Brain,
+  ChevronRight, AlertTriangle, Shield, X, RotateCcw,
   Info, Zap, ChevronDown, ChevronUp, Eye, EyeOff,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";

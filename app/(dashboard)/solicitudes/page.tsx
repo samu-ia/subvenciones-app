@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import {
   ClipboardList, ChevronRight, CheckCircle, Clock, XCircle,
-  AlertCircle, FileText, CreditCard, Loader2, X, ChevronDown,
+  FileText, CreditCard, Loader2, X,
   ArrowUpRight, RefreshCw, Building2, Zap,
 } from 'lucide-react';
 
@@ -436,6 +436,7 @@ export default function SolicitudesPage() {
     });
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const cargar = useCallback(async () => {
     setLoading(true);
     const q = supabase

@@ -6,8 +6,8 @@ import { createClient } from '@/lib/supabase/client';
 import { useMediaQuery } from '@/lib/hooks/use-media-query';
 import {
   Bell, LogOut, ChevronRight, ExternalLink, FileText,
-  CheckCircle, AlertTriangle, Clock, Zap, Star,
-  CreditCard, Landmark, ArrowRight, ArrowLeft,
+  CheckCircle, Clock, Zap, Star,
+  Landmark, ArrowRight, ArrowLeft,
   Shield, X, Check, Loader2, User, Building2, Save,
   MessageCircle, Send, Bot, Paperclip, Menu, Upload,
 } from 'lucide-react';

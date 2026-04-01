@@ -139,6 +139,7 @@ export default function ReunionNotebookPage() {
     supabase.auth.getUser().then(({ data: { user } }) => setUserId(user?.id ?? null));
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadData(); }, [reunionId]);
 
   const loadData = async () => {

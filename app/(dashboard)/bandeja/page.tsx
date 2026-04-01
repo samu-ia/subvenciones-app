@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import {
   Inbox, RefreshCw, CheckCircle, AlertTriangle, Clock,
-  ClipboardList, FolderOpen, Sparkles, ChevronRight, Loader2,
+  ChevronRight, Loader2,
 } from 'lucide-react';
 import type { Alerta } from '@/app/api/alertas/route';
 

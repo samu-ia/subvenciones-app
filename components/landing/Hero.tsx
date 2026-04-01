@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle, LogIn, ArrowRight, Shield, Zap, TrendingUp } from 'lucide-react';
+import { CheckCircle, LogIn, Shield, Zap } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 const trust = [

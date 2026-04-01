@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import {
-  RefreshCw, Loader2, TrendingUp, Building2, FileText,
-  CheckCircle, Clock, ChevronRight, Zap, Filter, X,
+  RefreshCw, Loader2, TrendingUp, FileText,
+  CheckCircle, Clock, Zap, Filter, X,
 } from 'lucide-react';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────

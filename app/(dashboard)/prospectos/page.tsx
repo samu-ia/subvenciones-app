@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, Phone, Mail, Globe, MapPin, ChevronDown, X, Check } from 'lucide-react';
+import { Search, Plus, Phone, Mail, Globe, MapPin, X, Check } from 'lucide-react';
 
 interface Prospecto {
   id: string;

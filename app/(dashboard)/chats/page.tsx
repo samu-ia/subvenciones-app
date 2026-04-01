@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   MessageCircle, Send, Paperclip, Search, X,
   Loader2, Bot, User, Building2, RefreshCw,
-  FileText, Zap, Clock, CreditCard, ChevronRight,
+  FileText, Zap, Clock, CreditCard,
   AlertTriangle, CheckCircle, Info,
 } from 'lucide-react';
 

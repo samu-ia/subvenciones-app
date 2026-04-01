@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  Building2, FolderOpen, TrendingUp, AlertTriangle,
+  FolderOpen, TrendingUp, AlertTriangle,
   Clock, Euro, Target, MessageSquare,
   ArrowRightLeft, FilePlus, Activity, Users, Receipt,
-  ChevronRight, Sparkles, ArrowUpRight,
+  ChevronRight, ArrowUpRight,
 } from 'lucide-react';
 
 // ── Tipos ────────────────────────────────────────────────────────────────────

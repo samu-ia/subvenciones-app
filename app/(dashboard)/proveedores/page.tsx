@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import {
   Store, Plus, Edit2, X, Check, Loader2,
-  Globe, Mail, Phone, Tag, ChevronDown, ToggleLeft, ToggleRight,
+  ToggleLeft, ToggleRight,
 } from 'lucide-react';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -203,6 +203,7 @@ export default function ProveedoresPage() {
   const [filtroTexto, setFiltroTexto] = useState('');
   const [modal, setModal] = useState<{ open: boolean; proveedor?: Proveedor | null }>({ open: false });
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const cargar = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase
