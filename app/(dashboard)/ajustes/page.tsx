@@ -791,7 +791,7 @@ export default function AjustesPage() {
 
           {/* Info */}
           <div style={{ marginTop: 24, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, padding: "14px 16px", fontSize: "0.82rem", color: "#92400e" }}>
-            <strong>Cómo funciona:</strong> Al clicar "Notificar al cliente" en Novedades → Oportunidades,
+            <strong>Cómo funciona:</strong> Al clicar &ldquo;Notificar al cliente&rdquo; en Novedades → Oportunidades,
             el sistema envía automáticamente un email y/o WhatsApp al cliente con los detalles de la subvención y
             un enlace a su portal para que pueda solicitar la ayuda directamente.
             El canal debe estar activo y el cliente debe tener email/teléfono registrado.
