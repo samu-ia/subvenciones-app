@@ -530,9 +530,34 @@ function PanelFicha({
   onFaseChange?: (fase: string) => void;
 }) {
   const [faseSaving, setFaseSaving] = useState(false);
+  const [faseError, setFaseError] = useState<string | null>(null);
   const [currentFase, setCurrentFase] = useState(expediente.fase || 'preparacion');
   const [feeEstado, setFeeEstado] = useState(expediente.fee_estado || 'no_aplica');
   const [feeSaving, setFeeSaving] = useState(false);
+  const [fechas, setFechas] = useState({
+    plazo_solicitud: expediente.plazo_solicitud?.slice(0, 10) ?? '',
+    fecha_presentacion: expediente.fecha_presentacion?.slice(0, 10) ?? '',
+    fecha_resolucion_provisional: expediente.fecha_resolucion_provisional?.slice(0, 10) ?? '',
+    fecha_alegaciones_fin: expediente.fecha_alegaciones_fin?.slice(0, 10) ?? '',
+    fecha_resolucion_definitiva: expediente.fecha_resolucion_definitiva?.slice(0, 10) ?? '',
+    fecha_fin_ejecucion: expediente.fecha_fin_ejecucion?.slice(0, 10) ?? '',
+    plazo_aceptacion: expediente.plazo_aceptacion?.slice(0, 10) ?? '',
+    plazo_justificacion: expediente.plazo_justificacion?.slice(0, 10) ?? '',
+  });
+  const [fechasSaving, setFechasSaving] = useState(false);
+
+  async function guardarFecha(campo: string, valor: string) {
+    setFechasSaving(true);
+    try {
+      await fetch(`/api/expedientes/${expediente.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [campo]: valor || null }),
+      });
+    } finally {
+      setFechasSaving(false);
+    }
+  }
 
   async function cambiarFeeEstado(nuevoEstado: string) {
     setFeeSaving(true);
@@ -550,14 +575,21 @@ function PanelFicha({
 
   async function cambiarFase(nuevaFase: string) {
     setFaseSaving(true);
+    setFaseError(null);
     try {
-      await fetch(`/api/expedientes/${expediente.id}`, {
+      const res = await fetch(`/api/expedientes/${expediente.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fase: nuevaFase }),
       });
-      setCurrentFase(nuevaFase);
-      onFaseChange?.(nuevaFase);
+      if (res.ok) {
+        setCurrentFase(nuevaFase);
+        onFaseChange?.(nuevaFase);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setFaseError(data?.error ?? `Error al cambiar la fase`);
+        setTimeout(() => setFaseError(null), 4000);
+      }
     } finally {
       setFaseSaving(false);
     }
@@ -596,18 +628,6 @@ function PanelFicha({
   const faseActual = FASES_EXPEDIENTE.find(f => f.value === currentFase);
   const esTerminal = ['denegada', 'desistida'].includes(currentFase);
 
-  // Fechas clave del expediente
-  const FECHAS_CLAVE = [
-    { label: 'Plazo solicitud', fecha: expediente.plazo_solicitud, icon: '📋', urgente: true },
-    { label: 'Fecha presentación', fecha: expediente.fecha_presentacion, icon: '📤' },
-    { label: 'Res. provisional', fecha: expediente.fecha_resolucion_provisional, icon: '⚖️' },
-    { label: 'Fin alegaciones', fecha: expediente.fecha_alegaciones_fin, icon: '💬' },
-    { label: 'Res. definitiva', fecha: expediente.fecha_resolucion_definitiva, icon: '✅' },
-    { label: 'Fin ejecución', fecha: expediente.fecha_fin_ejecucion, icon: '🏁' },
-    { label: 'Plazo aceptación', fecha: expediente.plazo_aceptacion, icon: '🖊️', urgente: true },
-    { label: 'Plazo justificación', fecha: expediente.plazo_justificacion, icon: '📊', urgente: true },
-    ...(subvencion?.plazo_fin ? [{ label: 'Convocatoria cierra', fecha: subvencion.plazo_fin, icon: '⏰', urgente: true }] : []),
-  ].filter(f => f.fecha);
 
   const prop = (label: string, value: string | null | undefined) => value ? (
     <div style={{ display: 'flex', gap: 8, padding: '5px 0', borderBottom: `1px solid ${S.border}`, fontSize: '0.78rem' }}>
@@ -624,6 +644,11 @@ function PanelFicha({
         <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: S.muted, marginBottom: 10 }}>
           Fase del expediente {faseSaving && <span style={{ color: S.teal }}>· Guardando...</span>}
         </div>
+        {faseError && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 7, padding: '8px 12px', marginBottom: 10, fontSize: '0.75rem', color: '#dc2626', fontWeight: 500 }}>
+            {faseError}
+          </div>
+        )}
 
         {/* Steps — fase actual destacada, las demás clicables */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 12 }}>
@@ -695,47 +720,57 @@ function PanelFicha({
 
       <div style={{ height: 1, background: S.border }} />
 
-      {/* ── FECHAS CLAVE ──────────────────────────────────────── */}
-      {FECHAS_CLAVE.length > 0 && (
-        <div style={{ padding: '12px 14px' }}>
-          <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: S.muted, marginBottom: 10 }}>
-            Fechas clave
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {FECHAS_CLAVE.map(({ label, fecha, icon, urgente }) => {
-              const dias = fecha ? Math.ceil((new Date(fecha).getTime() - Date.now()) / 86_400_000) : null;
-              const isFuture = dias !== null && dias >= 0;
-              const isUrgent = urgente && dias !== null && dias >= 0 && dias <= 14;
-              const isPast = dias !== null && dias < 0;
-              return (
-                <div key={label} style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '6px 8px', borderRadius: 6,
-                  background: isUrgent ? '#fff7ed' : 'transparent',
-                }}>
-                  <span style={{ fontSize: '0.85rem', flexShrink: 0 }}>{icon}</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.7rem', color: S.muted, fontWeight: 500 }}>{label}</div>
-                    <div style={{ fontSize: '0.78rem', color: isPast ? S.muted : S.navy, fontWeight: 600 }}>
-                      {fmtFecha(fecha!)}
-                    </div>
-                  </div>
+      {/* ── FECHAS CLAVE (editables) ──────────────────────────── */}
+      <div style={{ padding: '12px 14px' }}>
+        <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: S.muted, marginBottom: 10 }}>
+          Fechas clave {fechasSaving && <span style={{ color: S.teal }}>· Guardando...</span>}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {([
+            { campo: 'plazo_solicitud', label: 'Plazo solicitud', icon: '📋', urgente: true },
+            { campo: 'fecha_presentacion', label: 'Fecha presentación', icon: '📤', urgente: false },
+            { campo: 'fecha_resolucion_provisional', label: 'Res. provisional', icon: '⚖️', urgente: false },
+            { campo: 'fecha_alegaciones_fin', label: 'Fin alegaciones', icon: '💬', urgente: true },
+            { campo: 'fecha_resolucion_definitiva', label: 'Res. definitiva', icon: '✅', urgente: false },
+            { campo: 'plazo_aceptacion', label: 'Plazo aceptación', icon: '🖊️', urgente: true },
+            { campo: 'fecha_fin_ejecucion', label: 'Fin ejecución', icon: '🏁', urgente: false },
+            { campo: 'plazo_justificacion', label: 'Plazo justificación', icon: '📊', urgente: true },
+          ] as { campo: keyof typeof fechas; label: string; icon: string; urgente: boolean }[]).map(({ campo, label, icon, urgente }) => {
+            const valor = fechas[campo];
+            const dias = valor ? Math.ceil((new Date(valor).getTime() - Date.now()) / 86_400_000) : null;
+            const isUrgent = urgente && dias !== null && dias >= 0 && dias <= 14;
+            const isPast = dias !== null && dias < 0;
+            return (
+              <div key={campo} style={{ background: isUrgent ? '#fff7ed' : '#f8fafc', borderRadius: 7, padding: '7px 8px', border: `1px solid ${isUrgent ? '#fed7aa' : S.border}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                  <span style={{ fontSize: '0.68rem', color: isUrgent ? '#f97316' : S.muted, fontWeight: 600 }}>{icon} {label}</span>
                   {dias !== null && (
                     <span style={{
-                      fontSize: '0.68rem', fontWeight: 700, padding: '2px 6px', borderRadius: 100, flexShrink: 0,
+                      fontSize: '0.62rem', fontWeight: 700, padding: '1px 5px', borderRadius: 100,
                       background: isPast ? '#f1f5f9' : isUrgent ? '#fff7ed' : '#f0fdf4',
                       color: isPast ? S.muted : isUrgent ? '#f97316' : S.green,
-                      border: `1px solid ${isPast ? '#e2e8f0' : isUrgent ? '#fed7aa' : '#bbf7d0'}`,
                     }}>
                       {isPast ? `Hace ${Math.abs(dias)}d` : dias === 0 ? 'Hoy' : `${dias}d`}
                     </span>
                   )}
                 </div>
-              );
-            })}
-          </div>
+                <input
+                  type="date"
+                  value={valor}
+                  onChange={e => setFechas(prev => ({ ...prev, [campo]: e.target.value }))}
+                  onBlur={e => guardarFecha(campo, e.target.value)}
+                  style={{
+                    width: '100%', border: 'none', background: 'transparent',
+                    fontSize: '0.78rem', fontWeight: 600, color: isPast ? S.muted : S.navy,
+                    fontFamily: 'inherit', cursor: 'pointer', outline: 'none',
+                    padding: 0,
+                  }}
+                />
+              </div>
+            );
+          })}
         </div>
-      )}
+      </div>
 
       <div style={{ height: 1, background: S.border }} />
 

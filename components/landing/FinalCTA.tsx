@@ -1,9 +1,55 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { AlertTriangle } from 'lucide-react';
+
+interface ProximaConvocatoria {
+  titulo_comercial?: string;
+  titulo?: string;
+  plazo_fin?: string;
+  organismo?: string;
+}
+
 export default function FinalCTA({ onAuthClick }: { onAuthClick?: () => void }) {
+  const [proximas, setProximas] = useState<ProximaConvocatoria[]>([]);
+
+  useEffect(() => {
+    fetch('/api/public/proximas')
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d)) setProximas(d.slice(0, 2)); })
+      .catch(() => {/* ignore */});
+  }, []);
+
+  const fmtFecha = (s?: string) => s ? new Date(s).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' }) : '';
+  const diasHasta = (s?: string) => s ? Math.ceil((new Date(s).getTime() - Date.now()) / 86_400_000) : null;
+
   return (
     <section style={{ background: 'linear-gradient(135deg, #0d1f3c 0%, #0d4a45 100%)', padding: '80px 24px' }}>
       <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center' }}>
+
+        {/* Urgency: próximas convocatorias cerrando */}
+        {proximas.length > 0 && (
+          <div style={{ marginBottom: 28 }}>
+            {proximas.map((p, i) => {
+              const dias = diasHasta(p.plazo_fin);
+              if (!dias || dias < 0 || dias > 30) return null;
+              return (
+                <div key={i} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  background: dias <= 7 ? 'rgba(220,38,38,0.15)' : 'rgba(245,158,11,0.12)',
+                  border: `1px solid ${dias <= 7 ? 'rgba(220,38,38,0.3)' : 'rgba(245,158,11,0.25)'}`,
+                  borderRadius: 100, padding: '6px 16px', marginBottom: 8, marginRight: 8,
+                }}>
+                  <AlertTriangle size={13} style={{ color: dias <= 7 ? '#f87171' : '#fbbf24', flexShrink: 0 }} />
+                  <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.78rem', fontWeight: 600 }}>
+                    {p.titulo_comercial ?? p.titulo?.slice(0, 40)} — cierra en {dias}d ({fmtFecha(p.plazo_fin)})
+                  </span>
+                </div>
+              );
+            }).filter(Boolean)}
+          </div>
+        )}
+
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: 8,
           background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',

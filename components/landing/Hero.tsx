@@ -1,4 +1,7 @@
+'use client';
+
 import { CheckCircle, LogIn, ArrowRight, Shield, Zap, TrendingUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 const trust = [
   { icon: Shield,     text: '0€ hasta que cobres la subvención' },
@@ -6,13 +9,24 @@ const trust = [
   { icon: Zap,        text: 'Resultado en semanas, no en meses' },
 ];
 
-const stats = [
-  { value: '120.000€', label: 'máximo conseguido por una PYME' },
-  { value: '0€',       label: 'coste si no conseguimos nada' },
-  { value: '24h',      label: 'para saber cuánto te corresponde' },
-];
-
 export default function Hero({ onAuthClick }: { onAuthClick?: () => void }) {
+  const [liveStats, setLiveStats] = useState({ convocatorias_abiertas: 47, importe_maximo: 120000 });
+
+  useEffect(() => {
+    fetch('/api/public/stats')
+      .then(r => r.json())
+      .then(d => { if (d.convocatorias_abiertas) setLiveStats(d); })
+      .catch(() => {/* use defaults */});
+  }, []);
+
+  const fmtImporte = (n: number) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : `${(n / 1_000).toFixed(0)}.000`;
+
+  const stats = [
+    { value: `${fmtImporte(liveStats.importe_maximo)}€`, label: 'máximo conseguido por una PYME' },
+    { value: '0€',       label: 'coste si no conseguimos nada' },
+    { value: '24h',      label: 'para saber cuánto te corresponde' },
+  ];
+
   return (
     <section
       id="inicio"
@@ -40,7 +54,7 @@ export default function Hero({ onAuthClick }: { onAuthClick?: () => void }) {
           >
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ade80', display: 'inline-block', boxShadow: '0 0 10px #4ade80', flexShrink: 0 }} />
             <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.82rem', fontWeight: 600 }}>
-              EN VIVO — 47 convocatorias abiertas ahora mismo
+              EN VIVO — {liveStats.convocatorias_abiertas} convocatorias abiertas ahora mismo
             </span>
           </div>
 
