@@ -240,8 +240,8 @@ async function mergeWorktreeBranch(taskId: string, agentType: AgentType): Promis
 
     // Delete the branch
     await execAsync(`git -C "${ROOT}" branch -d ${branchName}`, { cwd: ROOT });
-  } catch (e: any) {
-    console.warn(`[${agentType}] No se pudo hacer merge automático: ${e.message}`);
+  } catch (e) {
+    console.warn(`[${agentType}] No se pudo hacer merge automático: ${(e as Error).message}`);
     console.warn(`  → Mergea manualmente: git merge ${branchName}`);
   }
 }
@@ -327,7 +327,7 @@ async function runAgent(task: AgentTask): Promise<void> {
       } else if (message.type === 'assistant') {
         lastActivity = Date.now();
         // Log progreso cada vez que el agente habla
-        const textBlock = (message as any).content?.find((b: any) => b.type === 'text');
+        const textBlock = (message as { content?: { type: string; text?: string }[] }).content?.find((b) => b.type === 'text');
         if (textBlock?.text) {
           process.stdout.write(`[${agent_type}] ${textBlock.text.slice(0, 120)}\n`);
         }
@@ -346,11 +346,12 @@ async function runAgent(task: AgentTask): Promise<void> {
       completed_at: new Date().toISOString(),
     }).eq('id', id);
 
-  } catch (error: any) {
-    console.error(`❌ [${agent_type}] Error en tarea ${id}:`, error.message);
+  } catch (error) {
+    const errMsg = (error as Error).message;
+    console.error(`❌ [${agent_type}] Error en tarea ${id}:`, errMsg);
     await supabase.from('agent_tasks').update({
       status: 'failed',
-      error: error.message,
+      error: errMsg,
       completed_at: new Date().toISOString(),
     }).eq('id', id);
   } finally {
@@ -485,8 +486,8 @@ Prioriza cosas que broken, que mejoren datos reales, o que ayuden a vender.`;
     if (toolUses.length === 0) {
       console.log('  ⚠️ No se generaron tareas nuevas');
     }
-  } catch (e: any) {
-    console.error('  ❌ Error auto-generando tareas:', e.message);
+  } catch (e) {
+    console.error('  ❌ Error auto-generando tareas:', (e as Error).message);
   }
 }
 

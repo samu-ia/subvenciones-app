@@ -373,7 +373,7 @@ export function NuevaSubvencion() {
 
   // Demo shortcut: expose state setter for testing
   if (typeof window !== 'undefined') {
-    (window as any).__wizardDemo = () => {
+    (window as Window & { __wizardDemo?: () => void }).__wizardDemo = () => {
       setSelected({ idBdns: '763201', nombre: 'Incentivos Kit Digital — Segmento I (10-49 empleados) 2026', organismo: 'Red.es — Ministerio de Transformación Digital', importeMax: 25000, fechaCierre: '2026-06-15', descripcion: 'Digitalización de pymes' })
       setAnalysis(generateAnalysis({ idBdns: '763201', nombre: 'Incentivos Kit Digital', organismo: 'Red.es', importeMax: 25000, fechaCierre: '2026-06-15', descripcion: 'Digitalización' }))
       setClienteId('c1')

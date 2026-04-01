@@ -100,7 +100,7 @@ export abstract class BaseAIProvider {
   /**
    * Maneja errores comunes de APIs
    */
-  protected handleAPIError(error: any): never {
+  protected handleAPIError(error: { response?: { status?: number; data?: { error?: { message?: string } } }; message?: string }): never {
     if (error.response) {
       const status = error.response.status;
       const message = error.response.data?.error?.message || 'Error desconocido';
