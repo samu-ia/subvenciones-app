@@ -51,7 +51,7 @@ export async function POST(
       .eq('id', sol.subvencion_id)
       .maybeSingle();
 
-    const { data: cliente } = await sb
+    await sb
       .from('cliente')
       .select('nombre_empresa')
       .eq('nif', sol.nif)

@@ -19,9 +19,7 @@ export default function RichTextEditor({
   content,
   onChange,
   onSave,
-  placeholder = 'Empieza a escribir...',
   autoSaveDelay = 1200,
-  lastSaved
 }: RichTextEditorProps) {
   // Ref to always have latest onSave without it being a useEffect dependency
   const onSaveRef = useRef(onSave);
@@ -122,16 +120,6 @@ export default function RichTextEditor({
   if (!editor) {
     return <div>Cargando editor...</div>;
   }
-
-  const formatLastSaved = (date: Date) => {
-    const now = new Date();
-    const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
-    if (diff < 5) return 'hace un momento';
-    if (diff < 60) return `hace ${diff}s`;
-    if (diff < 3600) return `hace ${Math.floor(diff / 60)}m`;
-    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-  };
 
   return (
     <div style={{

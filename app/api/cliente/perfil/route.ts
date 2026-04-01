@@ -66,7 +66,7 @@ export async function PATCH(request: NextRequest) {
   return NextResponse.json({ ok: true, nif: perfil.nif });
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });

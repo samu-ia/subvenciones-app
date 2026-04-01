@@ -100,7 +100,6 @@ export async function POST(
   const respuestasIA: RespuestaIA[] = (solicitud?.respuestas_ia as RespuestaIA[] | null) ?? [];
   const respuestasProyecto = respuestasIA.filter(r => r.categoria === 'proyecto');
   const respuestasEncaje  = respuestasIA.filter(r => r.categoria === 'encaje');
-  const respuestasEmpresa = respuestasIA.filter(r => r.categoria === 'empresa' || r.categoria === 'documentacion');
 
   // ── Cargar subvención + texto bases reguladoras ───────────────────────────
   let subvTexto = '';
@@ -408,7 +407,7 @@ Responde con JSON exactamente así (array de 3):
 function generarMemoriaBase(
   exp: { titulo: string | null; organismo: string | null; nif: string },
   cliente: Record<string, unknown> | null,
-  subv: Record<string, unknown>
+  _subv: Record<string, unknown>
 ): string {
   const nombre = (cliente?.nombre_empresa as string) ?? exp.nif;
   const fecha = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });

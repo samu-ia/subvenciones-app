@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { requireRole, requireAdminOrTramitador } from '@/lib/auth/helpers';
+import { requireAdminOrTramitador } from '@/lib/auth/helpers';
 import { sendTransactionalEmail } from '@/lib/email';
 import { generateInvoice } from '@/lib/billing/generate-invoice';
 

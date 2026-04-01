@@ -75,8 +75,8 @@ export default function NotebookLeftPanel({
   clienteSnapshot,
   documentos, archivos,
   selectedDocId,
-  onSelectDoc, onCreateDoc, onRenameDoc, onDeleteDoc,
-  contextoId, contextoTipo, nif, onArchivoUploaded, onSelectArchivo, selectedArchivoId,
+  onSelectDoc, onCreateDoc: _onCreateDoc, onRenameDoc, onDeleteDoc,
+  contextoId, contextoTipo, nif: _nif, onArchivoUploaded, onSelectArchivo, selectedArchivoId,
   contextSelections, onContextModeChange,
   investigacionEstado,
   subvenciones, subvencionActivaId,
@@ -122,7 +122,6 @@ export default function NotebookLeftPanel({
     setUploadError(null);
     try {
       const supabase = createClient();
-      const ext = file.name.split('.').pop();
       // Mismo path que DocumentList: reunion/ (sin plural)
       const path = `${contextoTipo}/${contextoId}/${Date.now()}-${file.name}`;
       const { error: upErr } = await supabase.storage.from('archivos').upload(path, file);

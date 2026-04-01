@@ -7,7 +7,7 @@ import {
   ChevronRight, ChevronLeft, KeyRound, Wrench
 } from 'lucide-react';
 import {
-  AIProvider, AITool, AVAILABLE_MODELS,
+  AIProvider, AITool,
   DEFAULT_TOOL_CONFIGS, getToolLabel, getProviderLabel
 } from '@/lib/types/ai-config';
 
@@ -94,7 +94,7 @@ interface AIConfigPanelProps {
 
 type ConfigView = 'main' | 'tool' | 'provider';
 
-export default function AIConfigPanel({ userId, workspaceType, inline, isOpen, onClose }: AIConfigPanelProps) {
+export default function AIConfigPanel({ userId: _userId, workspaceType, inline, isOpen, onClose }: AIConfigPanelProps) {
   const [view, setView] = useState<ConfigView>('main');
   const [selectedTool, setSelectedTool] = useState<AITool | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<AIProvider | null>(null);
@@ -270,6 +270,7 @@ export default function AIConfigPanel({ userId, workspaceType, inline, isOpen, o
     showFeedback();
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const saveTool = async () => {
     if (!selectedTool) return;
     setSaving(true);

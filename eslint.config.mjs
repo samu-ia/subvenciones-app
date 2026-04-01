@@ -19,6 +19,15 @@ const eslintConfig = defineConfig([
     "grants-manager/node_modules/**",
   ]),
   {
+    rules: {
+      "@typescript-eslint/no-unused-vars": ["warn", {
+        argsIgnorePattern: "^_",
+        varsIgnorePattern: "^_",
+        caughtErrorsIgnorePattern: "^_",
+      }],
+    },
+  },
+  {
     files: ["scripts/run-migration.js"],
     rules: {
       "@typescript-eslint/no-require-imports": "off",

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import {
   ChevronRight, ChevronDown, ExternalLink, CheckSquare, Square,
   FileText, Globe, Euro, Calendar, Building2, Target, Loader2,
-  AlertCircle, Edit3, Trash2
+  AlertCircle, Trash2
 } from 'lucide-react';
 import type {
   SubvencionDetectada, SubvencionChecklistItem,
