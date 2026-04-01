@@ -191,7 +191,7 @@ Incluye entre 10 y 15 elementos. Sé específico con la subvención.`;
       { nombre: 'Verificar plazo de presentación', categoria: 'tecnico', descripcion: 'Confirmar que la solicitud se presenta dentro del plazo oficial.', tipo: 'verificacion' },
     ];
     genericos.forEach((item, idx) => {
-      checklistItems.push({ ...item, tipo: (item as any).tipo ?? 'documento', obligatorio: true, orden: idx });
+      checklistItems.push({ ...item, tipo: item.tipo ?? 'documento', obligatorio: true, orden: idx });
     });
   }
 

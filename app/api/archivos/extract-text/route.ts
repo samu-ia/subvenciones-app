@@ -11,8 +11,8 @@ async function extractPdfText(buffer: Buffer): Promise<string> {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
     const pageText = content.items
-      .filter((item: any) => 'str' in item)
-      .map((item: any) => item.str)
+      .filter((item: { str?: string }) => 'str' in item)
+      .map((item: { str?: string }) => item.str)
       .join(' ');
     pages.push(pageText);
   }

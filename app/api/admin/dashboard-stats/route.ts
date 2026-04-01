@@ -111,10 +111,12 @@ export async function GET() {
 
   const urgentes: ExpedienteUrgente[] = [];
 
+  type NamedEntity = { nombre_empresa?: string; nombre_normalizado?: string };
+  type SubvEntity = { titulo?: string; plazo_fin?: string };
   if (expedientesUrgentes) {
     for (const exp of expedientesUrgentes) {
-      const cliente = exp.cliente as any;
-      const subv = exp.subvencion as any;
+      const cliente = exp.cliente as NamedEntity | null;
+      const subv = exp.subvencion as SubvEntity | null;
       const clienteNombre = cliente?.nombre_empresa || cliente?.nombre_normalizado || exp.nif;
       const expTitulo = exp.titulo || subv?.titulo || `Expediente ${exp.id.slice(0, 8)}`;
 
@@ -172,7 +174,7 @@ export async function GET() {
 
   if (mensajesRecientes) {
     for (const msg of mensajesRecientes) {
-      const cliente = msg.cliente as any;
+      const cliente = msg.cliente as NamedEntity | null;
       const nombre = cliente?.nombre_empresa || cliente?.nombre_normalizado || msg.nif;
       actividades.push({
         tipo: 'mensaje',
@@ -192,8 +194,8 @@ export async function GET() {
 
   if (fasesRecientes) {
     for (const f of fasesRecientes) {
-      const exp = f.expediente as any;
-      const cliente = exp?.cliente as any;
+      const exp = f.expediente as { titulo?: string; nif?: string; cliente?: NamedEntity } | null;
+      const cliente = exp?.cliente as NamedEntity | undefined;
       const nombre = cliente?.nombre_empresa || cliente?.nombre_normalizado || exp?.nif || '';
       actividades.push({
         tipo: 'fase_cambio',
@@ -213,7 +215,7 @@ export async function GET() {
 
   if (expRecientes) {
     for (const exp of expRecientes) {
-      const cliente = exp.cliente as any;
+      const cliente = exp.cliente as NamedEntity | null;
       const nombre = cliente?.nombre_empresa || cliente?.nombre_normalizado || exp.nif;
       actividades.push({
         tipo: 'expediente_nuevo',

@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
       default:
         return NextResponse.json({ ok: false, error: 'Test no disponible para este proveedor' });
     }
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e.message || 'Timeout o error de red' });
+  } catch (e) {
+    return NextResponse.json({ ok: false, error: (e as Error).message || 'Timeout o error de red' });
   }
 }

@@ -67,10 +67,12 @@ export async function GET() {
     .not('fase', 'in', '("denegada","desistida","cobro")')
     .not('estado', 'in', '("denegado","cerrado","cancelado","descartado")');
 
+  type NamedEntity = { nombre_empresa?: string; nombre_normalizado?: string };
+  type SubvEntity = { titulo?: string; fecha_fin_solicitud?: string };
   if (expedientes) {
     for (const exp of expedientes) {
-      const cliente = exp.cliente as any;
-      const subv = exp.subvencion as any;
+      const cliente = exp.cliente as NamedEntity | null;
+      const subv = exp.subvencion as SubvEntity | null;
       const clienteNombre = cliente?.nombre_empresa || cliente?.nombre_normalizado || exp.nif;
       const expTitulo = exp.titulo || subv?.titulo || `Expediente ${exp.id.slice(0, 8)}`;
 
@@ -225,8 +227,8 @@ export async function GET() {
 
   if (solicitudesPendientes) {
     for (const sol of solicitudesPendientes) {
-      const cliente = sol.cliente as any;
-      const subv = sol.subvencion as any;
+      const cliente = sol.cliente as NamedEntity | null;
+      const subv = sol.subvencion as SubvEntity | null;
       const clienteNombre = cliente?.nombre_empresa || cliente?.nombre_normalizado || sol.nif;
       const diasEspera = diasHasta(sol.created_at?.slice(0, 10));
       const diasAntiguedad = diasEspera !== null ? Math.abs(diasEspera) : 0;
@@ -261,8 +263,8 @@ export async function GET() {
 
   if (matchesNuevos) {
     for (const m of matchesNuevos) {
-      const cliente = m.cliente as any;
-      const subv = m.subvencion as any;
+      const cliente = m.cliente as NamedEntity | null;
+      const subv = m.subvencion as SubvEntity | null;
       const clienteNombre = cliente?.nombre_empresa || cliente?.nombre_normalizado || m.nif;
       alertas.push({
         id: `dyn-match-${m.id}`,
@@ -292,8 +294,8 @@ export async function GET() {
 
   if (alertasManuales) {
     for (const a of alertasManuales) {
-      const cliente = a.cliente as any;
-      const exp = a.expediente as any;
+      const cliente = a.cliente as NamedEntity | null;
+      const exp = a.expediente as { titulo?: string; nif?: string } | null;
       alertas.push({
         id: a.id,
         tipo: a.tipo,
