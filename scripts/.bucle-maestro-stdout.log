@@ -5618,3 +5618,9 @@ El sistema no puede encontrar la ruta especificada.
 [2026-04-01 14:21:22][R90][INFO] Analizando 1 hallazgos top con Claude...
 [2026-04-01 14:21:22][R90][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
 [2026-04-01 14:21:35][R90][INFO] Fix aplicado por Claude CLI
+warning: in the working copy of 'app/(dashboard)/clientes/[nif]/ClienteMatchesSection.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'grants-manager/src/pages/proveedor/SolicitudDetalle.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'lib/subvenciones/estado-calculator.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/.bucle-maestro-stdout.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/.bucle-maestro.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/agents/orchestrator.ts', LF will be replaced by CRLF the next time Git touches it
