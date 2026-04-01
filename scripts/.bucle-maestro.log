@@ -946,3 +946,17 @@
 [2026-04-01 10:44:02][R31][INFO] Analizando 1 hallazgos top con Claude...
 [2026-04-01 10:44:02][R31][INFO] Top hallazgo: [prio 9] 21 errores TypeScript
 [2026-04-01 10:44:13][R31][INFO] Fix aplicado por Claude CLI
+[2026-04-01 10:44:14][R31][INFO] Commit de respaldo realizado
+[2026-04-01 10:44:16][R31][INFO] Push a origin/main OK
+
+╔══════════════════════════════════════════════════════════╗
+║  RONDA 31   — INFORME FINAL  (23s)                        ║
+╠══════════════════════════════════════════════════════════╣
+║  Subvenciones: 307   | Abiertas: 165   | Matches: 3137  ║
+║  Hallazgos detectados: 1    | Acciones pipeline: 0  ║
+╠══════════════════════════════════════════════════════════╣
+║  TOP HALLAZGOS:                                           ║
+║    [p9] 21 errores TypeScript                            ║
+╚══════════════════════════════════════════════════════════╝
+
+[2026-04-01 10:44:16][R31][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)

@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
   // Insertar relaciones proveedor-plantilla
   if (proveedoresInput?.length) {
-    const rows = proveedoresInput.map((p: any, i: number) => ({
+    const rows = proveedoresInput.map((p: { proveedor_id: string; rol?: string }, i: number) => ({
       plantilla_id: plantilla.id,
       proveedor_id: p.proveedor_id,
       rol: p.rol,

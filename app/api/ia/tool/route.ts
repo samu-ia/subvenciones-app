@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
     let errorMessage = 'Error ejecutando la herramienta';
     let errorCode = 'unknown';
     if (error instanceof Error) errorMessage = error.message;
-    const anyErr = error as any;
+    const anyErr = error as { response?: { data?: { error?: { message?: string; code?: string } } } };
     if (anyErr?.response?.data?.error?.message) {
       errorMessage = anyErr.response.data.error.message;
       errorCode = anyErr.response.data.error.code || 'api_error';

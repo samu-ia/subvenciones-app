@@ -156,7 +156,7 @@ async function executeActions(
         results.push({ action, success: true, documentId: newDoc.id, documentName: newDoc.nombre });
       } catch (err) {
         console.error('[agent] create_document error:', JSON.stringify(err));
-        const msg = err instanceof Error ? err.message : (err as any)?.message ?? JSON.stringify(err);
+        const msg = err instanceof Error ? err.message : (err as { message?: string })?.message ?? JSON.stringify(err);
         results.push({ action, success: false, error: msg });
       }
       continue;
@@ -197,7 +197,7 @@ async function executeActions(
         results.push({ action, success: true, documentId: docId, documentName: action.nombre });
       } catch (err) {
         console.error('[agent] edit_document error:', JSON.stringify(err));
-        const msg = err instanceof Error ? err.message : (err as any)?.message ?? JSON.stringify(err);
+        const msg = err instanceof Error ? err.message : (err as { message?: string })?.message ?? JSON.stringify(err);
         results.push({ action, success: false, error: msg });
       }
       continue;
@@ -257,7 +257,7 @@ async function executeActions(
         results.push({ action, success: true, documentId: docId, documentName: docNombre });
       } catch (err) {
         console.error('[agent] edit_section error:', JSON.stringify(err));
-        const msg = err instanceof Error ? err.message : (err as any)?.message ?? JSON.stringify(err);
+        const msg = err instanceof Error ? err.message : (err as { message?: string })?.message ?? JSON.stringify(err);
         results.push({ action, success: false, error: msg });
       }
       continue;
@@ -286,7 +286,7 @@ async function executeActions(
         results.push({ action, success: true, documentId: docId, documentName: action.nombre });
       } catch (err) {
         console.error('[agent] delete_document error:', JSON.stringify(err));
-        const msg = err instanceof Error ? err.message : (err as any)?.message ?? JSON.stringify(err);
+        const msg = err instanceof Error ? err.message : (err as { message?: string })?.message ?? JSON.stringify(err);
         results.push({ action, success: false, error: msg });
       }
       continue;
@@ -553,7 +553,7 @@ export async function POST(request: NextRequest) {
     console.error('Error en /api/ia/agent:', error);
     let errorMessage = 'Error procesando el agente';
     if (error instanceof Error) errorMessage = error.message;
-    const anyErr = error as any;
+    const anyErr = error as { response?: { data?: { error?: { message?: string } } } };
     if (anyErr?.response?.data?.error?.message) errorMessage = anyErr.response.data.error.message;
 
     return NextResponse.json({ error: errorMessage, error_code: 'unknown' }, { status: 500 });

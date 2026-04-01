@@ -38,7 +38,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (proveedoresInput !== undefined) {
     await supabase.from('plantilla_proveedores').delete().eq('plantilla_id', id)
     if (proveedoresInput.length) {
-      const rows = proveedoresInput.map((p: any, i: number) => ({
+      const rows = proveedoresInput.map((p: { proveedor_id: string; rol?: string }, i: number) => ({
         plantilla_id: id,
         proveedor_id: p.proveedor_id,
         rol: p.rol,

@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
       errorMessage = error.message;
     }
     // Errores de API externa con formato { response: { status, data } }
-    const anyErr = error as any;
+    const anyErr = error as { response?: { data?: { error?: { message?: string; code?: string } } } };
     if (anyErr?.response?.data?.error?.message) {
       errorMessage = anyErr.response.data.error.message;
       errorCode = anyErr.response.data.error.code || 'api_error';
