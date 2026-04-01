@@ -35,7 +35,10 @@ export default function AuthModal({ onClose, initialMode = 'login' }: AuthModalP
     const { data: perfil } = await supabase
       .from('perfiles').select('rol').eq('id', authData.user.id).maybeSingle();
     const rol = perfil?.rol ?? authData.user.user_metadata?.rol ?? 'cliente';
-    router.push(rol === 'admin' ? '/dashboard' : '/portal');
+    const dest = ['admin', 'gestor', 'tramitador'].includes(rol) ? '/dashboard'
+      : rol === 'proveedor' ? '/proveedor'
+      : '/portal';
+    router.push(dest);
     router.refresh();
   }
 

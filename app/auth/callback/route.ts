@@ -15,8 +15,23 @@ export async function GET(request: NextRequest) {
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { error, data } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // Si no hay next explícito, redirigir según rol
+      if (nextParam === '/portal' && data?.user) {
+        const { data: perfil } = await supabase
+          .from('perfiles')
+          .select('rol')
+          .eq('id', data.user.id)
+          .maybeSingle();
+        const rol = perfil?.rol;
+        if (rol === 'admin' || rol === 'gestor' || rol === 'tramitador') {
+          return NextResponse.redirect(`${origin}/dashboard`);
+        }
+        if (rol === 'proveedor') {
+          return NextResponse.redirect(`${origin}/proveedor`);
+        }
+      }
       return NextResponse.redirect(`${origin}${safeNext}`);
     }
   }
