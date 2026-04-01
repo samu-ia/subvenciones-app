@@ -447,10 +447,10 @@ function TablaView({ expedientes, clientes, convocatorias, gestores, navigate, f
           </tr>
         </thead>
         <tbody>
-          {sorted.map((exp: any) => {
-            const cli = clientes.find((c: any) => c.id === exp.clienteId)
-            const conv = convocatorias.find((c: any) => c.idBdns === exp.convocatoriaId)
-            const gestor = gestores.find((g: any) => g.id === exp.gestorId)
+          {sorted.map((exp) => {
+            const cli = clientes.find((c) => c.id === exp.clienteId)
+            const conv = convocatorias.find((c) => c.idBdns === exp.convocatoriaId)
+            const gestor = gestores.find((g) => g.id === exp.gestorId)
             const dias = diffDays(exp.fechaVencimiento)
             return (
               <tr
