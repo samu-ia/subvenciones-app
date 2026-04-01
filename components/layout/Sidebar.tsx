@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import {
   Building2, Calendar, FolderOpen, LogOut, Database, Settings,
   ClipboardList, Store, Bell, MessageCircle, LayoutDashboard,
-  AlertTriangle, Sparkles, Inbox, Target, Radar, ChevronDown, Layers,
+  AlertTriangle, Sparkles, Inbox, Target, Radar, Layers,
 } from "lucide-react";
 
 const SECTIONS = [
@@ -77,6 +77,7 @@ export default function Sidebar({ rol }: { rol?: string }) {
         }).catch(() => setBandejaCount(alertasCriticasAltas));
       })
       .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleLogout() {
@@ -115,7 +116,7 @@ export default function Sidebar({ rol }: { rol?: string }) {
               {section.label}
             </div>
             {section.items
-              .filter(item => !(rol === 'tramitador' && ['Sistema'].includes(section.label)))
+              .filter(() => !(rol === 'tramitador' && ['Sistema'].includes(section.label)))
               .map(({ href, label, icon: Icon, badge, bandejaBadge }: {
                 href: string; label: string;
                 icon: React.ComponentType<{ size?: number }>;

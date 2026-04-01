@@ -354,7 +354,7 @@ export default function ExpedientesPage() {
   const [expedientes, setExpedientes] = useState<Expediente[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'lista' | 'kanban'>('kanban');
-  const [movingId, setMovingId] = useState<string | null>(null);
+  const [_movingId, setMovingId] = useState<string | null>(null);
 
   const fetchExpedientes = useCallback(() => {
     fetch('/api/expedientes?incluirFase=1')

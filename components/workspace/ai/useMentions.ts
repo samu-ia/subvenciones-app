@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect, type Dispatch, type SetStateAction } from 'react';
+import { useState, useRef, useCallback, type Dispatch, type SetStateAction } from 'react';
 
 export interface DocRef {
   id: string;

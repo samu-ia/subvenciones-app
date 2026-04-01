@@ -326,7 +326,7 @@ export default function ReunionNotebookPage() {
     setSelectedDocId(null);
   };
 
-  const handleGenerarDocumento = async (nombre: string, contenido: string, promptUsado: string) => {
+  const handleGenerarDocumento = async (nombre: string, contenido: string, _promptUsado: string) => {
     const supabase = createClient();
     if (nombre.startsWith('__insert__')) {
       const docId = nombre.replace('__insert__', '');

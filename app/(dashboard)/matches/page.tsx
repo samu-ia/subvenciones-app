@@ -47,12 +47,6 @@ const C = {
   red: '#dc2626', redBg: '#fef2f2',
 };
 
-function scoreInfo(s: number) {
-  if (s >= 0.65) return { label: 'Muy recomendable', color: C.fire, bg: C.fireBg, border: '#fed7aa' };
-  if (s >= 0.40) return { label: 'Buen encaje',       color: C.green, bg: C.greenBg, border: '#a7f3d0' };
-  return               { label: 'Encaje posible',      color: C.muted, bg: C.bg, border: C.border };
-}
-
 function scoreCircleColor(s: number): string {
   if (s >= 0.65) return '#f97316';
   if (s >= 0.40) return '#0d9488';

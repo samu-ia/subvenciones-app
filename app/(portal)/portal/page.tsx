@@ -164,7 +164,6 @@ function ModalSolicitud({
 
   const subv = match.subvencion;
   const scoreInfo = scoreLabel(match.score);
-  const dias = diasRestantes(subv.plazo_fin);
 
   // Cargar preguntas dinámicas al abrir el modal
   useEffect(() => {
@@ -642,7 +641,7 @@ function ModalSolicitud({
 
 function MatchCard({
   match,
-  cliente,
+  cliente: _cliente,
   onSolicitar,
 }: {
   match: MatchItem;
@@ -1518,7 +1517,7 @@ export default function PortalPage() {
   const [expedienteActivo, setExpedienteActivo] = useState<Expediente | null>(null);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [cargandoChecklist, setCargandoChecklist] = useState(false);
-  const [fasesData, setFasesData] = useState<FaseData[]>([]);
+  const [fasesData, _setFasesData] = useState<FaseData[]>([]);
   const [subiendoDoc, setSubiendoDoc] = useState<string | null>(null);
   const [vista, setVista] = useState<Vista>('dashboard');
   const [matchSolicitando, setMatchSolicitando] = useState<MatchItem | null>(null);
@@ -1669,7 +1668,7 @@ export default function PortalPage() {
       setChecklist(prev => prev.map(i => i.id === item.id ? { ...i, completado: true } : i));
       setToast('✓ Documento subido correctamente');
       setTimeout(() => setToast(''), 4000);
-    } catch (e) {
+    } catch {
       setToast('Error al subir el documento. Inténtalo de nuevo.');
       setTimeout(() => setToast(''), 4000);
     } finally {

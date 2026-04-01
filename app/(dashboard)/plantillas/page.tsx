@@ -25,12 +25,6 @@ interface Plantilla {
 
 const CATEGORIAS_PROVEEDOR = ['tecnologia', 'consultoria', 'formacion', 'equipamiento', 'marketing', 'juridico', 'financiero', 'construccion', 'otros'];
 
-const ORGANISMO_SUGERIDOS = [
-  'Red.es / Acelera PYME', 'IDAE', 'CDTI', 'ICEX', 'SEPE', 'IMSERSO',
-  'Junta de Andalucía', 'Xunta de Galicia', 'Comunidad de Madrid', 'Generalitat Valenciana',
-  'Comisión Europea (FEDER)', 'Comisión Europea (EIC/Horizon)',
-];
-
 export default function PlantillasPage() {
   const [plantillas, setPlantillas] = useState<Plantilla[]>([]);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
@@ -43,15 +37,6 @@ export default function PlantillasPage() {
   const [newProveedores, setNewProveedores] = useState<{ proveedor_id: string; rol: string; obligatorio: boolean }[]>([]);
   const [saving, setSaving] = useState(false);
   const [filterCat, setFilterCat] = useState('');
-
-  const reload = async () => {
-    const [pRes, provRes] = await Promise.all([
-      fetch('/api/plantillas'),
-      fetch('/api/plantillas').then(() => null), // dummy
-    ]);
-    setPlantillas(pRes.ok ? await pRes.json() : []);
-    setLoading(false);
-  };
 
   useEffect(() => {
     const supabase = createClient();

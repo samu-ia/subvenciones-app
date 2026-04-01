@@ -4,57 +4,11 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { notFound, redirect } from 'next/navigation';
 import ClienteMatchesSection from './ClienteMatchesSection';
 
-interface Cliente {
-  nif: string;
-  nombre_empresa: string | null;
-  nombre_normalizado: string | null;
-  email_normalizado: string | null;
-  tamano_empresa: string | null;
-  actividad: string | null;
-  domicilio_fiscal: string | null;
-  codigo_postal: string | null;
-  ciudad: string | null;
-  comunidad_autonoma: string | null;
-  telefono: string | null;
-  cnae_codigo: string | null;
-  cnae_descripcion: string | null;
-  num_empleados: number | null;
-  facturacion_anual: number | null;
-  created_at: string;
-}
-
-interface Einforma {
-  denominacion: string | null;
-  forma_juridica: string | null;
-  cnae: string | null;
-  situacion: string | null;
-  capital_social: number | null;
-  ventas: number | null;
-  anio_ventas: number | null;
-  empleados: number | null;
-  fecha_constitucion: string | null;
-  cargo_principal: string | null;
-  cargo_principal_puesto: string | null;
-  domicilio_social: string | null;
-  localidad: string | null;
-  telefono: string[] | null;
-  web: string[] | null;
-  email: string | null;
-}
-
 interface Expediente {
   id: string;
   titulo: string | null;
   estado: string;
   created_at: string;
-}
-
-interface Solicitud {
-  id: string;
-  estado: string;
-  created_at: string;
-  expediente_id: string | null;
-  subvencion: { titulo: string; importe_maximo: number | null } | null;
 }
 
 interface Reunion {

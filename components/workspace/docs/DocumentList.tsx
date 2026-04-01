@@ -56,7 +56,7 @@ export default function DocumentList({
   collapseButton,
   contextoId,
   contextoTipo,
-  userId,
+  userId: _userId,
   nif,
   onArchivoUploaded,
 }: DocumentListProps) {
@@ -146,7 +146,6 @@ export default function DocumentList({
     for (const file of Array.from(files)) {
       try {
         // 1. Subir al bucket 'archivos'
-        const ext = file.name.split('.').pop();
         const path = `${contextoTipo}/${contextoId}/${Date.now()}-${file.name}`;
         const { error: storageError } = await supabase.storage
           .from('archivos')
