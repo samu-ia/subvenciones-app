@@ -805,3 +805,20 @@
 ╚══════════════════════════════════════════════════════════╝
 
 [2026-04-01 10:27:22][R26][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)
+[2026-04-01 10:30:22][R27][INFO] INICIANDO RONDA 27
+[2026-04-01 10:30:22][R27][INFO] Subvenciones: 307 | Sin PDF: 0 | Sin título: 0
+[2026-04-01 10:30:22][R27][INFO] Matches: 3137 | Sin motivo: 0
+[2026-04-01 10:30:22][R27][INFO] Expedientes: 2 | Sin fase: 0
+[2026-04-01 10:30:22][R27][INFO] Pipeline errores: 0
+[2026-04-01 10:30:22][R27][INFO] Estados convocatoria: {"abierta":165,"cerrada":35,"desconocido":48,"proxima":59}
+[2026-04-01 10:30:32][R27][WARN] TypeScript: 4 errores
+[2026-04-01 10:30:33][R27][INFO] ✓ Query matches: 5 resultados
+[2026-04-01 10:30:33][R27][INFO] ✓ Convocatorias abiertas: 165
+[2026-04-01 10:30:33][R27][INFO] ✓ Expedientes en cobro: todos tienen importe_concedido
+[2026-04-01 10:30:33][R27][INFO] Clientes sin NIF (onboarding incompleto): 4
+[2026-04-01 10:30:33][R27][INFO] Alertas sin leer: null
+[2026-04-01 10:30:34][R27][INFO] Matching reciente (hace 1.6h) — skip
+[2026-04-01 10:30:34][R27][INFO] Pipeline BDNS reciente (hace 1.8h) — skip
+[2026-04-01 10:30:34][R27][INFO] Analizando 1 hallazgos top con Claude...
+[2026-04-01 10:30:34][R27][INFO] Top hallazgo: [prio 9] 4 errores TypeScript
+[2026-04-01 10:30:44][R27][INFO] Fix aplicado por Claude CLI
