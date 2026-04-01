@@ -805,11 +805,14 @@ async function procesarConvocatoria(conv, apiKey, semaforo) {
     };
 
   } catch (err) {
-    // Registrar error
+    // Si el PDF existe pero está vacío, marcarlo como procesado para no reintentar
+    const esPdfVacio = err.message?.includes('no pages') || err.message?.includes('no tiene páginas');
     await sb.from('subvenciones')
       .update({
         pipeline_estado: 'error',
         pipeline_error: err.message?.slice(0, 500),
+        // Marcar como procesado si el PDF está vacío (evita reintentos infinitos)
+        ...(esPdfVacio ? { pdf_procesado: true } : {}),
         updated_at: new Date().toISOString(),
       })
       .eq('bdns_id', bdnsId);
