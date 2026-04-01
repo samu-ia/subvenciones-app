@@ -7,7 +7,9 @@
  * y obtén el potencial estimado y el fee esperado antes de la llamada.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
 interface CalcResult {
   empresa: {
@@ -41,12 +43,30 @@ function fmtE(n: number) {
   return `${n.toLocaleString('es-ES')} €`;
 }
 
-export default function CalculadoraPage() {
-  const [nif, setNif] = useState('');
+function CalculadoraContent() {
+  const searchParams = useSearchParams();
+  const [nif, setNif] = useState(() => searchParams.get('nif') ?? '');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CalcResult | null>(null);
   const [error, setError] = useState('');
   const [copiado, setCopiado] = useState(false);
+
+  // Auto-calcular si viene con NIF en la URL
+  useEffect(() => {
+    const nifParam = searchParams.get('nif');
+    if (nifParam) {
+      setNif(nifParam.toUpperCase());
+      // Trigger calculation
+      const nifClean = nifParam.trim().toUpperCase();
+      setLoading(true);
+      fetch(`/api/admin/calculadora?nif=${encodeURIComponent(nifClean)}`)
+        .then(r => r.json())
+        .then(data => { if (data.error) setError(data.error); else setResult(data); })
+        .catch(() => setError('Error de conexión'))
+        .finally(() => setLoading(false));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function calcular() {
     const nifClean = nif.trim().toUpperCase();
@@ -236,5 +256,13 @@ export default function CalculadoraPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function CalculadoraPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 32 }}>Cargando...</div>}>
+      <CalculadoraContent />
+    </Suspense>
   );
 }

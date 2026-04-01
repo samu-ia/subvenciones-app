@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, Phone, Mail, Globe, MapPin, X, Check } from 'lucide-react';
+import Link from 'next/link';
+import { Search, Plus, Phone, Mail, Globe, MapPin, X, Check, Radar, Calculator } from 'lucide-react';
 
 interface Prospecto {
   id: string;
@@ -248,6 +249,25 @@ export default function ProspectosPage() {
                       >
                         <X size={12} />
                       </button>
+                    </div>
+                    {/* Herramientas de ventas */}
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {p.nif && (
+                        <Link
+                          href={`/calculadora?nif=${encodeURIComponent(p.nif)}`}
+                          style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f0fdf4', fontSize: '0.7rem', cursor: 'pointer', color: '#059669', fontWeight: 600, textDecoration: 'none' }}
+                          title="Ver potencial de subvenciones"
+                        >
+                          <Calculator size={10} /> Potencial
+                        </Link>
+                      )}
+                      <Link
+                        href={`/sector-scan${p.sector ? `?cnae=${encodeURIComponent(p.sector.slice(0, 4))}` : ''}`}
+                        style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#eff6ff', fontSize: '0.7rem', cursor: 'pointer', color: '#1d4ed8', fontWeight: 600, textDecoration: 'none' }}
+                        title="Radar sectorial"
+                      >
+                        <Radar size={10} /> Radar
+                      </Link>
                     </div>
                   </div>
                 </div>

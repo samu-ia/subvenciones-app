@@ -2023,9 +2023,30 @@ export default function PortalPage() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {matches.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '60px 20px', color: C.muted }}>
-                    <FileText size={40} style={{ marginBottom: 12, opacity: 0.5 }} />
-                    <p style={{ fontSize: '0.9rem' }}>No hay subvenciones en este momento. Vuelve pronto.</p>
+                  <div style={{ textAlign: 'center', padding: '48px 24px', background: '#f8fafc', borderRadius: 16, border: '1px dashed #e2e8f0' }}>
+                    <div style={{ width: 56, height: 56, background: 'linear-gradient(135deg,#0d9488,#1a3561)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                      <Zap size={24} color="#fff" />
+                    </div>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: C.navy, margin: '0 0 8px' }}>
+                      Estamos analizando tu perfil
+                    </h3>
+                    <p style={{ fontSize: '0.88rem', color: C.muted, margin: '0 0 20px', lineHeight: 1.6, maxWidth: 340, marginLeft: 'auto', marginRight: 'auto' }}>
+                      Nuestro motor IA está cruzando tu empresa con las convocatorias activas. En menos de 24&nbsp;h tendrás tus primeras oportunidades.
+                    </p>
+                    <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => setVista('gestor')}
+                        style={{ padding: '10px 18px', background: C.teal, color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem', fontFamily: 'inherit' }}
+                      >
+                        Habla con tu gestor
+                      </button>
+                      <button
+                        onClick={() => setVista('perfil')}
+                        style={{ padding: '10px 18px', background: '#fff', color: C.navy, border: `1.5px solid ${C.border}`, borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem', fontFamily: 'inherit' }}
+                      >
+                        Revisar mi perfil
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   matches.map(m => {
