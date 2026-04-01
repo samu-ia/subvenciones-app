@@ -186,7 +186,7 @@ async function main() {
 
   let procesadas = 0;
 
-  // eslint-disable-next-line no-constant-condition
+   
   while (true) {
     const tarea = await obtenerTarea();
 

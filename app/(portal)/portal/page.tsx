@@ -1357,7 +1357,7 @@ function VistaMiGestor({ nif }: { nif: string }) {
     cargar();
     const interval = setInterval(cargar, 20_000);
     return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [nif]);
 
   useEffect(() => {

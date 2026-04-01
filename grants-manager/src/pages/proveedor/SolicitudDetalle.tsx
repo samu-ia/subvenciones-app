@@ -193,7 +193,7 @@ export function SolicitudDetalle() {
     if (!isGeneric || !convocatoria || aiCtx || aiLoading) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setAiLoading(true)
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     setAiError(null)
     generateGrantContext({
       idBdns: convocatoria.idBdns,

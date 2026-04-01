@@ -231,7 +231,7 @@ export default function AIConfigPanel({ userId, workspaceType, inline, isOpen, o
       }
     }, 800);
     return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [tools, toolDirty, selectedTool, workspaceType]);
 
   // Reset dirty al cambiar de herramienta
