@@ -18,6 +18,14 @@ export interface ProviderConfigDB {
   updated_at: string;
 }
 
+// Mapa de proveedores a variables de entorno (fallback cuando no hay config en BD)
+const ENV_KEY_MAP: Partial<Record<AIProvider, string>> = {
+  anthropic: process.env.ANTHROPIC_API_KEY,
+  google:    process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY,
+  openai:    process.env.OPENAI_API_KEY,
+  openrouter: process.env.OPENROUTER_API_KEY,
+};
+
 export async function getProviderConfig(
   userId: string,
   provider: AIProvider
@@ -28,13 +36,26 @@ export async function getProviderConfig(
     .select('*')
     .eq('user_id', userId)
     .eq('provider', provider)
-    .single();
+    .maybeSingle();
 
-  if (error) {
-    console.error('Error obteniendo config de proveedor:', error);
-    return null;
+  // Si hay config en BD con API key → usarla
+  if (!error && data?.api_key) return data;
+
+  // Fallback a variables de entorno del servidor
+  const envKey = ENV_KEY_MAP[provider];
+  if (envKey) {
+    return {
+      user_id: userId,
+      provider,
+      api_key: envKey,
+      enabled: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as ProviderConfigDB;
   }
-  return data;
+
+  if (error) console.error('Error obteniendo config de proveedor:', error);
+  return data ?? null;
 }
 
 export async function getAllProviderConfigs(

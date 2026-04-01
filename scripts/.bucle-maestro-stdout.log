@@ -8147,3 +8147,61 @@ El sistema no puede encontrar la ruta especificada.
 [2026-04-01 16:58:50][R132][INFO] Analizando 2 hallazgos top con Claude...
 [2026-04-01 16:58:50][R132][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
 [2026-04-01 16:58:58][R132][INFO] Fix aplicado por Claude CLI
+[2026-04-01 16:58:58][R132][INFO] Commit de respaldo realizado
+[2026-04-01 16:59:00][R132][INFO] Push a origin/main OK
+
+╔══════════════════════════════════════════════════════════╗
+║  RONDA 132  — INFORME FINAL  (17s)                        ║
+╠══════════════════════════════════════════════════════════╣
+║  Subvenciones: 357   | Abiertas: 198   | Matches: 3697  ║
+║  Hallazgos detectados: 2    | Acciones pipeline: 0  ║
+╠══════════════════════════════════════════════════════════╣
+║  TOP HALLAZGOS:                                           ║
+║    [p9] 41 errores TypeScript                            ║
+║    [p6] 1 subvenciones en estado error                   ║
+╚══════════════════════════════════════════════════════════╝
+
+[2026-04-01 16:59:00][R132][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)
+
+████████████████████████████████████████████████████████████
+[2026-04-01 17:02:00][R133][INFO] INICIANDO RONDA 133
+████████████████████████████████████████████████████████████
+
+════════════════════════════════════════════════════════════
+  MÓDULO 1 — Salud de BD
+════════════════════════════════════════════════════════════
+[2026-04-01 17:02:01][R133][INFO] Subvenciones: 357 | Sin PDF: 0 | Sin título: 0
+[2026-04-01 17:02:01][R133][INFO] Matches: 3697 | Sin motivo: 0
+[2026-04-01 17:02:01][R133][INFO] Expedientes: 3 | Sin fase: 0
+[2026-04-01 17:02:01][R133][INFO] Pipeline errores: 1
+[2026-04-01 17:02:01][R133][INFO] Estados convocatoria: {"abierta":198,"cerrada":37,"desconocido":52,"proxima":68,"resuelta":2}
+
+════════════════════════════════════════════════════════════
+  MÓDULO 2 — Calidad de código
+════════════════════════════════════════════════════════════
+[2026-04-01 17:02:06][R133][WARN] TypeScript: 41 errores
+El sistema no puede encontrar la ruta especificada.
+El sistema no puede encontrar la ruta especificada.
+El sistema no puede encontrar la ruta especificada.
+
+════════════════════════════════════════════════════════════
+  MÓDULO 3 — Test de APIs (Supabase directo)
+════════════════════════════════════════════════════════════
+[2026-04-01 17:02:07][R133][INFO] ✓ Query matches: 5 resultados
+[2026-04-01 17:02:08][R133][INFO] ✓ Convocatorias abiertas: 198
+[2026-04-01 17:02:08][R133][INFO] ✓ Expedientes en cobro: todos tienen importe_concedido
+[2026-04-01 17:02:08][R133][INFO] Clientes sin NIF (onboarding incompleto): 4
+[2026-04-01 17:02:08][R133][INFO] Alertas sin leer: null
+
+════════════════════════════════════════════════════════════
+  MÓDULO 4 — Mantenimiento de Pipeline
+════════════════════════════════════════════════════════════
+[2026-04-01 17:02:09][R133][INFO] Matching reciente (hace 0.1h) — skip
+[2026-04-01 17:02:09][R133][INFO] Pipeline BDNS reciente (hace 2.2h) — skip
+
+════════════════════════════════════════════════════════════
+  MÓDULO 5 — Análisis IA + Generación de mejoras
+════════════════════════════════════════════════════════════
+[2026-04-01 17:02:09][R133][INFO] Analizando 2 hallazgos top con Claude...
+[2026-04-01 17:02:09][R133][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
+[2026-04-01 17:02:17][R133][INFO] Fix aplicado por Claude CLI
