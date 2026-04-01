@@ -189,10 +189,11 @@ export function SolicitudDetalle() {
   )
 
   // Trigger AI generation for generic grants
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (!isGeneric || !convocatoria || aiCtx || aiLoading) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAiLoading(true)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAiError(null)
     generateGrantContext({
       idBdns: convocatoria.idBdns,
@@ -229,9 +230,9 @@ export function SolicitudDetalle() {
   }, 0)
 
   // C2 — auto-populate importe field when table total changes
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (totalLines > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setImporte(totalLines.toString())
     }
   }, [totalLines])
