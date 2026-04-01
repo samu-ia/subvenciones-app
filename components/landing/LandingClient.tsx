@@ -19,9 +19,10 @@ import FinalCTA from '@/components/landing/FinalCTA';
 export default function LandingClient() {
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authContext, setAuthContext] = useState<'cliente' | 'proveedor'>('cliente');
 
-  function openLogin() { setAuthMode('login'); setAuthOpen(true); }
-  function openRegister() { setAuthMode('register'); setAuthOpen(true); }
+  function openLogin(ctx: 'cliente' | 'proveedor' = 'cliente') { setAuthMode('login'); setAuthContext(ctx); setAuthOpen(true); }
+  function openRegister() { setAuthMode('register'); setAuthContext('cliente'); setAuthOpen(true); }
   const router = useRouter();
   const supabase = createClient();
 
@@ -44,7 +45,7 @@ export default function LandingClient() {
 
   return (
     <div className="landing min-h-screen bg-background overflow-x-hidden" style={{ overflowX: 'hidden' }}>
-      <LandingHeader onAuthClick={openLogin} />
+      <LandingHeader onAuthClick={() => openLogin('cliente')} onProveedorClick={() => openLogin('proveedor')} />
       <main>
         <Hero onAuthClick={openRegister} />
         <BenefitsTicker />
@@ -57,7 +58,7 @@ export default function LandingClient() {
         <ContactSection />
       </main>
       <LandingFooter />
-      {authOpen && <AuthModal onClose={() => setAuthOpen(false)} initialMode={authMode} />}
+      {authOpen && <AuthModal onClose={() => setAuthOpen(false)} initialMode={authMode} context={authContext} />}
     </div>
   );
 }

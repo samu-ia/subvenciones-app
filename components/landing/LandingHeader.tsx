@@ -12,7 +12,7 @@ const navLinks = [
   { href: '#contacto', label: 'Contacto' },
 ];
 
-export default function LandingHeader({ onAuthClick }: { onAuthClick?: () => void }) {
+export default function LandingHeader({ onAuthClick, onProveedorClick }: { onAuthClick?: () => void; onProveedorClick?: () => void }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -58,6 +58,14 @@ export default function LandingHeader({ onAuthClick }: { onAuthClick?: () => voi
               </a>
             ))}
             <button
+              onClick={onProveedorClick ?? onAuthClick}
+              className={`text-sm transition-all cursor-pointer bg-transparent border-none font-medium ${
+                isScrolled ? 'text-muted-foreground hover:text-foreground' : 'text-white/65 hover:text-white/90'
+              }`}
+            >
+              Soy proveedor
+            </button>
+            <button
               onClick={onAuthClick}
               className={`font-semibold px-4 py-2 rounded-full border transition-all text-sm cursor-pointer ${
                 isScrolled
@@ -95,6 +103,14 @@ export default function LandingHeader({ onAuthClick }: { onAuthClick?: () => voi
                   {link.label}
                 </a>
               ))}
+              <button
+                onClick={() => { setIsMobileMenuOpen(false); (onProveedorClick ?? onAuthClick)?.(); }}
+                className={`py-2 transition-colors text-left cursor-pointer bg-transparent border-none font-medium ${
+                  isScrolled ? 'text-muted-foreground' : 'text-white/70'
+                }`}
+              >
+                Soy proveedor →
+              </button>
               <button
                 onClick={() => { setIsMobileMenuOpen(false); onAuthClick?.(); }}
                 className={`font-semibold py-2 transition-colors text-left cursor-pointer bg-transparent border-none ${

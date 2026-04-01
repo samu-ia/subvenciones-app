@@ -29,6 +29,25 @@ interface ProveedorAsignado {
 function PanelChecklist({ expedienteId }: { expedienteId: string }) {
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [generando, setGenerando] = useState(false);
+  const [genMsg, setGenMsg] = useState('');
+
+  async function generarConIA() {
+    setGenerando(true);
+    setGenMsg('');
+    try {
+      const res = await fetch(`/api/expedientes/${expedienteId}/generar-tareas`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setGenMsg(data.count > 0 ? `✓ ${data.count} tareas añadidas` : 'Ya estaban todas');
+      } else {
+        setGenMsg('Error: ' + (data.error ?? 'desconocido'));
+      }
+    } finally {
+      setGenerando(false);
+      setTimeout(() => setGenMsg(''), 4000);
+    }
+  }
 
   useEffect(() => {
     const supabase = createClient();
@@ -70,7 +89,15 @@ function PanelChecklist({ expedienteId }: { expedienteId: string }) {
   if (items.length === 0) return (
     <div style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>
       <CheckSquare size={32} style={{ marginBottom: 8, opacity: 0.4 }} />
-      <p style={{ fontSize: '0.82rem' }}>Sin checklist. Se genera automáticamente al activar el expediente.</p>
+      <p style={{ fontSize: '0.82rem', marginBottom: 12 }}>Sin checklist. Genera las tareas del cliente con IA.</p>
+      <button
+        onClick={generarConIA}
+        disabled={generando}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 8, fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', opacity: generando ? 0.7 : 1 }}
+      >
+        {generando ? '⏳ Generando...' : '✦ Generar con IA'}
+      </button>
+      {genMsg && <div style={{ marginTop: 8, fontSize: '0.75rem', color: '#059669' }}>{genMsg}</div>}
     </div>
   );
 
@@ -78,9 +105,20 @@ function PanelChecklist({ expedienteId }: { expedienteId: string }) {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Progress */}
       <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: '#475569', marginBottom: 6 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', fontWeight: 600, color: '#475569', marginBottom: 6 }}>
           <span>Documentación requerida</span>
-          <span style={{ color: completados === items.length ? '#059669' : '#475569' }}>{completados}/{items.length}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {genMsg && <span style={{ fontSize: '0.68rem', color: genMsg.startsWith('Error') ? '#dc2626' : '#059669' }}>{genMsg}</span>}
+            <button
+              onClick={generarConIA}
+              disabled={generando}
+              title="Generar más tareas con IA"
+              style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 8px', background: '#f5f3ff', color: '#7c3aed', border: '1px solid #c4b5fd', borderRadius: 6, fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer', opacity: generando ? 0.6 : 1 }}
+            >
+              {generando ? '...' : '✦ IA'}
+            </button>
+            <span style={{ color: completados === items.length ? '#059669' : '#475569' }}>{completados}/{items.length}</span>
+          </div>
         </div>
         <div style={{ background: '#f1f5f9', borderRadius: 4, height: 6, overflow: 'hidden' }}>
           <div style={{ height: '100%', borderRadius: 4, width: `${(completados / items.length) * 100}%`, background: completados === items.length ? '#059669' : '#3b82f6', transition: 'width 0.3s' }} />
