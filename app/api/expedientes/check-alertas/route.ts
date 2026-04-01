@@ -120,12 +120,6 @@ async function handler(request: NextRequest) {
     const nombre = exp.titulo || subv?.titulo || `Expediente ${exp.id.slice(0, 8)}`;
 
     // Email del cliente
-    const clientePerfil = exp.nif
-      ? allUsers.find(u => {
-          // buscar por nif en perfiles
-          return false; // se obtiene abajo
-        })
-      : null;
     const { data: clientePerfilData } = exp.nif
       ? await sb.from('perfiles').select('id').eq('nif', exp.nif).eq('rol', 'cliente').maybeSingle()
       : { data: null };
