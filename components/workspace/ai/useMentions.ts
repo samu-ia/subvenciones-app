@@ -146,6 +146,17 @@ export function useMentions({ documentos, onSubmit }: UseMentionsOptions) {
     });
   }, [inputText, documentos]);
 
+  // ── Submit ─────────────────────────────────────────────────────────────
+  const handleSubmit = useCallback(() => {
+    const text = inputText.trim();
+    if (!text) return;
+    const resolvedMentions = resolveMentions(text, documentos);
+    onSubmit(text, resolvedMentions);
+    setInputText('');
+    setMentions([]);
+    setSuggestionsOpen(false);
+  }, [inputText, documentos, onSubmit]);
+
   // ── Navegación por teclado ─────────────────────────────────────────────
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!suggestionsOpen) {
@@ -169,18 +180,7 @@ export function useMentions({ documentos, onSubmit }: UseMentionsOptions) {
       e.preventDefault();
       setSuggestionsOpen(false);
     }
-  }, [suggestionsOpen, suggestions, activeIndex, selectSuggestion]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Submit ─────────────────────────────────────────────────────────────
-  const handleSubmit = useCallback(() => {
-    const text = inputText.trim();
-    if (!text) return;
-    const resolvedMentions = resolveMentions(text, documentos);
-    onSubmit(text, resolvedMentions);
-    setInputText('');
-    setMentions([]);
-    setSuggestionsOpen(false);
-  }, [inputText, documentos, onSubmit]);
+  }, [suggestionsOpen, suggestions, activeIndex, selectSuggestion, handleSubmit]);
 
   // ── Cerrar dropdown al hacer clic fuera ───────────────────────────────
   const closeSuggestions = useCallback(() => setSuggestionsOpen(false), []);

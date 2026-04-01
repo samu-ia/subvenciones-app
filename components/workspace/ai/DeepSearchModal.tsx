@@ -66,9 +66,9 @@ export default function DeepSearchModal({
       // Reset
       setPrompt('');
       
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error en búsqueda profunda:', err);
-      setError(err.message || 'Error al generar la búsqueda');
+      setError((err as Error).message || 'Error al generar la búsqueda');
     } finally {
       setLoading(false);
     }

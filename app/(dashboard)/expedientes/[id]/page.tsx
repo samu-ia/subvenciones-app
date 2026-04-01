@@ -1134,11 +1134,6 @@ export default function ExpedienteWorkspacePage() {
     getUser();
   }, []);
 
-  // Cargar datos
-  useEffect(() => {
-    loadData();
-  }, [expedienteId]);
-
   const loadData = async () => {
     const supabase = createClient();
 
@@ -1198,6 +1193,10 @@ export default function ExpedienteWorkspacePage() {
     }
     setLoading(false);
   };
+
+  // Cargar datos
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { loadData(); }, [expedienteId]);
 
   const saveDocument = useCallback(async (content: string) => {
     if (!selectedDocId) return;
