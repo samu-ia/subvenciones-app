@@ -356,18 +356,69 @@ export default function ChatsPage() {
 
   useEffect(() => {
     cargarConversaciones();
-    const interval = setInterval(cargarConversaciones, 30_000);
-    return () => clearInterval(interval);
   }, [cargarConversaciones]);
 
   useEffect(() => {
     if (nifActivo) {
-      setContextoCliente(null); // Reset al cambiar de conversación
+      setContextoCliente(null);
       cargarMensajes(nifActivo);
-      const interval = setInterval(() => cargarMensajes(nifActivo), 15_000);
-      return () => clearInterval(interval);
     }
   }, [nifActivo, cargarMensajes]);
+
+  // Realtime: mensajes entrantes del cliente en la conversación activa
+  useEffect(() => {
+    if (!nifActivo) return;
+    const channel = supabase
+      .channel(`chat-admin-${nifActivo}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'mensajes_gestor',
+        filter: `nif=eq.${nifActivo}`,
+      }, (payload) => {
+        const nuevo = payload.new as Mensaje;
+        // No duplicar mensajes optimistas del gestor (ya los añadimos al enviar)
+        if (nuevo.remitente === 'cliente' || nuevo.remitente === 'ia') {
+          setMensajes(prev => prev.some(m => m.id === nuevo.id) ? prev : [...prev, nuevo]);
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [nifActivo, supabase]);
+
+  // Realtime: actualizar lista de conversaciones cuando llega un mensaje nuevo (cualquier cliente)
+  useEffect(() => {
+    const channel = supabase
+      .channel('chat-admin-convs')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'mensajes_gestor',
+      }, (payload) => {
+        const msg = payload.new as { nif: string; contenido: string; created_at: string; remitente: string };
+        if (msg.remitente !== 'cliente') return;
+        setConversaciones(prev => {
+          const idx = prev.findIndex(c => c.nif === msg.nif);
+          if (idx === -1) {
+            // Nueva conversación — recargar lista completa
+            cargarConversaciones();
+            return prev;
+          }
+          const updated = [...prev];
+          updated[idx] = {
+            ...updated[idx],
+            ultimo: msg.created_at,
+            preview: msg.contenido.slice(0, 80),
+            no_leidos: msg.nif === nifActivo ? 0 : (updated[idx].no_leidos ?? 0) + 1,
+          };
+          // Mover conversación al top
+          const [conv] = updated.splice(idx, 1);
+          return [conv, ...updated];
+        });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [supabase, nifActivo, cargarConversaciones]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });

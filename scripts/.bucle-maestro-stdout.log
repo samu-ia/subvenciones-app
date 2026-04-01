@@ -6006,3 +6006,21 @@ El sistema no puede encontrar la ruta especificada.
 [2026-04-01 14:42:03][R96][INFO] Analizando 1 hallazgos top con Claude...
 [2026-04-01 14:42:03][R96][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
 [2026-04-01 14:42:12][R96][INFO] Fix aplicado por Claude CLI
+warning: in the working copy of 'scripts/.bucle-maestro-stdout.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/.bucle-maestro.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/.bucle-maestro-stdout.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/.bucle-maestro.log', LF will be replaced by CRLF the next time Git touches it
+[2026-04-01 14:42:12][R96][INFO] Commit de respaldo realizado
+[2026-04-01 14:42:14][R96][INFO] Push a origin/main OK
+
+╔══════════════════════════════════════════════════════════╗
+║  RONDA 96   — INFORME FINAL  (36s)                        ║
+╠══════════════════════════════════════════════════════════╣
+║  Subvenciones: 307   | Abiertas: 165   | Matches: 3137  ║
+║  Hallazgos detectados: 1    | Acciones pipeline: 0  ║
+╠══════════════════════════════════════════════════════════╣
+║  TOP HALLAZGOS:                                           ║
+║    [p9] 41 errores TypeScript                            ║
+╚══════════════════════════════════════════════════════════╝
+
+[2026-04-01 14:42:14][R96][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)
