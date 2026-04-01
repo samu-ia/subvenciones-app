@@ -3481,3 +3481,35 @@
 [2026-04-01 15:50:16][R111][INFO] Analizando 2 hallazgos top con Claude...
 [2026-04-01 15:50:16][R111][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
 [2026-04-01 15:50:23][R111][INFO] Fix aplicado por Claude CLI
+[2026-04-01 15:50:23][R111][INFO] Commit de respaldo realizado
+[2026-04-01 15:50:25][R111][INFO] Push a origin/main OK
+
+╔══════════════════════════════════════════════════════════╗
+║  RONDA 111  — INFORME FINAL  (15s)                        ║
+╠══════════════════════════════════════════════════════════╣
+║  Subvenciones: 357   | Abiertas: 198   | Matches: 3693  ║
+║  Hallazgos detectados: 2    | Acciones pipeline: 0  ║
+╠══════════════════════════════════════════════════════════╣
+║  TOP HALLAZGOS:                                           ║
+║    [p9] 41 errores TypeScript                            ║
+║    [p6] 1 subvenciones en estado error                   ║
+╚══════════════════════════════════════════════════════════╝
+
+[2026-04-01 15:50:25][R111][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)
+[2026-04-01 15:53:25][R112][INFO] INICIANDO RONDA 112
+[2026-04-01 15:53:25][R112][INFO] Subvenciones: 357 | Sin PDF: 0 | Sin título: 0
+[2026-04-01 15:53:25][R112][INFO] Matches: 3693 | Sin motivo: 0
+[2026-04-01 15:53:25][R112][INFO] Expedientes: 2 | Sin fase: 0
+[2026-04-01 15:53:25][R112][INFO] Pipeline errores: 1
+[2026-04-01 15:53:26][R112][INFO] Estados convocatoria: {"abierta":198,"cerrada":37,"desconocido":52,"proxima":68,"resuelta":2}
+[2026-04-01 15:53:30][R112][WARN] TypeScript: 41 errores
+[2026-04-01 15:53:30][R112][INFO] ✓ Query matches: 5 resultados
+[2026-04-01 15:53:30][R112][INFO] ✓ Convocatorias abiertas: 198
+[2026-04-01 15:53:30][R112][INFO] ✓ Expedientes en cobro: todos tienen importe_concedido
+[2026-04-01 15:53:30][R112][INFO] Clientes sin NIF (onboarding incompleto): 4
+[2026-04-01 15:53:30][R112][INFO] Alertas sin leer: null
+[2026-04-01 15:53:31][R112][INFO] Matching reciente (hace 0.4h) — skip
+[2026-04-01 15:53:31][R112][INFO] Pipeline BDNS reciente (hace 1.0h) — skip
+[2026-04-01 15:53:31][R112][INFO] Analizando 2 hallazgos top con Claude...
+[2026-04-01 15:53:31][R112][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
+[2026-04-01 15:53:38][R112][INFO] Fix aplicado por Claude CLI
