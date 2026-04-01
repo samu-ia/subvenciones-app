@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
   MessageCircle, Send, Paperclip, Search, X,
@@ -308,11 +309,12 @@ function PanelContexto({ contexto, nif: _nif }: { contexto: ContextoCliente | nu
 }
 
 /* ── Página principal ──────────────────────────────────────────────────── */
-export default function ChatsPage() {
+function ChatsContent() {
   const supabase = useMemo(() => createClient(), []);
+  const searchParams = useSearchParams();
 
   const [conversaciones, setConversaciones] = useState<Conversacion[]>([]);
-  const [nifActivo, setNifActivo] = useState<string | null>(null);
+  const [nifActivo, setNifActivo] = useState<string | null>(() => searchParams.get('nif'));
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [contextoCliente, setContextoCliente] = useState<ContextoCliente | null>(null);
   const [texto, setTexto] = useState('');
@@ -791,5 +793,13 @@ export default function ChatsPage() {
         <PanelContexto contexto={contextoCliente} nif={nifActivo} />
       )}
     </div>
+  );
+}
+
+export default function ChatsPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 32 }}>Cargando chats...</div>}>
+      <ChatsContent />
+    </Suspense>
   );
 }

@@ -116,17 +116,35 @@ export default async function ClienteDetailPage({
         >
           ← Volver a clientes
         </Link>
-        <h1 style={{
-          fontSize: '32px',
-          fontWeight: '700',
-          color: 'var(--ink)',
-          marginBottom: '4px'
-        }}>
-          {cliente.nombre_empresa || cliente.nombre_normalizado || cliente.nif}
-        </h1>
-        <p style={{ color: 'var(--ink2)', fontSize: '15px', fontFamily: 'monospace' }}>
-          {cliente.nif}
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <h1 style={{
+              fontSize: '32px',
+              fontWeight: '700',
+              color: 'var(--ink)',
+              marginBottom: '4px'
+            }}>
+              {cliente.nombre_empresa || cliente.nombre_normalizado || cliente.nif}
+            </h1>
+            <p style={{ color: 'var(--ink2)', fontSize: '15px', fontFamily: 'monospace' }}>
+              {cliente.nif}
+            </p>
+          </div>
+          {/* Acciones rápidas */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <Link href={`/calculadora?nif=${encodeURIComponent(nif)}`} style={{ padding: '8px 16px', background: '#f0fdf4', color: '#059669', borderRadius: 8, fontWeight: 600, fontSize: '0.82rem', textDecoration: 'none', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: 5 }}>
+              Calculadora
+            </Link>
+            {cliente.cnae_codigo && (
+              <Link href={`/sector-scan?cnae=${encodeURIComponent(cliente.cnae_codigo)}`} style={{ padding: '8px 16px', background: '#eff6ff', color: '#1d4ed8', borderRadius: 8, fontWeight: 600, fontSize: '0.82rem', textDecoration: 'none', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', gap: 5 }}>
+                Radar sectorial
+              </Link>
+            )}
+            <Link href={`/chats?nif=${encodeURIComponent(nif)}`} style={{ padding: '8px 16px', background: '#f5f3ff', color: '#7c3aed', borderRadius: 8, fontWeight: 600, fontSize: '0.82rem', textDecoration: 'none', border: '1px solid #ddd6fe', display: 'flex', alignItems: 'center', gap: 5 }}>
+              Chat
+            </Link>
+          </div>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
