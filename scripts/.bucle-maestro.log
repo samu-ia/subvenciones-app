@@ -4311,3 +4311,18 @@
 [2026-04-01 17:16:37][R137][INFO] Analizando 2 hallazgos top con Claude...
 [2026-04-01 17:16:37][R137][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
 [2026-04-01 17:16:48][R137][INFO] Fix aplicado por Claude CLI
+[2026-04-01 17:16:49][R137][INFO] Commit de respaldo realizado
+[2026-04-01 17:16:51][R137][INFO] Push a origin/main OK
+
+╔══════════════════════════════════════════════════════════╗
+║  RONDA 137  — INFORME FINAL  (44s)                        ║
+╠══════════════════════════════════════════════════════════╣
+║  Subvenciones: 357   | Abiertas: 198   | Matches: 3697  ║
+║  Hallazgos detectados: 2    | Acciones pipeline: 0  ║
+╠══════════════════════════════════════════════════════════╣
+║  TOP HALLAZGOS:                                           ║
+║    [p9] 41 errores TypeScript                            ║
+║    [p6] 2 subvenciones en estado error                   ║
+╚══════════════════════════════════════════════════════════╝
+
+[2026-04-01 17:16:51][R137][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)

@@ -10,9 +10,10 @@ type Mode = 'login' | 'register' | 'forgot';
 interface AuthModalProps {
   onClose: () => void;
   initialMode?: Mode;
+  context?: 'cliente' | 'proveedor';
 }
 
-export default function AuthModal({ onClose, initialMode = 'login' }: AuthModalProps) {
+export default function AuthModal({ onClose, initialMode = 'login', context = 'cliente' }: AuthModalProps) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -147,11 +148,17 @@ export default function AuthModal({ onClose, initialMode = 'login' }: AuthModalP
         <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--navy)', marginBottom: 6 }}>
           {titles[mode]}
         </h2>
-        <p style={{ fontSize: '0.82rem', color: 'var(--ink2)', marginBottom: mode === 'register' ? 12 : 28 }}>
-          {mode === 'login' && 'Accede a tu panel de subvenciones.'}
+        <p style={{ fontSize: '0.82rem', color: 'var(--ink2)', marginBottom: mode === 'register' ? 12 : context === 'proveedor' ? 12 : 28 }}>
+          {mode === 'login' && (context === 'proveedor' ? 'Accede a tu panel de proveedor.' : 'Accede a tu panel de subvenciones.')}
           {mode === 'register' && 'Gratuito · Sin compromiso · Solo pagas si conseguimos la subvención.'}
           {mode === 'forgot' && 'Te enviaremos un enlace para restablecer tu contraseña.'}
         </p>
+        {mode === 'login' && context === 'proveedor' && (
+          <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 10, padding: '10px 14px', fontSize: '0.78rem', color: '#0c4a6e', marginBottom: 20, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <span style={{ fontSize: '1rem' }}>🏢</span>
+            <span>Si eres proveedor colaborador, usa las credenciales que te facilitó tu gestor de AyudaPyme.</span>
+          </div>
+        )}
         {mode === 'register' && (
           <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: 10, padding: '10px 14px', fontSize: '0.8rem', color: '#065f46', marginBottom: 20, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
             <span style={{ fontSize: '1rem' }}>✓</span>

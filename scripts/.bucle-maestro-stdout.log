@@ -8438,3 +8438,4 @@ El sistema no puede encontrar la ruta especificada.
 [2026-04-01 17:16:37][R137][INFO] Analizando 2 hallazgos top con Claude...
 [2026-04-01 17:16:37][R137][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
 [2026-04-01 17:16:48][R137][INFO] Fix aplicado por Claude CLI
+warning: in the working copy of 'app/(dashboard)/expedientes/[id]/page.tsx', LF will be replaced by CRLF the next time Git touches it
