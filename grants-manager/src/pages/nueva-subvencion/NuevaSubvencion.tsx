@@ -578,7 +578,7 @@ export function NuevaSubvencion() {
 
                 <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700">
                   <p className="font-semibold mb-1">Consejo</p>
-                  <p>Prueba con palabras clave del sector del cliente: "digitalización", "eficiencia energética", "I+D", etc.</p>
+                  <p>Prueba con palabras clave del sector del cliente: &ldquo;digitalización&rdquo;, &ldquo;eficiencia energética&rdquo;, &ldquo;I+D&rdquo;, etc.</p>
                 </div>
               </div>
 
@@ -911,7 +911,7 @@ export function NuevaSubvencion() {
                     <p className="font-semibold mb-0.5">Proveedores y presupuestos</p>
                     <p>
                       Necesitarás {analysis.gastos_elegibles.length > 2 ? '3 presupuestos comparativos' : 'al menos 1 presupuesto'} para los gastos elegibles.
-                      Puedes solicitarlos desde la pestaña "Presupuestos" del expediente.
+                      Puedes solicitarlos desde la pestaña &ldquo;Presupuestos&rdquo; del expediente.
                     </p>
                     {selectedCliente?.sector && (
                       <p className="mt-1 text-purple-600">
@@ -1002,7 +1002,7 @@ export function NuevaSubvencion() {
                       <p className="text-sm font-semibold text-slate-900">
                         {analysis.documentos_requeridos.length} documentos en checklist
                       </p>
-                      <p className="text-xs text-slate-500 mt-0.5">Todos pendientes de adjuntar. Puedes subir desde la pestaña "Documentos".</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Todos pendientes de adjuntar. Puedes subir desde la pestaña &ldquo;Documentos&rdquo;.</p>
                     </div>
                   </div>
                 </div>
@@ -1011,7 +1011,7 @@ export function NuevaSubvencion() {
                     <span className="text-lg">🏢</span>
                     <div>
                       <p className="text-sm font-semibold text-slate-900">Proveedores y presupuestos</p>
-                      <p className="text-xs text-slate-500 mt-0.5">Solicita los presupuestos desde la pestaña "Presupuestos" del expediente.</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Solicita los presupuestos desde la pestaña &ldquo;Presupuestos&rdquo; del expediente.</p>
                     </div>
                   </div>
                 </div>

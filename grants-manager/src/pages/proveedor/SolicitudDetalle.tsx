@@ -183,6 +183,11 @@ export function SolicitudDetalle() {
 
   const ctx = aiCtx ?? hardcodedCtx
 
+  // Budget lines state — declared before the useEffect that uses setLines
+  const [lines, setLines] = useState<BudgetLine[]>(
+    ctx?.partidas.map((p) => ({ ...p, unidades: '', precioUnitario: '' })) ?? []
+  )
+
   // Trigger AI generation for generic grants
   useEffect(() => {
     if (!isGeneric || !convocatoria || aiCtx || aiLoading) return
@@ -215,10 +220,6 @@ export function SolicitudDetalle() {
   // Document upload state (filename → uploaded)
   const [uploadedDocs, setUploadedDocs] = useState<Record<string, string>>({})
 
-  // Budget lines state
-  const [lines, setLines] = useState<BudgetLine[]>(
-    ctx?.partidas.map((p) => ({ ...p, unidades: '', precioUnitario: '' })) ?? []
-  )
 
   const totalLines = lines.reduce((acc, l) => {
     const u = parseFloat(l.unidades) || 0

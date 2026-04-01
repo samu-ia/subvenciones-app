@@ -582,7 +582,7 @@ function FichaPanel({
                             fontSize: "0.78rem", color: "#334155",
                             fontStyle: "italic", lineHeight: 1.55,
                           }}>
-                            "{campo.fragmento_texto}"
+                            &ldquo;{campo.fragmento_texto}&rdquo;
                             {campo.pagina_estimada && (
                               <span style={{ color: "#94a3b8", fontStyle: "normal", marginLeft: 8, fontSize: "0.72rem" }}>
                                 (p. {campo.pagina_estimada})
@@ -651,7 +651,7 @@ function FichaPanel({
                           paddingLeft: 10, fontSize: "0.75rem", color: "#64748b",
                           fontStyle: "italic",
                         }}>
-                          "{ev.fragmento_texto}"
+                          &ldquo;{ev.fragmento_texto}&rdquo;
                         </blockquote>
                       )}
                     </div>
