@@ -190,17 +190,26 @@ export function Expedientes() {
   )
 }
 
-function KanbanView({ expedientes, clientes, convocatorias, gestores, navigate, formatEur, diffDays, urgentPinnedIds }: any) {
+function KanbanView({ expedientes, clientes, convocatorias, gestores, navigate, formatEur, diffDays, urgentPinnedIds }: {
+  expedientes: Expediente[];
+  clientes: Cliente[];
+  convocatorias: Convocatoria[];
+  gestores: Gestor[];
+  navigate: (path: string) => void;
+  formatEur: (n: number) => string;
+  diffDays: (d: Date) => number;
+  urgentPinnedIds: string[];
+}) {
   const { toggleUrgentPin } = useAppStore()
 
   return (
     <div className="h-full overflow-x-auto">
       <div className="flex gap-3 p-4 h-full" style={{ minWidth: `${COLUMNAS.length * 250}px` }}>
         {COLUMNAS.map((estado) => {
-          const allItems = expedientes.filter((e: any) => e.estado === estado)
+          const allItems = expedientes.filter((e) => e.estado === estado)
           // B18 — pinned al top
-          const pinned = allItems.filter((e: any) => urgentPinnedIds.includes(e.id))
-          const unpinned = allItems.filter((e: any) => !urgentPinnedIds.includes(e.id))
+          const pinned = allItems.filter((e) => urgentPinnedIds.includes(e.id))
+          const unpinned = allItems.filter((e) => !urgentPinnedIds.includes(e.id))
           const items = [...pinned, ...unpinned]
 
           return (
@@ -215,21 +224,21 @@ function KanbanView({ expedientes, clientes, convocatorias, gestores, navigate, 
                 <span className="text-xs text-slate-400 font-medium flex-shrink-0">{items.length}</span>
               </div>
               <div className="flex-1 overflow-y-auto space-y-2 pb-2">
-                {items.map((exp: any) => {
-                  const cli = clientes.find((c: any) => c.id === exp.clienteId)
-                  const conv = convocatorias.find((c: any) => c.idBdns === exp.convocatoriaId)
-                  const gestor = gestores.find((g: any) => g.id === exp.gestorId)
+                {items.map((exp) => {
+                  const cli = clientes.find((c) => c.id === exp.clienteId)
+                  const conv = convocatorias.find((c) => c.idBdns === exp.convocatoriaId)
+                  const gestor = gestores.find((g) => g.id === exp.gestorId)
                   const dias = diffDays(exp.fechaVencimiento)
                   const isPinned = urgentPinnedIds.includes(exp.id)
 
                   // B10 — días en fase actual
                   const diasEnFase = exp.historial && exp.historial.length > 0
-                    ? Math.ceil((Date.now() - [...exp.historial].sort((a: any, b: any) => b.fecha - a.fecha)[0].fecha.getTime()) / (1000 * 60 * 60 * 24))
+                    ? Math.ceil((Date.now() - [...exp.historial].sort((a, b) => b.fecha.getTime() - a.fecha.getTime())[0].fecha.getTime()) / (1000 * 60 * 60 * 24))
                     : null
 
                   // B17 — edad del expediente
                   const primerEvento = exp.historial && exp.historial.length > 0
-                    ? [...exp.historial].sort((a: any, b: any) => a.fecha.getTime() - b.fecha.getTime())[0]
+                    ? [...exp.historial].sort((a, b) => a.fecha.getTime() - b.fecha.getTime())[0]
                     : null
                   const edadDias = primerEvento
                     ? Math.ceil((Date.now() - primerEvento.fecha.getTime()) / (1000 * 60 * 60 * 24))
@@ -237,7 +246,7 @@ function KanbanView({ expedientes, clientes, convocatorias, gestores, navigate, 
 
                   // B13 — progreso documentos
                   const totalDocs = exp.documentos?.length || 0
-                  const validadosDocs = exp.documentos?.filter((d: any) => d.estado === 'validado').length || 0
+                  const validadosDocs = exp.documentos?.filter((d: { estado: string }) => d.estado === 'validado').length || 0
                   const progresoDocs = totalDocs > 0 ? Math.round((validadosDocs / totalDocs) * 100) : null
 
                   // Tooltip fecha exacta para "Xd"
@@ -369,7 +378,15 @@ function KanbanView({ expedientes, clientes, convocatorias, gestores, navigate, 
   )
 }
 
-function TablaView({ expedientes, clientes, convocatorias, gestores, navigate, formatEur, diffDays }: any) {
+function TablaView({ expedientes, clientes, convocatorias, gestores, navigate, formatEur, diffDays }: {
+  expedientes: Expediente[];
+  clientes: Cliente[];
+  convocatorias: Convocatoria[];
+  gestores: Gestor[];
+  navigate: (path: string) => void;
+  formatEur: (n: number) => string;
+  diffDays: (d: Date) => number;
+}) {
   // B12 — columnas ordenables
   const [sortCol, setSortCol] = useState<'solicitado' | 'vencimiento' | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
@@ -383,7 +400,7 @@ function TablaView({ expedientes, clientes, convocatorias, gestores, navigate, f
     }
   }
 
-  const sorted = [...expedientes].sort((a: any, b: any) => {
+  const sorted = [...expedientes].sort((a, b) => {
     if (!sortCol) return 0
     let av: number, bv: number
     if (sortCol === 'solicitado') {
