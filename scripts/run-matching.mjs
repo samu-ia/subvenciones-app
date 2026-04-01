@@ -426,14 +426,14 @@ function calcularMatchV2(cliente, subvencion) {
   let confirmedCnaeMismatch = false;
 
   if (subvencion._sectores_todos) {
-    cnae = 25;
+    cnae = 15;
     motivos.push('Convocatoria abierta a todos los sectores');
   } else if (!subvencion.sectores?.length) {
-    cnae = 25;
+    cnae = 15;
     motivos.push('Sin restricción de sector');
   } else {
     const permitidos = subvencion.sectores.filter(s => !s.excluido);
-    if (!permitidos.length) { cnae = 25; }
+    if (!permitidos.length) { cnae = 15; }
     else {
       const exactMatch = permitidos.some(s => s.cnae_codigo?.slice(0, 4) === clienteCnae && clienteCnae);
       const divMatch = permitidos.some(s => s.cnae_codigo?.slice(0, 2) === clienteCnae2 && clienteCnae2);

@@ -524,12 +524,12 @@ function calcularMatchV2(
   let confirmedCnaeMismatch = false;
 
   if (!subvencion.sectores?.length) {
-    cnae = 25; // sin restricción de sector → genérica, puntuación parcial
+    cnae = 15; // sin restricción de sector → genérica, puntuación baja para no inflar score
     motivos.push('Convocatoria abierta a todos los sectores');
   } else {
     const permitidos = subvencion.sectores.filter(s => !s.excluido);
     if (!permitidos.length) {
-      cnae = 25; // solo hay excluidos, sin incluidos → genérica
+      cnae = 15; // solo hay excluidos, sin incluidos → genérica
     } else {
       const exactMatch = permitidos.some(
         s => s.cnae_codigo?.slice(0, 4) === clienteCnae && clienteCnae,
