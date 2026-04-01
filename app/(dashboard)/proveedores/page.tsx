@@ -213,7 +213,7 @@ export default function ProveedoresPage() {
     setLoading(false);
   }, []);
 
-  // eslint-disable-next-line react-compiler/react-compiler
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { cargar(); }, [cargar]);
 
   async function toggleActivo(p: Proveedor) {

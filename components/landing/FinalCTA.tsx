@@ -1,7 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
+
+// Computed at module load time (once per page load), not during render
+const PAGE_LOAD_TIME = Date.now();
 
 interface ProximaConvocatoria {
   titulo_comercial?: string;
@@ -20,8 +23,7 @@ export default function FinalCTA({ onAuthClick }: { onAuthClick?: () => void }) 
       .catch(() => {/* ignore */});
   }, []);
 
-  const nowRef = useRef(Date.now());
-  const now = nowRef.current;
+  const now = PAGE_LOAD_TIME;
   const fmtFecha = (s?: string) => s ? new Date(s).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' }) : '';
   const diasHasta = (s?: string) => s ? Math.ceil((new Date(s).getTime() - now) / 86_400_000) : null;
 

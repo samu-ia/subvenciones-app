@@ -64,7 +64,7 @@ export default function ProspectosPage() {
     setLoading(false);
   }, [filtroEstado, q]);
 
-  // eslint-disable-next-line react-compiler/react-compiler
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   function openNew() {

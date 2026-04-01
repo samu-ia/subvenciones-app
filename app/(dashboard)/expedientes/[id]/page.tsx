@@ -224,7 +224,7 @@ function PanelPresupuestos({ expedienteId }: { expedienteId: string }) {
     setLoading(false);
   };
 
-  // eslint-disable-next-line react-compiler/react-compiler
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { reload(); }, [expedienteId]);
 
   const crearPresupuesto = async () => {

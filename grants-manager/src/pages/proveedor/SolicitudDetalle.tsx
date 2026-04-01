@@ -189,7 +189,7 @@ export function SolicitudDetalle() {
   )
 
   // Trigger AI generation for generic grants
-  // eslint-disable-next-line react-compiler/react-compiler, react-hooks/set-state-in-effect
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (!isGeneric || !convocatoria || aiCtx || aiLoading) return
     setAiLoading(true)

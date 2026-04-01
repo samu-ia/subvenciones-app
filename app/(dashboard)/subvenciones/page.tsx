@@ -104,7 +104,7 @@ export default function SubvencionesPage() {
     setLoading(false);
   }, [search, estado, ccaa, soloAbiertas, page]);
 
-  // eslint-disable-next-line react-compiler/react-compiler
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { cargar(); }, [cargar]);
 
   function aplicarBusqueda() {
