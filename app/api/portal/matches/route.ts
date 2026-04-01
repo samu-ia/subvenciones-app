@@ -58,9 +58,9 @@ export async function GET() {
     `)
     .eq('nif', nif)
     .eq('es_hard_exclude', false)
-    .gte('score', 0.1)
+    .gte('score', 0.25)
     .order('score', { ascending: false })
-    .limit(50);
+    .limit(30);
 
   if (error) {
     console.error('[portal/matches] Error cargando matches:', error.message);
