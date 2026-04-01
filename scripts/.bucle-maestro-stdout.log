@@ -4097,3 +4097,66 @@ El sistema no puede encontrar la ruta especificada.
 [2026-04-01 12:38:10][R66][INFO] Analizando 1 hallazgos top con Claude...
 [2026-04-01 12:38:10][R66][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
 [2026-04-01 12:38:16][R66][INFO] Fix aplicado por Claude CLI
+warning: in the working copy of 'scripts/.bucle-maestro-stdout.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/.bucle-maestro.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/.bucle-maestro-stdout.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/.bucle-maestro.log', LF will be replaced by CRLF the next time Git touches it
+[2026-04-01 12:38:17][R66][INFO] Commit de respaldo realizado
+[2026-04-01 12:38:18][R66][INFO] Push a origin/main OK
+
+╔══════════════════════════════════════════════════════════╗
+║  RONDA 66   — INFORME FINAL  (14s)                        ║
+╠══════════════════════════════════════════════════════════╣
+║  Subvenciones: 307   | Abiertas: 165   | Matches: 3137  ║
+║  Hallazgos detectados: 1    | Acciones pipeline: 0  ║
+╠══════════════════════════════════════════════════════════╣
+║  TOP HALLAZGOS:                                           ║
+║    [p9] 41 errores TypeScript                            ║
+╚══════════════════════════════════════════════════════════╝
+
+[2026-04-01 12:38:19][R66][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)
+
+████████████████████████████████████████████████████████████
+[2026-04-01 12:59:17][R67][INFO] INICIANDO RONDA 67
+████████████████████████████████████████████████████████████
+
+════════════════════════════════════════════════════════════
+  MÓDULO 1 — Salud de BD
+════════════════════════════════════════════════════════════
+[2026-04-01 12:59:17][R67][INFO] Subvenciones: null | Sin PDF: null | Sin título: null
+[2026-04-01 12:59:17][R67][INFO] Matches: null | Sin motivo: null
+[2026-04-01 12:59:17][R67][INFO] Expedientes: null | Sin fase: null
+[2026-04-01 12:59:17][R67][INFO] Pipeline errores: null
+[2026-04-01 12:59:17][R67][INFO] Estados convocatoria: {}
+
+════════════════════════════════════════════════════════════
+  MÓDULO 2 — Calidad de código
+════════════════════════════════════════════════════════════
+[2026-04-01 13:04:55][R67][INFO] TypeScript: OK (0 errores)
+El sistema no puede encontrar la ruta especificada.
+El sistema no puede encontrar la ruta especificada.
+El sistema no puede encontrar la ruta especificada.
+
+════════════════════════════════════════════════════════════
+  MÓDULO 3 — Test de APIs (Supabase directo)
+════════════════════════════════════════════════════════════
+[2026-04-01 13:04:55][R67][ERROR] ✗ Query matches falló: TypeError: fetch failed
+[2026-04-01 13:04:55][R67][ERROR] ✗ Query subvenciones abiertas: TypeError: fetch failed
+[2026-04-01 13:04:55][R67][ERROR] ✗ Query expedientes cobro: TypeError: fetch failed
+[2026-04-01 13:04:55][R67][INFO] Clientes sin NIF (onboarding incompleto): null
+[2026-04-01 13:04:55][R67][INFO] Alertas sin leer: null
+
+════════════════════════════════════════════════════════════
+  MÓDULO 4 — Mantenimiento de Pipeline
+════════════════════════════════════════════════════════════
+[2026-04-01 13:04:55][R67][INFO] Re-calculando matches (última vez hace 999.0h)...
+[2026-04-01 13:04:56][R67][INFO] Matching: completado
+[2026-04-01 13:04:56][R67][INFO] Ejecutando pipeline BDNS (última ingesta hace 999.0h)...
+[2026-04-01 13:04:57][R67][INFO] Pipeline BDNS: completado
+
+════════════════════════════════════════════════════════════
+  MÓDULO 5 — Análisis IA + Generación de mejoras
+════════════════════════════════════════════════════════════
+[2026-04-01 13:04:57][R67][INFO] Analizando 2 hallazgos top con Claude...
+[2026-04-01 13:04:57][R67][INFO] Top hallazgo: [prio 9] Query de matches falla: TypeError: fetch failed
+[2026-04-01 13:05:04][R67][INFO] Fix aplicado por Claude CLI
