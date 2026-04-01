@@ -2844,3 +2844,17 @@
 [2026-04-01 14:28:22][R92][INFO] Analizando 1 hallazgos top con Claude...
 [2026-04-01 14:28:22][R92][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
 [2026-04-01 14:28:31][R92][INFO] Fix aplicado por Claude CLI
+[2026-04-01 14:28:32][R92][INFO] Commit de respaldo realizado
+[2026-04-01 14:28:34][R92][INFO] Push a origin/main OK
+
+╔══════════════════════════════════════════════════════════╗
+║  RONDA 92   — INFORME FINAL  (30s)                        ║
+╠══════════════════════════════════════════════════════════╣
+║  Subvenciones: 307   | Abiertas: 165   | Matches: 3137  ║
+║  Hallazgos detectados: 1    | Acciones pipeline: 0  ║
+╠══════════════════════════════════════════════════════════╣
+║  TOP HALLAZGOS:                                           ║
+║    [p9] 41 errores TypeScript                            ║
+╚══════════════════════════════════════════════════════════╝
+
+[2026-04-01 14:28:35][R92][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)
