@@ -18,7 +18,6 @@ export async function GET() {
     const { data } = await sb
       .from('subvenciones')
       .select('titulo_comercial, titulo, plazo_fin, organismo')
-      .eq('activa', true)
       .eq('estado_convocatoria', 'abierta')
       .gte('plazo_fin', hoy)
       .lte('plazo_fin', en30dias)

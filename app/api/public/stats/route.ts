@@ -16,11 +16,9 @@ export async function GET() {
     const [{ count: abiertas }, { data: maxRow }] = await Promise.all([
       sb.from('subvenciones')
         .select('*', { count: 'exact', head: true })
-        .eq('activa', true)
         .eq('estado_convocatoria', 'abierta'),
       sb.from('subvenciones')
         .select('importe_maximo')
-        .eq('activa', true)
         .not('importe_maximo', 'is', null)
         .order('importe_maximo', { ascending: false })
         .limit(1)
