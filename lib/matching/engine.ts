@@ -781,7 +781,7 @@ function matchGastosConActividad(
   if (!gastosRelevantes.length && !clienteDesc) return 5; // sin info para comparar
 
   let matches = 0;
-  let total = gastos.length;
+  const total = gastos.length;
 
   for (const gasto of gastos) {
     const gastoCat = gasto.categoria.toLowerCase();

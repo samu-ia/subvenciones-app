@@ -9,6 +9,8 @@ import { useAppStore } from '../../store'
 import { Search, ExternalLink, Calendar, Plus } from 'lucide-react'
 import { clsx } from 'clsx'
 
+const NOW = Date.now()
+
 export function Convocatorias() {
   const { convocatorias } = useAppStore()
   const navigate = useNavigate()
@@ -35,7 +37,7 @@ export function Convocatorias() {
   const formatEur = (n: number) =>
     new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
 
-  const diffDays = (date: Date) => Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+  const diffDays = (date: Date) => Math.ceil((date.getTime() - NOW) / (1000 * 60 * 60 * 24))
 
   return (
     <>

@@ -13,6 +13,10 @@ import {
 import { clsx } from 'clsx'
 import { ESTADO_COLORS, ESTADO_LABELS, type EstadoExpediente, type Presupuesto } from '../../types'
 
+const NOW = Date.now()
+const VERIFIED_DATE = new Date(NOW).toLocaleDateString('es-ES')
+const VALID_UNTIL = new Date(NOW + 90 * 24 * 60 * 60 * 1000).toLocaleDateString('es-ES')
+
 const TODOS_ESTADOS: EstadoExpediente[] = [
   'DETECCION', 'EVALUACION', 'PREPARACION', 'PRESENTADA',
   'SUBSANACION', 'CONCEDIDA', 'JUSTIFICACION', 'CERRADA', 'DENEGADA',

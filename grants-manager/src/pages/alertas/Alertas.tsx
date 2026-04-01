@@ -9,6 +9,8 @@ import { Bell, CheckCheck, ExternalLink, Plus, X } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { Alerta } from '../../types'
 
+const NOW = Date.now()
+
 export function Alertas() {
   const { alertas, expedientes, clientes, convocatorias, marcarAlertaVista, addAlerta } = useAppStore()
   const navigate = useNavigate()
@@ -25,7 +27,7 @@ export function Alertas() {
 
   // Compute live diasRestantes from fechaDisparo so urgency is always current
   const getDiasRestantes = (a: Alerta) =>
-    Math.ceil((a.fechaDisparo.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    Math.ceil((a.fechaDisparo.getTime() - NOW) / (1000 * 60 * 60 * 24))
 
   const filtered = alertas
     .filter((a) => {

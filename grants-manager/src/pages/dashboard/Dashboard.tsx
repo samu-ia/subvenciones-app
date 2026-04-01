@@ -11,6 +11,8 @@ import { FileText, AlertTriangle, TrendingUp, CheckCircle, User, Mail } from 'lu
 import { ESTADO_COLORS, ESTADO_LABELS, type EstadoExpediente } from '../../types'
 import { clsx } from 'clsx'
 
+const NOW = NOW
+
 const ESTADO_ORDER: EstadoExpediente[] = [
   'DETECCION', 'EVALUACION', 'PREPARACION', 'PRESENTADA',
   'SUBSANACION', 'CONCEDIDA', 'JUSTIFICACION', 'CERRADA', 'DENEGADA',
@@ -77,7 +79,7 @@ export function Dashboard() {
     .slice(0, 5)
 
   const getAlertaDias = (a: typeof alertas[number]) =>
-    Math.ceil((a.fechaDisparo.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    Math.ceil((a.fechaDisparo.getTime() - NOW) / (1000 * 60 * 60 * 24))
 
   // A22 — acción prioritaria: alerta más urgente
   const alertaMasUrgente = alertasPendientes.length > 0
@@ -88,7 +90,7 @@ export function Dashboard() {
     new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
 
   function diffDays(date: Date) {
-    const diff = date.getTime() - Date.now()
+    const diff = date.getTime() - NOW
     return Math.ceil(diff / (1000 * 60 * 60 * 24))
   }
 

@@ -8,6 +8,8 @@ import { Plus, Search, AlertTriangle, X } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { Cliente } from '../../types'
 
+const NOW = Date.now()
+
 const TAMANO_LABELS = {
   micropyme: 'Micropyme',
   pyme: 'PYME',
@@ -95,7 +97,7 @@ export function Clientes() {
   }
 
   const isCertificadoCaducando = (fecha: Date) => {
-    const days = Math.ceil((fecha.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    const days = Math.ceil((fecha.getTime() - NOW) / (1000 * 60 * 60 * 24))
     return days <= 30
   }
 

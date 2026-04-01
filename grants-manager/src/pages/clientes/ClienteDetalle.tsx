@@ -7,6 +7,8 @@ import { useAppStore } from '../../store'
 import { ArrowLeft, Mail, Phone, AlertTriangle, CheckCircle, User, Search } from 'lucide-react'
 import { clsx } from 'clsx'
 
+const NOW = Date.now()
+
 const TAMANO_LABELS = {
   micropyme: 'Micropyme', pyme: 'PYME', gran_empresa: 'Gran empresa', ong: 'ONG', autonomo: 'Autónomo',
 }
@@ -27,7 +29,7 @@ export function ClienteDetalle() {
   const formatEur = (n: number) =>
     new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
 
-  const certDays = Math.ceil((cliente.caducidadCertificado.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+  const certDays = Math.ceil((cliente.caducidadCertificado.getTime() - NOW) / (1000 * 60 * 60 * 24))
   const certOk = certDays > 30
 
   const importeConcedido = clienteExpedientes.reduce((s, e) => s + e.importeConcedido, 0)
