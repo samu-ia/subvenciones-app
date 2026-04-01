@@ -9,6 +9,7 @@
  */
 
 import { useState } from 'react';
+import Link from 'next/link';
 
 const CNAES_COMUNES = [
   { codigo: '5610', nombre: 'Restaurantes y puestos de comida' },
@@ -214,12 +215,20 @@ export default function SectorScanPage() {
                   <span style={{ fontSize: '0.85rem', color: '#e2e8f0' }}>hasta {fmtImporte(result.resumen.importe_maximo_total)} acumulados</span>
                 </div>
               </div>
-              <button
-                onClick={copiarMensaje}
-                style={{ padding: '10px 18px', background: copiado ? '#059669' : '#0d9488', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
-              >
-                {copiado ? '✓ Copiado' : 'Copiar mensaje ventas'}
-              </button>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button
+                  onClick={copiarMensaje}
+                  style={{ padding: '10px 18px', background: copiado ? '#059669' : '#0d9488', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                >
+                  {copiado ? '✓ Copiado' : 'Copiar mensaje ventas'}
+                </button>
+                <Link
+                  href={`/prospectos?nuevo=1&sector=${encodeURIComponent(result.query.cnae)}&provincia=${encodeURIComponent(result.query.ca)}`}
+                  style={{ padding: '10px 18px', background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 8, fontWeight: 600, fontSize: '0.85rem', whiteSpace: 'nowrap', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
+                >
+                  + Crear prospecto
+                </Link>
+              </div>
             </div>
             <div style={{ marginTop: 12, padding: '12px 16px', background: 'rgba(255,255,255,0.08)', borderRadius: 8, fontSize: '0.85rem', color: '#e2e8f0', fontStyle: 'italic' }}>
               &ldquo;{result.resumen.mensaje_ventas}&rdquo;
