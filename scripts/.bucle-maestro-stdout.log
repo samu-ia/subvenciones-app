@@ -5080,3 +5080,64 @@ El sistema no puede encontrar la ruta especificada.
 [2026-04-01 13:54:04][R82][INFO] Analizando 1 hallazgos top con Claude...
 [2026-04-01 13:54:04][R82][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
 [2026-04-01 13:54:11][R82][INFO] Fix aplicado por Claude CLI
+warning: in the working copy of 'scripts/.bucle-maestro-stdout.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/.bucle-maestro.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/.bucle-maestro-stdout.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/.bucle-maestro.log', LF will be replaced by CRLF the next time Git touches it
+[2026-04-01 13:54:12][R82][INFO] Commit de respaldo realizado
+[2026-04-01 13:54:13][R82][INFO] Push a origin/main OK
+
+╔══════════════════════════════════════════════════════════╗
+║  RONDA 82   — INFORME FINAL  (16s)                        ║
+╠══════════════════════════════════════════════════════════╣
+║  Subvenciones: 307   | Abiertas: 165   | Matches: 3137  ║
+║  Hallazgos detectados: 1    | Acciones pipeline: 0  ║
+╠══════════════════════════════════════════════════════════╣
+║  TOP HALLAZGOS:                                           ║
+║    [p9] 41 errores TypeScript                            ║
+╚══════════════════════════════════════════════════════════╝
+
+[2026-04-01 13:54:14][R82][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)
+
+████████████████████████████████████████████████████████████
+[2026-04-01 13:57:14][R83][INFO] INICIANDO RONDA 83
+████████████████████████████████████████████████████████████
+
+════════════════════════════════════════════════════════════
+  MÓDULO 1 — Salud de BD
+════════════════════════════════════════════════════════════
+[2026-04-01 13:57:14][R83][INFO] Subvenciones: 307 | Sin PDF: 0 | Sin título: 0
+[2026-04-01 13:57:14][R83][INFO] Matches: 3137 | Sin motivo: 0
+[2026-04-01 13:57:14][R83][INFO] Expedientes: 2 | Sin fase: 0
+[2026-04-01 13:57:14][R83][INFO] Pipeline errores: 0
+[2026-04-01 13:57:14][R83][INFO] Estados convocatoria: {"abierta":165,"cerrada":35,"desconocido":48,"proxima":59}
+
+════════════════════════════════════════════════════════════
+  MÓDULO 2 — Calidad de código
+════════════════════════════════════════════════════════════
+[2026-04-01 13:57:19][R83][WARN] TypeScript: 41 errores
+El sistema no puede encontrar la ruta especificada.
+El sistema no puede encontrar la ruta especificada.
+El sistema no puede encontrar la ruta especificada.
+
+════════════════════════════════════════════════════════════
+  MÓDULO 3 — Test de APIs (Supabase directo)
+════════════════════════════════════════════════════════════
+[2026-04-01 13:57:19][R83][INFO] ✓ Query matches: 5 resultados
+[2026-04-01 13:57:19][R83][INFO] ✓ Convocatorias abiertas: 165
+[2026-04-01 13:57:19][R83][INFO] ✓ Expedientes en cobro: todos tienen importe_concedido
+[2026-04-01 13:57:20][R83][INFO] Clientes sin NIF (onboarding incompleto): 4
+[2026-04-01 13:57:20][R83][INFO] Alertas sin leer: null
+
+════════════════════════════════════════════════════════════
+  MÓDULO 4 — Mantenimiento de Pipeline
+════════════════════════════════════════════════════════════
+[2026-04-01 13:57:21][R83][INFO] Matching reciente (hace 5.1h) — skip
+[2026-04-01 13:57:21][R83][INFO] Pipeline BDNS reciente (hace 5.2h) — skip
+
+════════════════════════════════════════════════════════════
+  MÓDULO 5 — Análisis IA + Generación de mejoras
+════════════════════════════════════════════════════════════
+[2026-04-01 13:57:21][R83][INFO] Analizando 1 hallazgos top con Claude...
+[2026-04-01 13:57:21][R83][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
+[2026-04-01 13:57:29][R83][INFO] Fix aplicado por Claude CLI
