@@ -20,8 +20,9 @@ export default function FinalCTA({ onAuthClick }: { onAuthClick?: () => void }) 
       .catch(() => {/* ignore */});
   }, []);
 
+  const now = Date.now();
   const fmtFecha = (s?: string) => s ? new Date(s).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' }) : '';
-  const diasHasta = (s?: string) => s ? Math.ceil((new Date(s).getTime() - Date.now()) / 86_400_000) : null;
+  const diasHasta = (s?: string) => s ? Math.ceil((new Date(s).getTime() - now) / 86_400_000) : null;
 
   return (
     <section style={{ background: 'linear-gradient(135deg, #0d1f3c 0%, #0d4a45 100%)', padding: '80px 24px' }}>

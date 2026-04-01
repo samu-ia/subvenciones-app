@@ -441,7 +441,7 @@ function ModalSolicitud({
                 </p>
                 <p><strong>PARTES:</strong> AyudaPyme (en adelante, el Gestor) y {cliente.nombre_empresa || 'el Cliente'} con NIF {cliente.nif} (en adelante, el Cliente).</p>
                 <br />
-                <p><strong>OBJETO:</strong> El Gestor se compromete a identificar, preparar y presentar en nombre del Cliente la solicitud de la siguiente subvención: <em>"{subv.titulo}"</em> (BDNS #{subv.bdns_id}), convocada por {subv.organismo ?? 'el organismo convocante'}.</p>
+                <p><strong>OBJETO:</strong> El Gestor se compromete a identificar, preparar y presentar en nombre del Cliente la solicitud de la siguiente subvención: <em>&ldquo;{subv.titulo}&rdquo;</em> (BDNS #{subv.bdns_id}), convocada por {subv.organismo ?? 'el organismo convocante'}.</p>
                 <br />
                 <p><strong>HONORARIOS:</strong> Este contrato se rige bajo el modelo de éxito. El Cliente <strong>no abonará cantidad alguna</strong> si no se obtiene la subvención. En caso de concesión, el Cliente pagará al Gestor el <strong>15% del importe concedido</strong> (IVA no incluido), en el plazo de 30 días desde el cobro.</p>
                 <br />
