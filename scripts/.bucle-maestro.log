@@ -791,3 +791,17 @@
 [2026-04-01 10:27:11][R26][INFO] Analizando 1 hallazgos top con Claude...
 [2026-04-01 10:27:11][R26][INFO] Top hallazgo: [prio 9] 4 errores TypeScript
 [2026-04-01 10:27:19][R26][INFO] Fix aplicado por Claude CLI
+[2026-04-01 10:27:19][R26][INFO] Commit de respaldo realizado
+[2026-04-01 10:27:21][R26][INFO] Push a origin/main OK
+
+╔══════════════════════════════════════════════════════════╗
+║  RONDA 26   — INFORME FINAL  (19s)                        ║
+╠══════════════════════════════════════════════════════════╣
+║  Subvenciones: 307   | Abiertas: 165   | Matches: 3137  ║
+║  Hallazgos detectados: 1    | Acciones pipeline: 0  ║
+╠══════════════════════════════════════════════════════════╣
+║  TOP HALLAZGOS:                                           ║
+║    [p9] 4 errores TypeScript                             ║
+╚══════════════════════════════════════════════════════════╝
+
+[2026-04-01 10:27:22][R26][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)

@@ -401,7 +401,7 @@ El proyecto aportará un incremento de facturación estimado en 120.000€ en lo
   const handleAddPresupuesto = () => {
     if (!newPresupuesto.proveedorNombre.trim()) return
     addPresupuesto({
-      id: `p${Date.now()}`,
+      id: `p${NOW}-${Math.random().toString(36).slice(2)}`,
       expedienteId: exp.id,
       proveedorNombre: newPresupuesto.proveedorNombre.trim(),
       proveedorCif: newPresupuesto.proveedorCif.trim(),
@@ -597,7 +597,7 @@ El proyecto aportará un incremento de facturación estimado en 120.000€ en lo
                         </div>
                       </div>
                       <p className="text-slate-400 text-xs border-t border-slate-100 pt-2">
-                        Verificado el {new Date().toLocaleDateString('es-ES')} · Válido hasta {new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toLocaleDateString('es-ES')}
+                        Verificado el {VERIFIED_DATE} · Válido hasta {VALID_UNTIL}
                       </p>
                     </div>
                   </>
