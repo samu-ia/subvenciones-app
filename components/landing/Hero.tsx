@@ -53,8 +53,8 @@ export default function Hero({ onAuthClick }: { onAuthClick?: () => void }) {
             }}
           >
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ade80', display: 'inline-block', boxShadow: '0 0 10px #4ade80', flexShrink: 0 }} />
-            <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.82rem', fontWeight: 600 }}>
-              EN VIVO — {liveStats.convocatorias_abiertas} convocatorias abiertas ahora mismo
+            <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.82rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+              EN VIVO — {liveStats.convocatorias_abiertas} convocatorias abiertas
             </span>
           </div>
 

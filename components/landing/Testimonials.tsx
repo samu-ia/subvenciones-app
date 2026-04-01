@@ -184,14 +184,15 @@ export default function Testimonials({ onAuthClick }: { onAuthClick?: () => void
           </p>
           <button
             onClick={onAuthClick}
+            className="w-full sm:w-auto"
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
+              display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8,
               background: 'hsl(215 70% 35%)', color: '#fff',
               border: 'none', borderRadius: 12, padding: '12px 24px',
               fontSize: '0.92rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
             }}
           >
-            Comprueba si tu empresa tiene dinero esperando →
+            Comprueba si tienes ayudas →
           </button>
         </div>
 

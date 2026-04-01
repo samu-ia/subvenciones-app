@@ -127,8 +127,9 @@ export default function Pricing({ onAuthClick }: { onAuthClick?: () => void }) {
 
               <button
                 onClick={onAuthClick}
+                className="w-full sm:w-auto"
                 style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 10,
+                  display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10,
                   background: '#0d9488', color: '#fff',
                   border: 'none', borderRadius: 14,
                   padding: '15px 32px', fontSize: '0.98rem', fontWeight: 800,

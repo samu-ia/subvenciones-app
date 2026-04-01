@@ -74,8 +74,9 @@ export default function FinalCTA({ onAuthClick }: { onAuthClick?: () => void }) 
         </p>
         <button
           onClick={onAuthClick}
+          className="w-full sm:w-auto"
           style={{
-            display: 'inline-flex', alignItems: 'center', gap: 10,
+            display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10,
             background: '#0d9488', color: '#fff', border: 'none',
             borderRadius: 14, padding: '18px 36px',
             fontSize: '1.05rem', fontWeight: 800, cursor: 'pointer',
