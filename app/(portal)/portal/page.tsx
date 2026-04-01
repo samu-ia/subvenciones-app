@@ -1625,6 +1625,26 @@ export default function PortalPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Realtime: badge de mensajes no leídos se actualiza cuando llega mensaje del gestor
+  useEffect(() => {
+    if (!cliente?.nif) return;
+    const channel = supabase
+      .channel(`portal-mensajes-badge-${cliente.nif}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'mensajes_gestor',
+        filter: `nif=eq.${cliente.nif}`,
+      }, (payload) => {
+        const msg = payload.new as { remitente: string; leido: boolean };
+        if ((msg.remitente === 'gestor' || msg.remitente === 'ia') && !msg.leido) {
+          setMensajesNoLeidos(prev => prev + 1);
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [cliente?.nif, supabase]);
+
   function onSolicitudCompletada() {
     setMatchSolicitando(null);
     setToast('✓ Solicitud registrada. Nuestro equipo se pondrá en contacto pronto.');
