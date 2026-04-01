@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Search, Plus, Phone, Mail, Globe, MapPin, X, Check, Radar, Calculator } from 'lucide-react';
 
 interface Prospecto {
@@ -41,7 +42,8 @@ const EMPTY_FORM = {
   estado: 'nuevo', notas: '', proxima_accion: '', fecha_proxima: '', potencial_eur: '',
 };
 
-export default function ProspectosPage() {
+function ProspectosContent() {
+  const searchParams = useSearchParams();
   const [prospectos, setProspectos] = useState<Prospecto[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
@@ -51,6 +53,18 @@ export default function ProspectosPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
+
+  // Auto-open form when coming from sector-scan with ?nuevo=1
+  useEffect(() => {
+    if (searchParams.get('nuevo') === '1') {
+      const sector = searchParams.get('sector') ?? '';
+      const provincia = searchParams.get('provincia') ?? '';
+      setForm({ ...EMPTY_FORM, sector, provincia });
+      setEditId(null);
+      setShowForm(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -380,5 +394,13 @@ export default function ProspectosPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ProspectosPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 32 }}>Cargando...</div>}>
+      <ProspectosContent />
+    </Suspense>
   );
 }
