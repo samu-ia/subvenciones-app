@@ -143,6 +143,9 @@ export default async function ClienteDetailPage({
             <Link href={`/chats?nif=${encodeURIComponent(nif)}`} style={{ padding: '8px 16px', background: '#f5f3ff', color: '#7c3aed', borderRadius: 8, fontWeight: 600, fontSize: '0.82rem', textDecoration: 'none', border: '1px solid #ddd6fe', display: 'flex', alignItems: 'center', gap: 5 }}>
               Chat
             </Link>
+            <Link href={`/reuniones/nueva?cliente=${encodeURIComponent(nif)}`} style={{ padding: '8px 16px', background: '#0d1f3c', color: '#fff', borderRadius: 8, fontWeight: 600, fontSize: '0.82rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
+              + Reunión
+            </Link>
           </div>
         </div>
       </div>

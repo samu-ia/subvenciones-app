@@ -3014,3 +3014,25 @@
 ╚══════════════════════════════════════════════════════════╝
 
 [2026-04-01 14:55:51][R97][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)
+[2026-04-01 14:58:51][R98][INFO] INICIANDO RONDA 98
+[2026-04-01 14:58:51][R98][INFO] Subvenciones: 357 | Sin PDF: 50 | Sin título: 50
+[2026-04-01 14:58:51][R98][INFO] Matches: 3137 | Sin motivo: 0
+[2026-04-01 14:58:51][R98][INFO] Expedientes: 2 | Sin fase: 0
+[2026-04-01 14:58:51][R98][INFO] Pipeline errores: 1
+[2026-04-01 14:58:52][R98][INFO] Estados convocatoria: {"abierta":198,"cerrada":37,"desconocido":52,"proxima":68,"resuelta":2}
+[2026-04-01 14:58:57][R98][WARN] TypeScript: 41 errores
+[2026-04-01 14:58:57][R98][INFO] ✓ Query matches: 5 resultados
+[2026-04-01 14:58:57][R98][INFO] ✓ Convocatorias abiertas: 198
+[2026-04-01 14:58:57][R98][INFO] ✓ Expedientes en cobro: todos tienen importe_concedido
+[2026-04-01 14:58:58][R98][INFO] Clientes sin NIF (onboarding incompleto): 4
+[2026-04-01 14:58:58][R98][INFO] Alertas sin leer: null
+[2026-04-01 14:58:58][R98][INFO] Procesando 50 PDFs pendientes...
+[2026-04-01 15:02:07][R98][INFO] PDF pipeline: 📊 Resumen Pipeline PDF Real: |    ✅ Procesadas: 48 |    ❌ Errores:    2
+[2026-04-01 15:02:07][R98][INFO] Generando 50 títulos comerciales...
+[2026-04-01 15:03:22][R98][INFO] Títulos: ✅ 45/50✅ 50/50 | 📊 20 títulos generados, 30 errores
+[2026-04-01 15:03:23][R98][INFO] Re-calculando matches (última vez hace 6.2h)...
+[2026-04-01 15:03:35][R98][INFO] Matching:   Matches relevantes:   914
+[2026-04-01 15:03:35][R98][INFO] Pipeline BDNS reciente (hace 0.2h) — skip
+[2026-04-01 15:03:35][R98][INFO] Analizando 3 hallazgos top con Claude...
+[2026-04-01 15:03:35][R98][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
+[2026-04-01 15:03:47][R98][INFO] Fix aplicado por Claude CLI
