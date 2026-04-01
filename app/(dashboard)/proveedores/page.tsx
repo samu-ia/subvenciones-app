@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import {
   Store, Plus, Edit2, X, Check, Loader2,
-  ToggleLeft, ToggleRight,
+  Globe, Mail, Phone, Tag, ChevronDown, ToggleLeft, ToggleRight,
 } from 'lucide-react';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────

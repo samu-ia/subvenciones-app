@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
-  LogOut, Store, Briefcase, FileText, CheckCircle,
-  Clock, Euro, Star,
-  ChevronRight, Package, TrendingUp, RefreshCw,
+  LogOut, Store, Briefcase, FileText,
+  Euro, Star, Globe, Mail,
+  Package, TrendingUp, RefreshCw,
 } from 'lucide-react';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────

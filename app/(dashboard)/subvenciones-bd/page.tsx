@@ -760,7 +760,6 @@ function Empty({ label }: { label: string }) {
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function SubvencionsBdPage() {
-  const supabase = createClient();
 
   // Lista
   const [items, setItems] = useState<SubvencionItem[]>([]);

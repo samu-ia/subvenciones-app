@@ -95,7 +95,7 @@ function fmtImporte(n: number) {
 }
 
 /* ── Panel lateral de contexto del cliente ─────────────────────────────── */
-function PanelContexto({ contexto, nif }: { contexto: ContextoCliente | null; nif: string }) {
+function PanelContexto({ contexto, nif: _nif }: { contexto: ContextoCliente | null; nif: string }) {
   const [expandido, setExpandido] = useState(true);
 
   if (!contexto) {
