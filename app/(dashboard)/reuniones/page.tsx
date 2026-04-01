@@ -37,17 +37,34 @@ function isToday(dateStr: string | null) {
   return d.toDateString() === now.toDateString();
 }
 
-function ReunionRow({ reunion }: { reunion: Reunion }) {
+function ReunionRow({ reunion, onEstadoChange }: { reunion: Reunion; onEstadoChange?: (id: string, estado: string) => void }) {
   const hoy = isToday(reunion.fecha_programada);
   const tipo = TIPO_COLORS[reunion.tipo ?? ''] ?? { bg: '#f1f5f9', color: '#475569' };
   const esPasada = reunion.fecha_programada && new Date(reunion.fecha_programada) < new Date() && reunion.estado !== 'realizada';
+  const [marking, setMarking] = useState(false);
+
+  async function marcarRealizada(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setMarking(true);
+    try {
+      await fetch(`/api/reuniones?id=${reunion.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: 'realizada' }),
+      });
+      onEstadoChange?.(reunion.id, 'realizada');
+    } finally {
+      setMarking(false);
+    }
+  }
 
   return (
     <Link key={reunion.id} href={`/reuniones/${reunion.id}`} style={{ textDecoration: 'none' }}>
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '2fr 1.6fr 0.8fr 0.8fr',
+          gridTemplateColumns: '2fr 1.6fr 0.8fr 1fr',
           gap: 16,
           padding: '16px 24px',
           borderBottom: '1px solid var(--border)',
@@ -78,7 +95,7 @@ function ReunionRow({ reunion }: { reunion: Reunion }) {
             </span>
           )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {reunion.estado && (
             <span style={{
               padding: '3px 10px', borderRadius: 6, fontSize: '0.75rem', fontWeight: 600,
@@ -87,6 +104,22 @@ function ReunionRow({ reunion }: { reunion: Reunion }) {
             }}>
               {reunion.estado}
             </span>
+          )}
+          {reunion.estado && reunion.estado !== 'realizada' && reunion.estado !== 'cancelada' && (
+            <button
+              onClick={marcarRealizada}
+              disabled={marking}
+              title="Marcar como realizada"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 4,
+                padding: '3px 8px', borderRadius: 6, border: '1px solid var(--green)',
+                background: 'var(--green-bg)', color: 'var(--green)',
+                fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer',
+                opacity: marking ? 0.6 : 1, whiteSpace: 'nowrap',
+              }}
+            >
+              <CheckCircle size={10} /> Realizada
+            </button>
           )}
         </div>
       </div>
