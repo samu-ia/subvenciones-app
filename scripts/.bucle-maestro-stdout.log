@@ -5482,3 +5482,13 @@ El sistema no puede encontrar la ruta especificada.
 [2026-04-01 14:14:24][R88][INFO] Analizando 1 hallazgos top con Claude...
 [2026-04-01 14:14:24][R88][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
 [2026-04-01 14:14:38][R88][INFO] Fix aplicado por Claude CLI
+warning: in the working copy of 'app/(dashboard)/proveedores/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(dashboard)/subvenciones-bd/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(portal)/proveedor/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/.bucle-maestro-stdout.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/.bucle-maestro.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(dashboard)/proveedores/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(dashboard)/subvenciones-bd/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(portal)/proveedor/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/.bucle-maestro-stdout.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/.bucle-maestro.log', LF will be replaced by CRLF the next time Git touches it
