@@ -5,7 +5,9 @@
  * permitiendo reanudar ejecuciones interrumpidas.
  */
 
-import { BaseCheckpointSaver, type Checkpoint, type CheckpointMetadata, type CheckpointTuple, type PendingWrite } from '@langchain/langgraph';
+import { BaseCheckpointSaver, type Checkpoint, type CheckpointMetadata, type CheckpointTuple } from '@langchain/langgraph';
+
+type PendingWrite = [string, unknown];
 import type { RunnableConfig } from '@langchain/core/runnables';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
@@ -110,6 +112,13 @@ export class SupabaseCheckpointSaver extends BaseCheckpointSaver {
         checkpoint_id: checkpointId,
       },
     };
+  }
+
+  async deleteThread(threadId: string): Promise<void> {
+    await Promise.all([
+      this.sb.from('lg_checkpoints').delete().eq('thread_id', threadId),
+      this.sb.from('lg_checkpoint_writes').delete().eq('thread_id', threadId),
+    ]);
   }
 
   async putWrites(

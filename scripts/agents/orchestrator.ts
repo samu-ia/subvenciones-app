@@ -250,10 +250,11 @@ async function mergeWorktreeBranch(taskId: string, agentType: AgentType): Promis
 
 function makeEscalationHook(taskId: string, agentType: AgentType): HookCallback {
   // Guarda en Supabase cuando el agente pide input humano via AskUserQuestion
-  return async (input: any) => {
-    if (input.tool_name === 'AskUserQuestion') {
-      const question = input.tool_input?.question ?? 'El agente necesita input';
-      const context = input.tool_input?.options ? JSON.stringify(input.tool_input.options) : '';
+  return async (input: Parameters<HookCallback>[0]) => {
+    const toolInput = input as { tool_name?: string; tool_input?: { question?: string; options?: unknown } };
+    if (toolInput.tool_name === 'AskUserQuestion') {
+      const question = toolInput.tool_input?.question ?? 'El agente necesita input';
+      const context = toolInput.tool_input?.options ? JSON.stringify(toolInput.tool_input.options) : '';
 
       await supabase.from('agent_escalations').insert({
         task_id: taskId,

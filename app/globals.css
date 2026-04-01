@@ -59,7 +59,7 @@ html { scrollbar-gutter: stable; overflow-x: hidden; }
 }
 
 body {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
   background: var(--bg);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
@@ -114,8 +114,8 @@ body {
   --hero-gradient: linear-gradient(135deg, hsl(210 100% 5%) 0%, hsl(205 100% 12%) 50%, hsl(195 90% 18%) 100%);
   --card-shadow: 0 4px 20px -4px hsl(215 70% 35% / 0.1);
   --card-shadow-hover: 0 8px 30px -4px hsl(215 70% 35% / 0.15);
-  --font-heading: 'Montserrat', sans-serif;
-  --font-body: 'Inter', sans-serif;
+  --font-heading: var(--font-montserrat), 'Montserrat', sans-serif;
+  --font-body: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
 
   font-family: var(--font-body);
   background-color: var(--background);
