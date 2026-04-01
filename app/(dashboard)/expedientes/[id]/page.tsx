@@ -34,6 +34,27 @@ function PanelChecklist({ expedienteId }: { expedienteId: string }) {
     const supabase = createClient();
     supabase.from('checklist_items').select('*').eq('expediente_id', expedienteId).order('orden')
       .then(({ data }) => { setItems(data ?? []); setLoading(false); });
+
+    // Realtime: sync checklist changes from client or other gestor
+    const channel = supabase
+      .channel(`checklist-${expedienteId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'checklist_items',
+        filter: `expediente_id=eq.${expedienteId}`,
+      }, (payload) => {
+        if (payload.eventType === 'UPDATE') {
+          setItems(prev => prev.map(i => i.id === payload.new.id ? { ...i, ...payload.new } as ChecklistItem : i));
+        } else if (payload.eventType === 'INSERT') {
+          setItems(prev => prev.some(i => i.id === payload.new.id) ? prev : [...prev, payload.new as ChecklistItem]);
+        } else if (payload.eventType === 'DELETE') {
+          setItems(prev => prev.filter(i => i.id !== payload.old.id));
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [expedienteId]);
 
   async function toggle(item: ChecklistItem) {
@@ -1193,6 +1214,23 @@ export default function ExpedienteWorkspacePage() {
   // Cargar datos
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadData(); }, [expedienteId]);
+
+  // Realtime: sincronizar cambios del expediente (fase, fee, estado)
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`expediente-${expedienteId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'expediente',
+        filter: `id=eq.${expedienteId}`,
+      }, (payload) => {
+        setExpediente(prev => prev ? { ...prev, ...payload.new } as typeof prev : prev);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [expedienteId]);
 
   const saveDocument = useCallback(async (content: string) => {
     if (!selectedDocId) return;

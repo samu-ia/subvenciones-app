@@ -201,6 +201,23 @@ export default function ExpedienteDetallePage() {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [mensajes]);
 
+  // Realtime: mensajes del gestor aparecen sin recargar
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`mensajes-portal-${id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'mensajes_gestor',
+        filter: `expediente_id=eq.${id}`,
+      }, (payload) => {
+        setMensajes(prev => prev.some(m => m.id === payload.new.id) ? prev : [...prev, payload.new as MensajeGestor]);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [id, supabase]);
+
   // ─── Subir documento ──────────────────────────────────────────────────────
 
   async function subirDocumento(item: ChecklistItem, file: File) {
