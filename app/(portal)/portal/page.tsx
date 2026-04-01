@@ -878,6 +878,7 @@ function VistaPerfilEmpresa({
     tamano_empresa: cliente?.tamano_empresa ?? '',
   });
 
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
@@ -950,7 +951,7 @@ function VistaPerfilEmpresa({
           <div style={{ fontSize: '0.78rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16 }}>
             Datos básicos
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
             <div style={{ gridColumn: '1/-1' }}>
               <label style={{ fontSize: '0.78rem', fontWeight: 600, color: C.ink2, display: 'block', marginBottom: 5 }}>Nombre de la empresa</label>
               <input
@@ -989,7 +990,7 @@ function VistaPerfilEmpresa({
           <div style={{ fontSize: '0.78rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16 }}>
             Actividad y sector
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 14, marginBottom: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '120px 1fr', gap: 14, marginBottom: 14 }}>
             <div>
               <label style={{ fontSize: '0.78rem', fontWeight: 600, color: C.ink2, display: 'block', marginBottom: 5 }}>
                 Código CNAE
@@ -1029,7 +1030,7 @@ function VistaPerfilEmpresa({
           <div style={{ fontSize: '0.78rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16 }}>
             Localización
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 14 }}>
             <div>
               <label style={{ fontSize: '0.78rem', fontWeight: 600, color: C.ink2, display: 'block', marginBottom: 5 }}>Comunidad autónoma</label>
               <select
@@ -1067,7 +1068,7 @@ function VistaPerfilEmpresa({
           <div style={{ fontSize: '0.78rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16 }}>
             Tamaño y finanzas
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
             <div>
               <label style={{ fontSize: '0.78rem', fontWeight: 600, color: C.ink2, display: 'block', marginBottom: 5 }}>Número de empleados</label>
               <input
