@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import {
   MessageCircle, Send, Paperclip, Search, X,
   Loader2, Bot, User, Building2, RefreshCw,
@@ -308,6 +309,8 @@ function PanelContexto({ contexto, nif: _nif }: { contexto: ContextoCliente | nu
 
 /* ── Página principal ──────────────────────────────────────────────────── */
 export default function ChatsPage() {
+  const supabase = useMemo(() => createClient(), []);
+
   const [conversaciones, setConversaciones] = useState<Conversacion[]>([]);
   const [nifActivo, setNifActivo] = useState<string | null>(null);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
