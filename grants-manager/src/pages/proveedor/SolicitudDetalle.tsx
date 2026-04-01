@@ -191,7 +191,6 @@ export function SolicitudDetalle() {
   // Trigger AI generation for generic grants
   useEffect(() => {
     if (!isGeneric || !convocatoria || aiCtx || aiLoading) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAiLoading(true)
      
     setAiError(null)
@@ -233,7 +232,6 @@ export function SolicitudDetalle() {
   // C2 — auto-populate importe field when table total changes
   useEffect(() => {
     if (totalLines > 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setImporte(totalLines.toString())
     }
   }, [totalLines])

@@ -308,7 +308,7 @@ async function buscarPdfReal(bdnsId, detalle) {
   return null;
 }
 
-async function intentarDescargarPdf(url, bdnsId) {
+async function intentarDescargarPdf(url, _bdnsId) {
   try {
     const res = await fetch(url, {
       headers: { 'User-Agent': 'AyudaPyme-Bot/2.0' },
@@ -380,16 +380,7 @@ async function scrapeInfosubvencionesPdf(bdnsId) {
 
 async function extraerDatosDesdeHtml(bdnsId, detalle) {
   // Intentar obtener la página web y extraer lo que se pueda
-  let htmlText = '';
-  try {
-    const res = await fetch(`${BDNS_WEB}/${bdnsId}`, {
-      headers: { 'User-Agent': 'AyudaPyme-Bot/2.0' },
-      signal: AbortSignal.timeout(15_000),
-    });
-    if (res.ok) htmlText = await res.text();
-  } catch { /* sin html */ }
-
-  // Construir campos básicos desde detalle BDNS + HTML
+  // Construir campos básicos desde detalle BDNS
   const campos = {
     beneficiarios_tipo: null,
     cnae_incluidos: null,

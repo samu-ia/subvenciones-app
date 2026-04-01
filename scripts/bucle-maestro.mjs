@@ -21,10 +21,9 @@
  *   node scripts/bucle-maestro.mjs --pipeline-solo # solo mantenimiento de pipeline
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { execSync, spawnSync } from 'child_process';
-import { readFileSync, writeFileSync, existsSync, appendFileSync } from 'fs';
+import { readFileSync, appendFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -47,7 +46,6 @@ function loadEnv() {
 
 const ENV = loadEnv();
 const sb = createClient(ENV.NEXT_PUBLIC_SUPABASE_URL, ENV.SUPABASE_SERVICE_ROLE_KEY);
-const anthropic = new Anthropic({ apiKey: ENV.ANTHROPIC_API_KEY });
 
 const args = process.argv.slice(2);
 const PAUSA_SEG = parseInt(args[args.indexOf('--pausa') + 1] || '120');

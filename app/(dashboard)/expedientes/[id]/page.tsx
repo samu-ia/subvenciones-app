@@ -1428,6 +1428,7 @@ export default function ExpedienteWorkspacePage() {
                     <iframe src={fileUrl} style={{ width: '100%', height: '100%', border: 'none' }} />
                   ) : fileUrl && isImage ? (
                     <div style={{ padding: '24px', display: 'flex', justifyContent: 'center', overflowY: 'auto', height: '100%' }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={fileUrl} alt={selectedArchivo.nombre}
                         style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '8px' }} />
                     </div>

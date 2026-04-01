@@ -105,7 +105,7 @@ async function fetchDetalle(id) {
   }
 }
 
-function inferirAmbito(nivel1, nivel2) {
+function inferirAmbito(nivel1, _nivel2) {
   if (nivel1 === 'ESTATAL') return 'nacional';
   if (nivel1 === 'AUTONOMICA') return 'autonomico';
   return 'local';
@@ -270,7 +270,7 @@ async function main() {
       body: JSON.stringify({}),
     });
     console.log('  Matching response:', res.status);
-  } catch (e) {
+  } catch {
     console.log('  (matching se lanzará manualmente)');
   }
 

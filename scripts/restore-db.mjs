@@ -10,7 +10,6 @@
 
 import pg from 'pg';
 import fs from 'fs';
-import path from 'path';
 import readline from 'readline';
 
 const { Client } = pg;

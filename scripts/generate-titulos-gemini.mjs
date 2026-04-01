@@ -21,7 +21,7 @@ const sb = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 const MODELO = 'gemini-2.5-flash';
 const BATCH = 15; // subvenciones por llamada a Gemini
-const WORKERS = 3;
+const _WORKERS = 3;
 
 async function getGeminiKey() {
   if (env.GEMINI_API_KEY) return env.GEMINI_API_KEY;

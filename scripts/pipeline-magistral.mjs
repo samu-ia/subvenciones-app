@@ -914,7 +914,7 @@ async function guardarEventosLegacy(subvencionId, bdnsId, docId, extraccion) {
 async function faseNormalizacion(ctx) {
   if (ctx.skip) return ctx;
 
-  const { bdnsId, subvencionId, extraccion, hashPdf } = ctx;
+  const { bdnsId, subvencionId, extraccion } = ctx;
   const e = extraccion;
 
   const update = {
@@ -1375,7 +1375,7 @@ async function main() {
   let ok = 0, sinCambio = 0, errores = 0;
   const inicio = Date.now();
 
-  const promises = convocatorias.map((conv, i) =>
+  const promises = convocatorias.map((conv) =>
     procesarConvocatoria(conv, apiKey, semaforo, 1)
   );
   const resultados = await Promise.allSettled(promises);
