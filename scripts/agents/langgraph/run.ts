@@ -115,19 +115,19 @@ async function runGraph(taskId: string, title: string, description: string, maxI
   try {
     for await (const chunk of await graph.stream(initialState, config)) {
       const nodeName = Object.keys(chunk)[0];
-      const nodeState = chunk[nodeName as keyof typeof chunk];
+      const nodeState = chunk[nodeName as keyof typeof chunk] as GraphState | undefined;
 
       // Persistir progreso en Supabase después de cada nodo
       await sb.from('agent_tasks').update({
         output: JSON.stringify({
-          iteration: nodeState.iteration,
+          iteration: nodeState?.iteration,
           last_agent: nodeName,
-          messages_count: nodeState.messages?.length ?? 0,
-          files_modified: nodeState.context?.files_modified ?? [],
+          messages_count: nodeState?.messages?.length ?? 0,
+          files_modified: nodeState?.context?.files_modified ?? [],
         }),
       }).eq('id', taskId);
 
-      finalState = nodeState as GraphState;
+      if (nodeState) finalState = nodeState;
     }
 
     // Merge worktree → main

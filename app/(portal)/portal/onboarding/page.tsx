@@ -52,6 +52,7 @@ export default function OnboardingPage() {
   const [paso, setPaso] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
 
   // Paso 1: Datos empresa
@@ -110,6 +111,7 @@ export default function OnboardingPage() {
   // Guardar y redirigir
   async function guardarYContinuar() {
     setSaving(true);
+    setSaveError('');
     try {
       const res = await fetch('/api/portal/onboarding', {
         method: 'POST',
@@ -127,7 +129,7 @@ export default function OnboardingPage() {
       setShowConfetti(true);
       setPaso(4);
     } catch {
-      console.error('Error guardando onboarding');
+      setSaveError('Error al guardar. Inténtalo de nuevo.');
     } finally {
       setSaving(false);
     }
@@ -416,7 +418,10 @@ export default function OnboardingPage() {
             </div>
 
             {/* Navegación */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 32 }}>
+            {saveError && (
+              <p style={{ color: '#dc2626', fontSize: '0.85rem', marginTop: 12, textAlign: 'center' }}>{saveError}</p>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
               <button onClick={() => setPaso(2)} style={btnSecondary}>
                 <ChevronLeft size={18} /> Atrás
               </button>
