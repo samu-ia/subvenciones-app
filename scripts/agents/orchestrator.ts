@@ -250,7 +250,7 @@ async function mergeWorktreeBranch(taskId: string, agentType: AgentType): Promis
 
 function makeEscalationHook(taskId: string, agentType: AgentType): HookCallback {
   // Guarda en Supabase cuando el agente pide input humano via AskUserQuestion
-  return async (input: Parameters<HookCallback>[0]) => {
+  const hook: HookCallback = async (input) => {
     const toolInput = input as { tool_name?: string; tool_input?: { question?: string; options?: unknown } };
     if (toolInput.tool_name === 'AskUserQuestion') {
       const question = toolInput.tool_input?.question ?? 'El agente necesita input';
@@ -268,8 +268,10 @@ function makeEscalationHook(taskId: string, agentType: AgentType): HookCallback 
       // Respuesta default para no bloquear (el humano puede responder en Supabase)
       return { content: 'Continúa con tu mejor criterio. Si no puedes avanzar, marca la tarea como "blocked".' };
     }
-    return {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return {} as any;
   };
+  return hook;
 }
 
 // ─── Ejecutar un agente ─────────────────────────────────────────────────────
