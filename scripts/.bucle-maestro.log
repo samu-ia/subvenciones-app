@@ -2796,3 +2796,20 @@
 ╚══════════════════════════════════════════════════════════╝
 
 [2026-04-01 14:21:39][R90][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)
+[2026-04-01 14:24:39][R91][INFO] INICIANDO RONDA 91
+[2026-04-01 14:24:40][R91][INFO] Subvenciones: 307 | Sin PDF: 0 | Sin título: 0
+[2026-04-01 14:24:40][R91][INFO] Matches: 3137 | Sin motivo: 0
+[2026-04-01 14:24:40][R91][INFO] Expedientes: 2 | Sin fase: 0
+[2026-04-01 14:24:40][R91][INFO] Pipeline errores: 0
+[2026-04-01 14:24:40][R91][INFO] Estados convocatoria: {"abierta":165,"cerrada":35,"desconocido":48,"proxima":59}
+[2026-04-01 14:24:47][R91][WARN] TypeScript: 41 errores
+[2026-04-01 14:24:47][R91][INFO] ✓ Query matches: 5 resultados
+[2026-04-01 14:24:47][R91][INFO] ✓ Convocatorias abiertas: 165
+[2026-04-01 14:24:47][R91][INFO] ✓ Expedientes en cobro: todos tienen importe_concedido
+[2026-04-01 14:24:47][R91][INFO] Clientes sin NIF (onboarding incompleto): 4
+[2026-04-01 14:24:47][R91][INFO] Alertas sin leer: null
+[2026-04-01 14:24:48][R91][INFO] Matching reciente (hace 5.5h) — skip
+[2026-04-01 14:24:48][R91][INFO] Pipeline BDNS reciente (hace 5.7h) — skip
+[2026-04-01 14:24:48][R91][INFO] Analizando 1 hallazgos top con Claude...
+[2026-04-01 14:24:48][R91][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
+[2026-04-01 14:25:01][R91][INFO] Fix aplicado por Claude CLI
