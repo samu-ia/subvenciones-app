@@ -115,7 +115,7 @@ async function runGraph(taskId: string, title: string, description: string, maxI
   try {
     for await (const chunk of await graph.stream(initialState, config)) {
       const nodeName = Object.keys(chunk)[0];
-      const nodeState = chunk[nodeName];
+      const nodeState = chunk[nodeName as keyof typeof chunk];
 
       // Persistir progreso en Supabase después de cada nodo
       await sb.from('agent_tasks').update({

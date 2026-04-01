@@ -237,7 +237,7 @@ async function checkAPIs() {
   try {
     const { data: exps, error } = await sb
       .from('expediente')
-      .select('id, fase, importe_concedido, fee_amount, fee_estado')
+      .select('id, fase, importe_concedido, importe_subvencion')
       .eq('fase', 'cobro')
       .is('importe_concedido', null);
     if (error) throw new Error(error.message);
