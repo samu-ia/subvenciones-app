@@ -7,7 +7,7 @@ import { Input, Select } from '../../components/ui/Input'
 import { useAppStore } from '../../store'
 import { LayoutGrid, List, Search, User, Calendar, Star, Sparkles } from 'lucide-react'
 import { clsx } from 'clsx'
-import { ESTADO_COLORS, ESTADO_LABELS, type EstadoExpediente } from '../../types'
+import { ESTADO_COLORS, ESTADO_LABELS, type EstadoExpediente, type Expediente, type Cliente, type Convocatoria, type Gestor } from '../../types'
 
 const COLUMNAS: EstadoExpediente[] = [
   'DETECCION', 'EVALUACION', 'PREPARACION', 'PRESENTADA',

@@ -258,7 +258,7 @@ export default function AIPanelV2({
               type: r.action.type,
               documentId: r.documentId,
               documentName: r.documentName,
-              contenido: (r.action as any).contenido,
+              contenido: (r.action as { contenido?: string }).contenido,
             },
           }));
         });

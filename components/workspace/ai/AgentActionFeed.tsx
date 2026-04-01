@@ -5,23 +5,23 @@ import {
   Loader2, Bot, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { useState } from 'react';
-import type { AgentActionResult } from '@/lib/types/agent-actions';
+import type { AgentActionResult, AgentActionCreateFolder, AgentActionCreateDocument, AgentActionEditDocument } from '@/lib/types/agent-actions';
 
 // ─── Labels y colores por tipo de acción ────────────────────────────────────
 
 const ACTION_META: Record<string, { label: (r: AgentActionResult) => string; icon: React.ReactNode; color: string }> = {
   create_folder: {
-    label: (r) => `Carpeta creada: "${(r.action as any).folder_name}"`,
+    label: (r) => `Carpeta creada: "${(r.action as AgentActionCreateFolder).folder_name}"`,
     icon: <FolderPlus size={13} />,
     color: '#f59e0b',
   },
   create_document: {
-    label: (r) => `Documento creado: "${r.documentName ?? (r.action as any).nombre}"`,
+    label: (r) => `Documento creado: "${r.documentName ?? (r.action as AgentActionCreateDocument).nombre}"`,
     icon: <FilePlus size={13} />,
     color: '#6366f1',
   },
   edit_document: {
-    label: (r) => `Documento editado: "${r.documentName ?? (r.action as any).nombre}"`,
+    label: (r) => `Documento editado: "${r.documentName ?? (r.action as AgentActionEditDocument).nombre}"`,
     icon: <FileEdit size={13} />,
     color: '#0ea5e9',
   },

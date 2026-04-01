@@ -44,7 +44,7 @@ export function Select({ label, children, className, ...props }: SelectProps) {
     <div className="flex flex-col gap-1">
       {label && <label className="text-xs font-medium text-slate-700">{label}</label>}
       <select
-        {...props as any}
+        {...props}
         className={clsx(
           'w-full text-sm bg-white border border-slate-200 rounded-lg text-slate-900',
           'focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400',
