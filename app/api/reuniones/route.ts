@@ -2,6 +2,31 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { requireRole, requireAdminOrTramitador } from '@/lib/auth/helpers';
 
+export async function PATCH(request: NextRequest) {
+  const authPatch = await requireRole('admin');
+  if (authPatch instanceof NextResponse) return authPatch;
+
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+  if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 });
+
+  const body = await request.json().catch(() => null);
+  if (!body) return NextResponse.json({ error: 'Body requerido' }, { status: 400 });
+
+  const allowed = ['estado', 'titulo', 'tipo', 'fecha_programada', 'objetivo', 'notas'];
+  const updates = Object.fromEntries(
+    Object.entries(body).filter(([k]) => allowed.includes(k))
+  );
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'Sin campos a actualizar' }, { status: 400 });
+  }
+
+  const sb = createServiceClient();
+  const { error } = await sb.from('reuniones').update(updates).eq('id', id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}
+
 export async function GET() {
   const authGet = await requireAdminOrTramitador();
   if (authGet instanceof NextResponse) return authGet;

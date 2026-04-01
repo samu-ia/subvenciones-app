@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Bell, Clock, CheckCircle, ChevronRight, RefreshCw, Calendar } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 import type { Alerta } from '@/app/api/alertas/route';
 
 const PRIORIDAD_STYLES: Record<string, { bg: string; color: string; border: string; dot: string }> = {
@@ -41,6 +42,7 @@ export default function AlertasPage() {
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState<'todas' | 'critica' | 'alta' | 'media' | 'baja'>('todas');
   const [resolviendo, setResolviendo] = useState<string | null>(null);
+  const supabase = useMemo(() => createClient(), []);
 
   async function cargarAlertas() {
     setLoading(true);
@@ -55,7 +57,23 @@ export default function AlertasPage() {
     }
   }
 
-  useEffect(() => { cargarAlertas(); }, []);
+  useEffect(() => { cargarAlertas(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Realtime: reload when new static alerts are inserted/deleted
+  useEffect(() => {
+    const channel = supabase
+      .channel('alertas-page')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'alertas' }, () => {
+        cargarAlertas();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'alertas' }, (payload) => {
+        if (payload.new.resuelta) {
+          setAlertas(prev => prev.filter(a => a.id !== payload.new.id));
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [supabase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function resolverAlerta(id: string) {
     // Solo alertas manuales (sin prefijo "dyn-") se pueden resolver en BD

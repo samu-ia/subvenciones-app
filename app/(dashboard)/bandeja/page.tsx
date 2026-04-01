@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -109,7 +109,7 @@ function VacioSutil({ texto }: { texto: string }) {
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function BandejaPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [alertasCriticas, setAlertasCriticas] = useState<Alerta[]>([]);
   const [solicitudes, setSolicitudes] = useState<SolicitudPendiente[]>([]);
@@ -290,6 +290,21 @@ export default function BandejaPage() {
   }
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  // Realtime: auto-reload bandeja when solicitudes or alertas change
+  useEffect(() => {
+    const channel = supabase
+      .channel('bandeja-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'solicitudes' }, () => {
+        cargar();
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'alertas' }, () => {
+        cargar();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function resolverAlerta(id: string) {
     if (id.startsWith('dyn-')) {

@@ -3036,3 +3036,39 @@
 [2026-04-01 15:03:35][R98][INFO] Analizando 3 hallazgos top con Claude...
 [2026-04-01 15:03:35][R98][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
 [2026-04-01 15:03:47][R98][INFO] Fix aplicado por Claude CLI
+[2026-04-01 15:03:48][R98][INFO] Commit de respaldo realizado
+[2026-04-01 15:03:50][R98][INFO] Push a origin/main OK
+
+╔══════════════════════════════════════════════════════════╗
+║  RONDA 98   — INFORME FINAL  (299s)                       ║
+╠══════════════════════════════════════════════════════════╣
+║  Subvenciones: 357   | Abiertas: 198   | Matches: 3693  ║
+║  Hallazgos detectados: 4    | Acciones pipeline: 3  ║
+╠══════════════════════════════════════════════════════════╣
+║  TOP HALLAZGOS:                                           ║
+║    [p9] 41 errores TypeScript                            ║
+║    [p8] 50 subvenciones sin PDF procesado                ║
+║    [p7] 50 subvenciones sin titulo_comercial             ║
+╚══════════════════════════════════════════════════════════╝
+
+[2026-04-01 15:03:50][R98][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)
+[2026-04-01 15:06:50][R99][INFO] INICIANDO RONDA 99
+[2026-04-01 15:06:51][R99][INFO] Subvenciones: 357 | Sin PDF: 0 | Sin título: 30
+[2026-04-01 15:06:51][R99][INFO] Matches: 3693 | Sin motivo: 0
+[2026-04-01 15:06:51][R99][INFO] Expedientes: 2 | Sin fase: 0
+[2026-04-01 15:06:51][R99][INFO] Pipeline errores: 1
+[2026-04-01 15:06:51][R99][INFO] Estados convocatoria: {"abierta":198,"cerrada":37,"desconocido":52,"proxima":68,"resuelta":2}
+[2026-04-01 15:07:03][R99][WARN] TypeScript: 41 errores
+[2026-04-01 15:07:03][R99][INFO] ✓ Query matches: 5 resultados
+[2026-04-01 15:07:03][R99][INFO] ✓ Convocatorias abiertas: 198
+[2026-04-01 15:07:03][R99][INFO] ✓ Expedientes en cobro: todos tienen importe_concedido
+[2026-04-01 15:07:04][R99][INFO] Clientes sin NIF (onboarding incompleto): 4
+[2026-04-01 15:07:04][R99][INFO] Alertas sin leer: null
+[2026-04-01 15:07:04][R99][INFO] Generando 30 títulos comerciales...
+[2026-04-01 15:07:44][R99][INFO] Títulos: ✅ 30/30 | 📊 15 títulos generados, 15 errores
+[2026-04-01 15:07:44][R99][INFO] Re-calculando matches (última vez hace 0.1h)...
+[2026-04-01 15:07:56][R99][INFO] Matching:   Matches relevantes:   914
+[2026-04-01 15:07:56][R99][INFO] Pipeline BDNS reciente (hace 0.3h) — skip
+[2026-04-01 15:07:56][R99][INFO] Analizando 3 hallazgos top con Claude...
+[2026-04-01 15:07:56][R99][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
+[2026-04-01 15:08:08][R99][INFO] Fix aplicado por Claude CLI
