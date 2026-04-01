@@ -120,11 +120,6 @@ export function useMentions({ documentos, onSubmit }: UseMentionsOptions) {
     setMentions(resolveMentions(value, documentos));
   }, [documentos]);
 
-  // También recalcular menciones si cambia el listado de documentos
-  useEffect(() => {
-    setMentions(resolveMentions(inputText, documentos));
-  }, [documentos]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // ── Seleccionar una sugerencia ─────────────────────────────────────────
   const selectSuggestion = useCallback((doc: DocRef) => {
     const cursor = inputRef.current?.selectionStart ?? inputText.length;

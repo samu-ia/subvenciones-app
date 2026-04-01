@@ -812,7 +812,7 @@ export default function AIPanelV2({
                     onMouseLeave={e => (e.currentTarget.style.background = 'var(--background)')}
                   >
                     <Replace size={13} />
-                    Insertar en "{documentos.find(d => d.id === selectedDocId)?.nombre}"
+                    Insertar en &ldquo;{documentos.find(d => d.id === selectedDocId)?.nombre}&rdquo;
                   </button>
                 )}
 
