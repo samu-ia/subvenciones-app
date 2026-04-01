@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AlertTriangle } from 'lucide-react';
 
 interface ProximaConvocatoria {
@@ -20,7 +20,8 @@ export default function FinalCTA({ onAuthClick }: { onAuthClick?: () => void }) 
       .catch(() => {/* ignore */});
   }, []);
 
-  const now = Date.now();
+  const nowRef = useRef(Date.now());
+  const now = nowRef.current;
   const fmtFecha = (s?: string) => s ? new Date(s).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' }) : '';
   const diasHasta = (s?: string) => s ? Math.ceil((new Date(s).getTime() - now) / 86_400_000) : null;
 

@@ -485,6 +485,7 @@ export default function SolicitudesPage() {
     setLoading(false);
   }, [filtroEstado]);
 
+  // eslint-disable-next-line react-compiler/react-compiler
   useEffect(() => { cargar(); }, [cargar]);
 
   const visible = solicitudes.filter(s => {

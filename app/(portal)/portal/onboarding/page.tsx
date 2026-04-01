@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useMediaQuery } from '@/lib/hooks/use-media-query';
@@ -613,19 +613,20 @@ function PriorityCard({ selected, onChange, icon, title, subtitle, color, bgColo
   );
 }
 
+const CONFETTI_COLORS = ['#0d9488', '#f97316', '#1d4ed8', '#059669', '#d97706', '#7c3aed', '#dc2626'];
+const CONFETTI_DOTS = Array.from({ length: 18 }, (_, i) => ({
+  width: 8 + Math.random() * 8,
+  height: 8 + Math.random() * 8,
+  borderRadius: Math.random() > 0.5 ? '50%' : 3,
+  color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+  left: `${10 + Math.random() * 80}%`,
+  top: -60 - Math.random() * 100,
+  duration: 1.5 + Math.random() * 1.5,
+  delay: Math.random() * 0.5,
+}));
+
 function ConfettiDots() {
-  const colors = ['#0d9488', '#f97316', '#1d4ed8', '#059669', '#d97706', '#7c3aed', '#dc2626'];
-  // Pre-compute random values to avoid impure function calls during render
-  const dots = useMemo(() => Array.from({ length: 18 }, (_, i) => ({
-    width: 8 + Math.random() * 8,
-    height: 8 + Math.random() * 8,
-    borderRadius: Math.random() > 0.5 ? '50%' : 3,
-    color: colors[i % colors.length],
-    left: `${10 + Math.random() * 80}%`,
-    top: -60 - Math.random() * 100,
-    duration: 1.5 + Math.random() * 1.5,
-    delay: Math.random() * 0.5,
-  })), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const dots = CONFETTI_DOTS;
 
   return (
     <div style={{ position: 'relative', width: '100%', height: 0, overflow: 'visible' }}>
