@@ -114,7 +114,7 @@ function PanelProveedores({ expedienteId }: { expedienteId: string }) {
       .eq('expediente_id', expedienteId)
       .order('relevancia_score', { ascending: false })
       .then(({ data }) => {
-        setProvs((data ?? []).map((d: any) => ({ ...d, proveedor: Array.isArray(d.proveedor) ? d.proveedor[0] : d.proveedor })));
+        setProvs((data ?? []).map((d: { proveedor: unknown; [k: string]: unknown }) => ({ ...d, proveedor: Array.isArray(d.proveedor) ? d.proveedor[0] : d.proveedor })));
         setLoading(false);
       });
   }, [expedienteId]);
@@ -289,7 +289,7 @@ function PanelPresupuestos({ expedienteId }: { expedienteId: string }) {
       {/* Sub-tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid #e8ecf4', background: '#fafbfc', flexShrink: 0 }}>
         {[{ key: 'presupuestos', label: `Presupuestos (${presupuestos.length})` }, { key: 'contratos', label: `Contratos (${contratos.length})` }].map(t => (
-          <button key={t.key} onClick={() => setTab(t.key as any)} style={{
+          <button key={t.key} onClick={() => setTab(t.key as 'presupuestos' | 'contratos')} style={{
             flex: 1, padding: '8px 4px', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
             fontSize: '0.72rem', fontWeight: tab === t.key ? 700 : 500,
             color: tab === t.key ? '#0d1f3c' : '#94a3b8',
@@ -323,10 +323,10 @@ function PanelPresupuestos({ expedienteId }: { expedienteId: string }) {
                   <div key={key} style={{ marginBottom: 8 }}>
                     <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#64748b', marginBottom: 3 }}>{label}</div>
                     {key === 'descripcion' || key === 'notas' ? (
-                      <textarea value={(form as any)[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} placeholder={placeholder}
+                      <textarea value={(form as Record<string, string>)[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} placeholder={placeholder}
                         rows={2} style={{ width: '100%', fontSize: '0.75rem', border: '1px solid #e2e8f0', borderRadius: 6, padding: '5px 8px', resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} />
                     ) : (
-                      <input value={(form as any)[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} placeholder={placeholder}
+                      <input value={(form as Record<string, string>)[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} placeholder={placeholder}
                         style={{ width: '100%', fontSize: '0.75rem', border: '1px solid #e2e8f0', borderRadius: 6, padding: '5px 8px', fontFamily: 'inherit', boxSizing: 'border-box' }} />
                     )}
                   </div>

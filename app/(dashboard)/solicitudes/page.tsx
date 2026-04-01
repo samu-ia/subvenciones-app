@@ -456,14 +456,14 @@ export default function SolicitudesPage() {
     if (error) { setLoading(false); return; }
 
     // Obtener NIFs únicos para cargar datos de cliente
-    const nifs = [...new Set((data ?? []).map((s: any) => s.nif))];
+    const nifs = [...new Set((data ?? []).map((s: { nif: string }) => s.nif))];
     const { data: clientes } = nifs.length > 0
       ? await supabase.from('cliente').select('nif, nombre_empresa, ciudad, comunidad_autonoma').in('nif', nifs)
       : { data: [] };
 
-    const clienteMap = Object.fromEntries((clientes ?? []).map((c: any) => [c.nif, c]));
+    const clienteMap = Object.fromEntries((clientes ?? []).map((c: { nif: string; [k: string]: unknown }) => [c.nif, c]));
 
-    const rows: Solicitud[] = (data ?? []).map((s: any) => ({
+    const rows: Solicitud[] = (data ?? []).map((s: { nif: string; subvencion: unknown; match: unknown; [k: string]: unknown }) => ({
       ...s,
       subvencion: Array.isArray(s.subvencion) ? s.subvencion[0] : s.subvencion,
       match: Array.isArray(s.match) ? s.match[0] : s.match,
@@ -479,7 +479,7 @@ export default function SolicitudesPage() {
       contrato_firmado: 0, pago_pendiente: 0, activo: 0, rechazado: 0, cancelado: 0,
     };
     for (const r of rows) {
-      if (r.estado in st) (st as any)[r.estado]++;
+      if (r.estado in st) (st as Record<string, number>)[r.estado]++;
     }
     setStats(st);
     setLoading(false);
@@ -545,7 +545,7 @@ export default function SolicitudesPage() {
               }}
             >
               <div style={{ fontSize: '1.5rem', fontWeight: 800, color: f.color, lineHeight: 1 }}>
-                {(stats as any)[f.key] ?? 0}
+                {(stats as Record<string, number>)[f.key] ?? 0}
               </div>
               <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: 3, fontWeight: 500 }}>
                 {f.label}

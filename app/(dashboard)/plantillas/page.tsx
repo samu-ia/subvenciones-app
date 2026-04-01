@@ -19,7 +19,7 @@ interface Plantilla {
   categoria?: string; notas_plantilla?: string; activa: boolean;
   subvencion?: { id: string; titulo: string; organismo: string } | null;
   plantilla_proveedores: PlantillaProveedor[];
-  checklist_items?: any[];
+  checklist_items?: { id: string; texto: string; completado: boolean }[];
   created_at: string;
 }
 
@@ -150,7 +150,7 @@ export default function PlantillasPage() {
               <div key={key}>
                 <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>{label}</label>
                 <input
-                  value={(newForm as any)[key]}
+                  value={(newForm as Record<string, string>)[key]}
                   onChange={e => setNewForm(f => ({ ...f, [key]: e.target.value }))}
                   placeholder={placeholder}
                   style={{ width: '100%', fontSize: '0.82rem', border: '1px solid #e2e8f0', borderRadius: 8, padding: '7px 10px', boxSizing: 'border-box', fontFamily: 'inherit' }}

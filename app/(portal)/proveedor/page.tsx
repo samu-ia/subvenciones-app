@@ -155,15 +155,15 @@ export default function PortalProveedorPage() {
         .order('created_at', { ascending: false }),
     ]);
 
-    setAsignaciones((asig ?? []).map((a: any) => ({
+    setAsignaciones((asig ?? []).map((a: { expediente: unknown; [k: string]: unknown }) => ({
       ...a,
       expediente: Array.isArray(a.expediente) ? a.expediente[0] : a.expediente,
     })));
-    setPresupuestos((pres ?? []).map((p: any) => ({
+    setPresupuestos((pres ?? []).map((p: { expediente: unknown; [k: string]: unknown }) => ({
       ...p,
       expediente: Array.isArray(p.expediente) ? p.expediente[0] : p.expediente,
     })));
-    setContratos((cont ?? []).map((c: any) => ({
+    setContratos((cont ?? []).map((c: { expediente: unknown; [k: string]: unknown }) => ({
       ...c,
       expediente: Array.isArray(c.expediente) ? c.expediente[0] : c.expediente,
     })));

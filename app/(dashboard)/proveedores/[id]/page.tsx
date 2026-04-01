@@ -72,15 +72,15 @@ export default function ProveedorDetallePage() {
         .order('created_at', { ascending: false }),
     ]).then(([{ data: prov }, { data: asig }, { data: pres }, { data: cont }]) => {
       setProveedor(prov);
-      setAsignaciones((asig ?? []).map((a: any) => ({
+      setAsignaciones((asig ?? []).map((a: { expediente: unknown; [k: string]: unknown }) => ({
         ...a,
         expediente: Array.isArray(a.expediente) ? a.expediente[0] : a.expediente,
       })));
-      setPresupuestos((pres ?? []).map((p: any) => ({
+      setPresupuestos((pres ?? []).map((p: { expediente: unknown; [k: string]: unknown }) => ({
         ...p,
         expediente: Array.isArray(p.expediente) ? p.expediente[0] : p.expediente,
       })));
-      setContratos((cont ?? []).map((c: any) => ({
+      setContratos((cont ?? []).map((c: { expediente: unknown; [k: string]: unknown }) => ({
         ...c,
         expediente: Array.isArray(c.expediente) ? c.expediente[0] : c.expediente,
       })));
@@ -262,7 +262,7 @@ export default function ProveedorDetallePage() {
             { key: 'presupuestos', label: `Presupuestos (${presupuestos.length})` },
             { key: 'contratos', label: `Contratos (${contratos.length})` },
           ].map(t => (
-            <button key={t.key} onClick={() => setTab(t.key as any)} style={{
+            <button key={t.key} onClick={() => setTab(t.key as 'expedientes' | 'presupuestos' | 'contratos')} style={{
               padding: '13px 20px', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
               fontSize: '0.82rem', fontWeight: tab === t.key ? 700 : 500,
               color: tab === t.key ? '#0d1f3c' : '#94a3b8',
@@ -297,7 +297,7 @@ export default function ProveedorDetallePage() {
                     <tr key={a.id} style={{ borderBottom: '1px solid #f8fafc', cursor: 'pointer' }}
                       onClick={() => router.push(`/expedientes/${a.expediente_id}`)}>
                       <td style={{ padding: '11px 16px', fontSize: '0.82rem', fontWeight: 600, color: '#0d1f3c' }}>
-                        {(cliente as any)?.nombre_normalizado ?? a.expediente?.nif}
+                        {(cliente as { nombre_normalizado?: string } | null)?.nombre_normalizado ?? a.expediente?.nif}
                       </td>
                       <td style={{ padding: '11px 16px', fontSize: '0.82rem', color: '#475569', maxWidth: 240 }}>
                         <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

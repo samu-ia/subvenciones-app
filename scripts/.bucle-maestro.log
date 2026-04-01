@@ -884,3 +884,34 @@
 [2026-04-01 10:37:22][R29][INFO] Analizando 1 hallazgos top con Claude...
 [2026-04-01 10:37:22][R29][INFO] Top hallazgo: [prio 9] 4 errores TypeScript
 [2026-04-01 10:37:30][R29][INFO] Fix aplicado por Claude CLI
+[2026-04-01 10:37:31][R29][INFO] Commit de respaldo realizado
+[2026-04-01 10:37:33][R29][INFO] Push a origin/main OK
+
+╔══════════════════════════════════════════════════════════╗
+║  RONDA 29   — INFORME FINAL  (20s)                        ║
+╠══════════════════════════════════════════════════════════╣
+║  Subvenciones: 307   | Abiertas: 165   | Matches: 3137  ║
+║  Hallazgos detectados: 1    | Acciones pipeline: 0  ║
+╠══════════════════════════════════════════════════════════╣
+║  TOP HALLAZGOS:                                           ║
+║    [p9] 4 errores TypeScript                             ║
+╚══════════════════════════════════════════════════════════╝
+
+[2026-04-01 10:37:33][R29][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)
+[2026-04-01 10:40:33][R30][INFO] INICIANDO RONDA 30
+[2026-04-01 10:40:33][R30][INFO] Subvenciones: 307 | Sin PDF: 0 | Sin título: 0
+[2026-04-01 10:40:33][R30][INFO] Matches: 3137 | Sin motivo: 0
+[2026-04-01 10:40:33][R30][INFO] Expedientes: 2 | Sin fase: 0
+[2026-04-01 10:40:33][R30][INFO] Pipeline errores: 0
+[2026-04-01 10:40:34][R30][INFO] Estados convocatoria: {"abierta":165,"cerrada":35,"desconocido":48,"proxima":59}
+[2026-04-01 10:40:41][R30][WARN] TypeScript: 15 errores
+[2026-04-01 10:40:41][R30][INFO] ✓ Query matches: 5 resultados
+[2026-04-01 10:40:41][R30][INFO] ✓ Convocatorias abiertas: 165
+[2026-04-01 10:40:41][R30][INFO] ✓ Expedientes en cobro: todos tienen importe_concedido
+[2026-04-01 10:40:41][R30][INFO] Clientes sin NIF (onboarding incompleto): 4
+[2026-04-01 10:40:42][R30][INFO] Alertas sin leer: null
+[2026-04-01 10:40:42][R30][INFO] Matching reciente (hace 1.8h) — skip
+[2026-04-01 10:40:42][R30][INFO] Pipeline BDNS reciente (hace 1.9h) — skip
+[2026-04-01 10:40:42][R30][INFO] Analizando 1 hallazgos top con Claude...
+[2026-04-01 10:40:42][R30][INFO] Top hallazgo: [prio 9] 15 errores TypeScript
+[2026-04-01 10:40:51][R30][INFO] Fix aplicado por Claude CLI

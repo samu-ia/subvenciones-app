@@ -161,18 +161,20 @@ export default function BandejaPage() {
 
       if (!solData || solData.length === 0) { setSolicitudes([]); return; }
 
-      const nifs = [...new Set(solData.map((s: any) => s.nif as string))];
+      type SolRow = { nif: string; subvencion: unknown; id: string; estado: string; created_at: string; expediente_id: string };
+      type ClienteRow = { nif: string; nombre_empresa: string | null };
+      const nifs = [...new Set(solData.map((s: SolRow) => s.nif))];
       const { data: clientesData } = await supabase
         .from('cliente')
         .select('nif, nombre_empresa')
         .in('nif', nifs);
 
       const clienteMap: Record<string, string> = {};
-      for (const c of clientesData ?? []) {
-        clienteMap[(c as any).nif] = (c as any).nombre_empresa ?? '';
+      for (const c of (clientesData ?? []) as ClienteRow[]) {
+        clienteMap[c.nif] = c.nombre_empresa ?? '';
       }
 
-      const rows: SolicitudPendiente[] = solData.map((s: any) => ({
+      const rows: SolicitudPendiente[] = (solData as SolRow[]).map((s) => ({
         id: s.id,
         nif: s.nif,
         estado: s.estado,
@@ -203,7 +205,8 @@ export default function BandejaPage() {
 
       const urgentes: ExpedienteUrgente[] = [];
 
-      for (const exp of expData as any[]) {
+      type ExpRow = { id: string; nif: string; titulo: string; fase: string; plazo_solicitud?: string; plazo_aceptacion?: string; plazo_justificacion?: string };
+      for (const exp of expData as ExpRow[]) {
         let plazoRelevante: string | null = null;
         if (exp.fase === 'preparacion' && exp.plazo_solicitud) plazoRelevante = exp.plazo_solicitud;
         else if (exp.fase === 'aceptacion' && exp.plazo_aceptacion) plazoRelevante = exp.plazo_aceptacion;
@@ -235,8 +238,8 @@ export default function BandejaPage() {
         .in('nif', nifs2);
 
       const cliMap: Record<string, string> = {};
-      for (const c of clis ?? []) {
-        cliMap[(c as any).nif] = (c as any).nombre_empresa ?? '';
+      for (const c of (clis ?? []) as ClienteRow[]) {
+        cliMap[c.nif] = c.nombre_empresa ?? '';
       }
 
       setExpedientes(urgentes.map(e => ({ ...e, nombre_empresa: cliMap[e.nif] ?? e.nif })));
@@ -258,18 +261,19 @@ export default function BandejaPage() {
 
       if (!matchData || matchData.length === 0) { setMatches([]); return; }
 
-      const nifs3 = [...new Set(matchData.map((m: any) => m.nif as string))];
+      type MatchRow = { id: string; nif: string; score: number; subvencion: unknown };
+      const nifs3 = [...new Set((matchData as MatchRow[]).map((m) => m.nif))];
       const { data: clis3 } = await supabase
         .from('cliente')
         .select('nif, nombre_empresa')
         .in('nif', nifs3);
 
       const cliMap3: Record<string, string> = {};
-      for (const c of clis3 ?? []) {
-        cliMap3[(c as any).nif] = (c as any).nombre_empresa ?? '';
+      for (const c of (clis3 ?? []) as ClienteRow[]) {
+        cliMap3[c.nif] = c.nombre_empresa ?? '';
       }
 
-      const rows2: MatchNuevo[] = matchData.map((m: any) => ({
+      const rows2: MatchNuevo[] = (matchData as MatchRow[]).map((m) => ({
         id: m.id,
         nif: m.nif,
         score: m.score,
