@@ -18,6 +18,12 @@ const eslintConfig = defineConfig([
     "grants-manager/dist/**",
     "grants-manager/node_modules/**",
   ]),
+  {
+    files: ["scripts/run-migration.js"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

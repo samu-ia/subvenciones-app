@@ -1690,3 +1690,21 @@ El sistema no puede encontrar la ruta especificada.
 [2026-04-01 10:30:34][R27][INFO] Analizando 1 hallazgos top con Claude...
 [2026-04-01 10:30:34][R27][INFO] Top hallazgo: [prio 9] 4 errores TypeScript
 [2026-04-01 10:30:44][R27][INFO] Fix aplicado por Claude CLI
+warning: in the working copy of 'scripts/.bucle-maestro-stdout.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/.bucle-maestro.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/.bucle-maestro-stdout.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/.bucle-maestro.log', LF will be replaced by CRLF the next time Git touches it
+[2026-04-01 10:30:45][R27][INFO] Commit de respaldo realizado
+[2026-04-01 10:30:47][R27][INFO] Push a origin/main OK
+
+╔══════════════════════════════════════════════════════════╗
+║  RONDA 27   — INFORME FINAL  (26s)                        ║
+╠══════════════════════════════════════════════════════════╣
+║  Subvenciones: 307   | Abiertas: 165   | Matches: 3137  ║
+║  Hallazgos detectados: 1    | Acciones pipeline: 0  ║
+╠══════════════════════════════════════════════════════════╣
+║  TOP HALLAZGOS:                                           ║
+║    [p9] 4 errores TypeScript                             ║
+╚══════════════════════════════════════════════════════════╝
+
+[2026-04-01 10:30:48][R27][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)

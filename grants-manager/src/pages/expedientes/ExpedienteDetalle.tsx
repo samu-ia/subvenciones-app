@@ -16,6 +16,7 @@ import { ESTADO_COLORS, ESTADO_LABELS, type EstadoExpediente, type Presupuesto }
 const NOW = Date.now()
 const VERIFIED_DATE = new Date(NOW).toLocaleDateString('es-ES')
 const VALID_UNTIL = new Date(NOW + 90 * 24 * 60 * 60 * 1000).toLocaleDateString('es-ES')
+let presupuestoCounter = NOW
 
 const TODOS_ESTADOS: EstadoExpediente[] = [
   'DETECCION', 'EVALUACION', 'PREPARACION', 'PRESENTADA',
@@ -401,7 +402,7 @@ El proyecto aportará un incremento de facturación estimado en 120.000€ en lo
   const handleAddPresupuesto = () => {
     if (!newPresupuesto.proveedorNombre.trim()) return
     addPresupuesto({
-      id: `p${NOW}-${Math.random().toString(36).slice(2)}`,
+      id: `p${++presupuestoCounter}`,
       expedienteId: exp.id,
       proveedorNombre: newPresupuesto.proveedorNombre.trim(),
       proveedorCif: newPresupuesto.proveedorCif.trim(),

@@ -229,6 +229,7 @@ export function SolicitudDetalle() {
   }, 0)
 
   // C2 — auto-populate importe field when table total changes
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (totalLines > 0) {
       setImporte(totalLines.toString())
