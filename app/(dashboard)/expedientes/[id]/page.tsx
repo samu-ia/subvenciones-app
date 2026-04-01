@@ -19,7 +19,7 @@ interface ChecklistItem {
   completado: boolean; generado_ia: boolean; orden: number;
 }
 interface ProveedorAsignado {
-  id: string; relevancia_score: number;
+  id: string; proveedor_id: string; relevancia_score: number;
   motivo_match?: string; propuesta_texto?: string; estado: string;
   proveedor: { nombre: string; categoria: string; descripcion?: string; servicios?: string[]; web?: string; contacto_email?: string; contacto_nombre?: string; precio_referencia?: string };
 }
@@ -127,11 +127,34 @@ function PanelChecklist({ expedienteId }: { expedienteId: string }) {
 function PanelProveedores({ expedienteId }: { expedienteId: string }) {
   const [provs, setProvs] = useState<ProveedorAsignado[]>([]);
   const [loading, setLoading] = useState(true);
+  const [solicitando, setSolicitando] = useState<string | null>(null);
+  const [solicitado, setSolicitado] = useState<Set<string>>(new Set());
+
+  async function solicitarPresupuesto(p: ProveedorAsignado) {
+    setSolicitando(p.id);
+    try {
+      const res = await fetch(`/api/expedientes/${expedienteId}/presupuestos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          proveedor_id: p.proveedor_id,
+          titulo: `Presupuesto — ${p.proveedor?.nombre}`,
+          estado: 'borrador',
+        }),
+      });
+      if (res.ok) {
+        setSolicitado(prev => new Set([...prev, p.id]));
+        if (p.estado === 'sugerido') cambiarEstado(p.id, 'contactado');
+      }
+    } finally {
+      setSolicitando(null);
+    }
+  }
 
   useEffect(() => {
     const supabase = createClient();
     supabase.from('expediente_proveedores')
-      .select('id, relevancia_score, motivo_match, propuesta_texto, estado, proveedor:proveedores(nombre,categoria,descripcion,servicios,web,contacto_email,contacto_nombre,precio_referencia)')
+      .select('id, proveedor_id, relevancia_score, motivo_match, propuesta_texto, estado, proveedor:proveedores(nombre,categoria,descripcion,servicios,web,contacto_email,contacto_nombre,precio_referencia)')
       .eq('expediente_id', expedienteId)
       .order('relevancia_score', { ascending: false })
       .then(({ data }) => {
@@ -189,6 +212,19 @@ function PanelProveedores({ expedienteId }: { expedienteId: string }) {
               <a href={p.proveedor.web} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.68rem', color: '#475569', textDecoration: 'none', background: '#f8fafc', padding: '3px 7px', borderRadius: 6 }}>
                 <ExternalLink size={10} /> Web
               </a>
+            )}
+            {p.estado !== 'descartado' && (
+              solicitado.has(p.id) ? (
+                <span style={{ fontSize: '0.65rem', color: '#059669', fontWeight: 600 }}>✓ Presupuesto creado</span>
+              ) : (
+                <button
+                  onClick={() => solicitarPresupuesto(p)}
+                  disabled={solicitando === p.id}
+                  style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.68rem', color: '#7c3aed', background: '#f5f3ff', border: '1px solid #c4b5fd', borderRadius: 6, padding: '3px 8px', cursor: 'pointer', fontWeight: 600, opacity: solicitando === p.id ? 0.6 : 1 }}
+                >
+                  {solicitando === p.id ? '...' : '+ Presupuesto'}
+                </button>
+              )
             )}
             <select
               value={p.estado}
