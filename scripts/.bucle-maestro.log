@@ -5051,3 +5051,40 @@
 [2026-04-04 19:09:15][R160][INFO] Analizando 2 hallazgos top con Claude...
 [2026-04-04 19:09:15][R160][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
 [2026-04-04 19:09:26][R160][INFO] Fix aplicado por Claude CLI
+[2026-04-04 19:09:27][R160][INFO] Commit de respaldo realizado
+[2026-04-04 19:09:29][R160][INFO] Push a origin/main OK
+
+╔══════════════════════════════════════════════════════════╗
+║  RONDA 160  — INFORME FINAL  (637s)                       ║
+╠══════════════════════════════════════════════════════════╣
+║  Subvenciones: 398   | Abiertas: 230   | Matches: null  ║
+║  Hallazgos detectados: 2    | Acciones pipeline: 2  ║
+╠══════════════════════════════════════════════════════════╣
+║  TOP HALLAZGOS:                                           ║
+║    [p9] 41 errores TypeScript                            ║
+║    [p6] 2 subvenciones en estado error                   ║
+╚══════════════════════════════════════════════════════════╝
+
+[2026-04-04 19:09:29][R160][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)
+[2026-04-04 19:12:29][R161][INFO] INICIANDO RONDA 161
+[2026-04-04 19:12:30][R161][INFO] Subvenciones: 398 | Sin PDF: 41 | Sin título: 41
+[2026-04-04 19:12:30][R161][INFO] Matches: 3698 | Sin motivo: 0
+[2026-04-04 19:12:30][R161][INFO] Expedientes: 3 | Sin fase: 0
+[2026-04-04 19:12:30][R161][INFO] Pipeline errores: 2
+[2026-04-04 19:12:30][R161][INFO] Estados convocatoria: {"abierta":230,"cerrada":38,"desconocido":53,"proxima":75,"resuelta":2}
+[2026-04-04 19:12:36][R161][WARN] TypeScript: 41 errores
+[2026-04-04 19:12:36][R161][INFO] ✓ Query matches: 5 resultados
+[2026-04-04 19:12:36][R161][INFO] ✓ Convocatorias abiertas: 230
+[2026-04-04 19:12:38][R161][INFO] ✓ Expedientes en cobro: todos tienen importe_concedido
+[2026-04-04 19:12:38][R161][INFO] Clientes sin NIF (onboarding incompleto): 4
+[2026-04-04 19:12:39][R161][INFO] Alertas sin leer: null
+[2026-04-04 19:12:39][R161][INFO] Procesando 41 PDFs pendientes...
+[2026-04-04 19:15:39][R161][INFO] PDF pipeline: 📊 Resumen Pipeline PDF Real: |    ✅ Procesadas: 41 |    ❌ Errores:    0
+[2026-04-04 19:15:39][R161][INFO] Generando 41 títulos comerciales...
+[2026-04-04 19:16:30][R161][INFO] Títulos: ✅ 41/41 | 📊 11 títulos generados, 30 errores
+[2026-04-04 19:16:30][R161][INFO] Re-calculando matches (última vez hace 0.3h)...
+[2026-04-04 19:16:45][R161][INFO] Matching:   Matches relevantes:   975
+[2026-04-04 19:16:46][R161][INFO] Pipeline BDNS reciente (hace 0.2h) — skip
+[2026-04-04 19:16:46][R161][INFO] Analizando 3 hallazgos top con Claude...
+[2026-04-04 19:16:46][R161][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
+[2026-04-04 19:16:55][R161][INFO] Fix aplicado por Claude CLI
