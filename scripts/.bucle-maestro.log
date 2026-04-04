@@ -5960,3 +5960,35 @@
 [2026-04-04 22:59:00][R188][INFO] Analizando 2 hallazgos top con Claude...
 [2026-04-04 22:59:00][R188][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
 [2026-04-04 22:59:07][R188][INFO] Fix aplicado por Claude CLI
+[2026-04-04 22:59:07][R188][INFO] Commit de respaldo realizado
+[2026-04-04 22:59:09][R188][INFO] Push a origin/main OK
+
+╔══════════════════════════════════════════════════════════╗
+║  RONDA 188  — INFORME FINAL  (14s)                        ║
+╠══════════════════════════════════════════════════════════╣
+║  Subvenciones: 398   | Abiertas: 230   | Matches: 4179  ║
+║  Hallazgos detectados: 2    | Acciones pipeline: 0  ║
+╠══════════════════════════════════════════════════════════╣
+║  TOP HALLAZGOS:                                           ║
+║    [p9] 41 errores TypeScript                            ║
+║    [p6] 2 subvenciones en estado error                   ║
+╚══════════════════════════════════════════════════════════╝
+
+[2026-04-04 22:59:09][R188][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)
+[2026-04-04 23:22:00][R189][INFO] INICIANDO RONDA 189
+[2026-04-04 23:22:01][R189][INFO] Subvenciones: null | Sin PDF: null | Sin título: null
+[2026-04-04 23:22:01][R189][INFO] Matches: null | Sin motivo: null
+[2026-04-04 23:22:01][R189][INFO] Expedientes: null | Sin fase: null
+[2026-04-04 23:22:01][R189][INFO] Pipeline errores: null
+[2026-04-04 23:22:01][R189][INFO] Estados convocatoria: {}
+[2026-04-04 23:24:06][R189][INFO] TypeScript: OK (0 errores)
+[2026-04-04 23:24:07][R189][ERROR] ✗ Query matches falló: TypeError: fetch failed
+[2026-04-04 23:24:07][R189][ERROR] ✗ Query subvenciones abiertas: TypeError: fetch failed
+[2026-04-04 23:24:07][R189][ERROR] ✗ Query expedientes cobro: TypeError: fetch failed
+[2026-04-04 23:24:07][R189][INFO] Clientes sin NIF (onboarding incompleto): null
+[2026-04-04 23:24:09][R189][INFO] Alertas sin leer: null
+[2026-04-04 23:24:10][R189][INFO] Matching reciente (hace 3.3h) — skip
+[2026-04-04 23:24:10][R189][INFO] Pipeline BDNS reciente (hace 4.3h) — skip
+[2026-04-04 23:24:10][R189][INFO] Analizando 2 hallazgos top con Claude...
+[2026-04-04 23:24:10][R189][INFO] Top hallazgo: [prio 9] Query de matches falla: TypeError: fetch failed
+[2026-04-04 23:24:15][R189][INFO] Fix aplicado por Claude CLI
