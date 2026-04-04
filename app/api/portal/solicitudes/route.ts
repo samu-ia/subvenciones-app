@@ -177,6 +177,33 @@ export async function POST(request: NextRequest) {
     await sb.from('cliente_subvencion_match').update({ estado: 'interesado' }).eq('id', body.match_id);
   }
 
+  // ── Auto-crear expediente si el contrato está firmado ─────────────────────
+  let expedienteId: string | null = null;
+  if (solicitudData.contrato_firmado) {
+    // Verificar que no tenga ya un expediente (upsert puede haber actualizado una existente)
+    const { data: solActual } = await sb.from('solicitudes').select('expediente_id').eq('id', sol.id).maybeSingle();
+    if (!solActual?.expediente_id) {
+      const { data: subvData } = await sb.from('subvenciones').select('titulo,organismo').eq('id', body.subvencion_id).maybeSingle();
+      const { data: expNuevo } = await sb.from('expediente').insert({
+        nif,
+        estado: 'en_tramitacion',
+        titulo: (subvData as Record<string,unknown> | null)?.titulo as string ?? 'Subvención',
+        organismo: (subvData as Record<string,unknown> | null)?.organismo as string ?? null,
+        subvencion_id: body.subvencion_id,
+      }).select('id').single();
+      if (expNuevo) {
+        expedienteId = expNuevo.id;
+        await sb.from('solicitudes').update({ expediente_id: expNuevo.id }).eq('id', sol.id);
+        // Setup automático (checklist, proveedores) en background
+        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ayudapyme.es';
+        fetch(`${baseUrl}/api/expedientes/${expNuevo.id}/setup`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${process.env.INGEST_SECRET ?? ''}` },
+        }).catch(() => {});
+      }
+    }
+  }
+
   // Enviar emails de confirmación al cliente y notificación al admin (en background, no bloquea)
   (async () => {
     try {
