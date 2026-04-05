@@ -6505,3 +6505,36 @@
 [2026-04-05 01:06:17][R205][INFO] Analizando 2 hallazgos top con Claude...
 [2026-04-05 01:06:17][R205][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
 [2026-04-05 01:06:25][R205][INFO] Fix aplicado por Claude CLI
+[2026-04-05 01:06:25][R205][INFO] Commit de respaldo realizado
+[2026-04-05 01:06:27][R205][INFO] Push a origin/main OK
+
+╔══════════════════════════════════════════════════════════╗
+║  RONDA 205  — INFORME FINAL  (17s)                        ║
+╠══════════════════════════════════════════════════════════╣
+║  Subvenciones: 398   | Abiertas: 230   | Matches: 4179  ║
+║  Hallazgos detectados: 2    | Acciones pipeline: 0  ║
+╠══════════════════════════════════════════════════════════╣
+║  TOP HALLAZGOS:                                           ║
+║    [p9] 41 errores TypeScript                            ║
+║    [p6] 2 subvenciones en estado error                   ║
+╚══════════════════════════════════════════════════════════╝
+
+[2026-04-05 01:06:27][R205][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)
+[2026-04-05 01:09:27][R206][INFO] INICIANDO RONDA 206
+[2026-04-05 01:09:28][R206][INFO] Subvenciones: 398 | Sin PDF: 0 | Sin título: 0
+[2026-04-05 01:09:28][R206][INFO] Matches: 4179 | Sin motivo: 0
+[2026-04-05 01:09:28][R206][INFO] Expedientes: 8 | Sin fase: 0
+[2026-04-05 01:09:28][R206][INFO] Pipeline errores: 2
+[2026-04-05 01:09:28][R206][INFO] Estados convocatoria: {"abierta":230,"cerrada":38,"desconocido":53,"proxima":75,"resuelta":2}
+[2026-04-05 01:09:32][R206][WARN] TypeScript: 41 errores
+[2026-04-05 01:09:32][R206][INFO] ✓ Query matches: 5 resultados
+[2026-04-05 01:09:32][R206][INFO] ✓ Convocatorias abiertas: 230
+[2026-04-05 01:09:33][R206][INFO] ✓ Expedientes en cobro: todos tienen importe_concedido
+[2026-04-05 01:09:33][R206][INFO] Clientes sin NIF (onboarding incompleto): 4
+[2026-04-05 01:09:33][R206][INFO] Alertas sin leer: null
+[2026-04-05 01:09:33][R206][INFO] Matching reciente (hace 5.0h) — skip
+[2026-04-05 01:09:33][R206][INFO] Ejecutando pipeline BDNS (última ingesta hace 6.1h)...
+[2026-04-05 01:15:19][R206][INFO] Pipeline BDNS: ✅ OK: 0 | Sin cambio: 10000 | Errores: 0 | Tiempo: 172.3s
+[2026-04-05 01:15:19][R206][INFO] Analizando 2 hallazgos top con Claude...
+[2026-04-05 01:15:19][R206][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
+[2026-04-05 01:15:25][R206][INFO] Fix aplicado por Claude CLI
