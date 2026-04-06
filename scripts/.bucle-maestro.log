@@ -6804,3 +6804,37 @@
 [2026-04-05 03:09:08][R214][INFO] Analizando 2 hallazgos top con Claude...
 [2026-04-05 03:09:08][R214][INFO] Top hallazgo: [prio 9] Query de matches falla: TypeError: fetch failed
 [2026-04-05 07:13:25][R214][INFO] Fix aplicado por Claude CLI
+[2026-04-05 07:13:27][R214][INFO] Commit de respaldo realizado
+[2026-04-05 07:13:28][R214][WARN] Git error: Command failed: git push origin main 2>&1
+
+╔══════════════════════════════════════════════════════════╗
+║  RONDA 214  — INFORME FINAL  (17403s)                     ║
+╠══════════════════════════════════════════════════════════╣
+║  Subvenciones: null  | Abiertas: null  | Matches: null  ║
+║  Hallazgos detectados: 2    | Acciones pipeline: 2  ║
+╠══════════════════════════════════════════════════════════╣
+║  TOP HALLAZGOS:                                           ║
+║    [p9] Query de matches falla: TypeError: fetch failed  ║
+║    [p6] 2 subvenciones en estado error                   ║
+╚══════════════════════════════════════════════════════════╝
+
+[2026-04-05 07:13:28][R214][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)
+[2026-04-06 15:39:00][R215][INFO] INICIANDO RONDA 215
+[2026-04-06 15:39:01][R215][INFO] Subvenciones: null | Sin PDF: null | Sin título: null
+[2026-04-06 15:39:01][R215][INFO] Matches: null | Sin motivo: null
+[2026-04-06 15:39:01][R215][INFO] Expedientes: null | Sin fase: null
+[2026-04-06 15:39:01][R215][INFO] Pipeline errores: null
+[2026-04-06 15:39:01][R215][INFO] Estados convocatoria: {}
+[2026-04-06 15:39:20][R215][WARN] TypeScript: 41 errores
+[2026-04-06 15:39:21][R215][INFO] ✓ Query matches: 5 resultados
+[2026-04-06 15:39:21][R215][INFO] ✓ Convocatorias abiertas: 229
+[2026-04-06 15:39:21][R215][INFO] ✓ Expedientes en cobro: todos tienen importe_concedido
+[2026-04-06 15:39:22][R215][INFO] Clientes sin NIF (onboarding incompleto): 4
+[2026-04-06 15:39:22][R215][INFO] Alertas sin leer: null
+[2026-04-06 15:39:22][R215][INFO] Re-calculando matches (última vez hace 37.4h)...
+[2026-04-06 15:39:37][R215][INFO] Matching:   Matches relevantes:   971
+[2026-04-06 15:39:37][R215][INFO] Ejecutando pipeline BDNS (última ingesta hace 44.6h)...
+[2026-04-06 15:49:37][R215][INFO] Pipeline BDNS: completado
+[2026-04-06 15:49:37][R215][INFO] Analizando 2 hallazgos top con Claude...
+[2026-04-06 15:49:37][R215][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
+[2026-04-06 15:49:46][R215][INFO] Fix aplicado por Claude CLI
