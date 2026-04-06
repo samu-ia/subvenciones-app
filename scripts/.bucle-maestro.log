@@ -8576,3 +8576,35 @@
 [2026-04-06 18:49:51][R269][INFO] Analizando 2 hallazgos top con Claude...
 [2026-04-06 18:49:51][R269][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
 [2026-04-06 18:49:59][R269][INFO] Fix aplicado por Claude CLI
+[2026-04-06 18:49:59][R269][INFO] Commit de respaldo realizado
+[2026-04-06 18:50:01][R269][INFO] Push a origin/main OK
+
+╔══════════════════════════════════════════════════════════╗
+║  RONDA 269  — INFORME FINAL  (15s)                        ║
+╠══════════════════════════════════════════════════════════╣
+║  Subvenciones: 440   | Abiertas: 252   | Matches: 5158  ║
+║  Hallazgos detectados: 2    | Acciones pipeline: 0  ║
+╠══════════════════════════════════════════════════════════╣
+║  TOP HALLAZGOS:                                           ║
+║    [p9] 41 errores TypeScript                            ║
+║    [p6] 2 subvenciones en estado error                   ║
+╚══════════════════════════════════════════════════════════╝
+
+[2026-04-06 18:50:01][R269][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)
+[2026-04-06 18:53:01][R270][INFO] INICIANDO RONDA 270
+[2026-04-06 18:53:01][R270][INFO] Subvenciones: 440 | Sin PDF: 0 | Sin título: 0
+[2026-04-06 18:53:01][R270][INFO] Matches: 5158 | Sin motivo: 0
+[2026-04-06 18:53:01][R270][INFO] Expedientes: 10 | Sin fase: 0
+[2026-04-06 18:53:01][R270][INFO] Pipeline errores: 2
+[2026-04-06 18:53:01][R270][INFO] Estados convocatoria: {"abierta":252,"cerrada":43,"desconocido":55,"proxima":87,"resuelta":3}
+[2026-04-06 18:53:05][R270][WARN] TypeScript: 41 errores
+[2026-04-06 18:53:05][R270][INFO] ✓ Query matches: 5 resultados
+[2026-04-06 18:53:06][R270][INFO] ✓ Convocatorias abiertas: 252
+[2026-04-06 18:53:06][R270][INFO] ✓ Expedientes en cobro: todos tienen importe_concedido
+[2026-04-06 18:53:06][R270][INFO] Clientes sin NIF (onboarding incompleto): 3
+[2026-04-06 18:53:06][R270][INFO] Alertas sin leer: null
+[2026-04-06 18:53:06][R270][INFO] Matching reciente (hace 0.6h) — skip
+[2026-04-06 18:53:06][R270][INFO] Pipeline BDNS reciente (hace 3.1h) — skip
+[2026-04-06 18:53:06][R270][INFO] Analizando 2 hallazgos top con Claude...
+[2026-04-06 18:53:06][R270][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
+[2026-04-06 18:53:13][R270][INFO] Fix aplicado por Claude CLI
