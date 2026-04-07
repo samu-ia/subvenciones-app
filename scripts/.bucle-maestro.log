@@ -9538,3 +9538,40 @@
 [2026-04-07 07:05:21][R299][INFO] Analizando 2 hallazgos top con Claude...
 [2026-04-07 07:05:21][R299][INFO] Top hallazgo: [prio 9] Query de matches falla: TypeError: fetch failed
 [2026-04-07 07:05:26][R299][INFO] Fix aplicado por Claude CLI
+[2026-04-07 07:05:26][R299][INFO] Commit de respaldo realizado
+[2026-04-07 07:05:29][R299][INFO] Push a origin/main OK
+
+╔══════════════════════════════════════════════════════════╗
+║  RONDA 299  — INFORME FINAL  (37332s)                     ║
+╠══════════════════════════════════════════════════════════╣
+║  Subvenciones: 449   | Abiertas: 261   | Matches: null  ║
+║  Hallazgos detectados: 2    | Acciones pipeline: 2  ║
+╠══════════════════════════════════════════════════════════╣
+║  TOP HALLAZGOS:                                           ║
+║    [p9] Query de matches falla: TypeError: fetch failed  ║
+║    [p6] 2 subvenciones en estado error                   ║
+╚══════════════════════════════════════════════════════════╝
+
+[2026-04-07 07:05:30][R299][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)
+[2026-04-07 07:08:30][R300][INFO] INICIANDO RONDA 300
+[2026-04-07 07:08:30][R300][INFO] Subvenciones: 449 | Sin PDF: 9 | Sin título: 9
+[2026-04-07 07:08:30][R300][INFO] Matches: 5160 | Sin motivo: 0
+[2026-04-07 07:08:30][R300][INFO] Expedientes: 10 | Sin fase: 0
+[2026-04-07 07:08:30][R300][INFO] Pipeline errores: 2
+[2026-04-07 07:08:30][R300][INFO] Estados convocatoria: {"abierta":261,"cerrada":43,"desconocido":55,"proxima":87,"resuelta":3}
+[2026-04-07 07:08:35][R300][WARN] TypeScript: 41 errores
+[2026-04-07 07:08:35][R300][INFO] ✓ Query matches: 5 resultados
+[2026-04-07 07:08:35][R300][INFO] ✓ Convocatorias abiertas: 261
+[2026-04-07 07:08:35][R300][INFO] ✓ Expedientes en cobro: todos tienen importe_concedido
+[2026-04-07 07:08:35][R300][INFO] Clientes sin NIF (onboarding incompleto): 3
+[2026-04-07 07:08:35][R300][INFO] Alertas sin leer: null
+[2026-04-07 07:08:36][R300][INFO] Procesando 9 PDFs pendientes...
+[2026-04-07 07:09:28][R300][INFO] PDF pipeline: 📊 Resumen Pipeline PDF Real: |    ✅ Procesadas: 9 |    ❌ Errores:    0
+[2026-04-07 07:09:28][R300][INFO] Generando 9 títulos comerciales...
+[2026-04-07 07:09:45][R300][INFO] Títulos: ✅ 9/9 | 📊 9 títulos generados, 0 errores
+[2026-04-07 07:09:45][R300][INFO] Re-calculando matches (última vez hace 0.2h)...
+[2026-04-07 07:09:56][R300][INFO] Matching:   Matches relevantes:   1675
+[2026-04-07 07:09:56][R300][INFO] Pipeline BDNS reciente (hace 0.1h) — skip
+[2026-04-07 07:09:56][R300][INFO] Analizando 3 hallazgos top con Claude...
+[2026-04-07 07:09:56][R300][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
+[2026-04-07 07:10:02][R300][INFO] Fix aplicado por Claude CLI
