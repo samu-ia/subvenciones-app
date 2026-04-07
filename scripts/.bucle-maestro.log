@@ -9575,3 +9575,36 @@
 [2026-04-07 07:09:56][R300][INFO] Analizando 3 hallazgos top con Claude...
 [2026-04-07 07:09:56][R300][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
 [2026-04-07 07:10:02][R300][INFO] Fix aplicado por Claude CLI
+[2026-04-07 07:10:10][R300][INFO] Commit de respaldo realizado
+[2026-04-07 07:10:12][R300][INFO] Push a origin/main OK
+
+╔══════════════════════════════════════════════════════════╗
+║  RONDA 300  — INFORME FINAL  (102s)                       ║
+╠══════════════════════════════════════════════════════════╣
+║  Subvenciones: 449   | Abiertas: 261   | Matches: 5277  ║
+║  Hallazgos detectados: 4    | Acciones pipeline: 3  ║
+╠══════════════════════════════════════════════════════════╣
+║  TOP HALLAZGOS:                                           ║
+║    [p9] 41 errores TypeScript                            ║
+║    [p8] 9 subvenciones sin PDF procesado                 ║
+║    [p7] 9 subvenciones sin titulo_comercial              ║
+╚══════════════════════════════════════════════════════════╝
+
+[2026-04-07 07:10:12][R300][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)
+[2026-04-07 07:13:12][R301][INFO] INICIANDO RONDA 301
+[2026-04-07 07:13:13][R301][INFO] Subvenciones: 449 | Sin PDF: 0 | Sin título: 0
+[2026-04-07 07:13:13][R301][INFO] Matches: 5277 | Sin motivo: 0
+[2026-04-07 07:13:13][R301][INFO] Expedientes: 10 | Sin fase: 0
+[2026-04-07 07:13:13][R301][INFO] Pipeline errores: 2
+[2026-04-07 07:13:13][R301][INFO] Estados convocatoria: {"abierta":261,"cerrada":43,"desconocido":55,"proxima":87,"resuelta":3}
+[2026-04-07 07:13:17][R301][WARN] TypeScript: 41 errores
+[2026-04-07 07:13:17][R301][INFO] ✓ Query matches: 5 resultados
+[2026-04-07 07:13:17][R301][INFO] ✓ Convocatorias abiertas: 261
+[2026-04-07 07:13:17][R301][INFO] ✓ Expedientes en cobro: todos tienen importe_concedido
+[2026-04-07 07:13:17][R301][INFO] Clientes sin NIF (onboarding incompleto): 3
+[2026-04-07 07:13:17][R301][INFO] Alertas sin leer: null
+[2026-04-07 07:13:18][R301][INFO] Matching reciente (hace 0.1h) — skip
+[2026-04-07 07:13:18][R301][INFO] Pipeline BDNS reciente (hace 0.2h) — skip
+[2026-04-07 07:13:18][R301][INFO] Analizando 2 hallazgos top con Claude...
+[2026-04-07 07:13:18][R301][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
+[2026-04-07 07:13:24][R301][INFO] Fix aplicado por Claude CLI
