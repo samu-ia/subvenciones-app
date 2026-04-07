@@ -12264,3 +12264,35 @@
 [2026-04-07 11:43:53][R384][INFO] Analizando 2 hallazgos top con Claude...
 [2026-04-07 11:43:53][R384][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
 [2026-04-07 11:44:01][R384][INFO] Fix aplicado por Claude CLI
+[2026-04-07 11:44:02][R384][INFO] Commit de respaldo realizado
+[2026-04-07 11:44:04][R384][INFO] Push a origin/main OK
+
+╔══════════════════════════════════════════════════════════╗
+║  RONDA 384  — INFORME FINAL  (19s)                        ║
+╠══════════════════════════════════════════════════════════╣
+║  Subvenciones: 449   | Abiertas: 261   | Matches: 5277  ║
+║  Hallazgos detectados: 2    | Acciones pipeline: 0  ║
+╠══════════════════════════════════════════════════════════╣
+║  TOP HALLAZGOS:                                           ║
+║    [p9] 41 errores TypeScript                            ║
+║    [p6] 2 subvenciones en estado error                   ║
+╚══════════════════════════════════════════════════════════╝
+
+[2026-04-07 11:44:04][R384][INFO] Siguiente ronda en 180s... (Ctrl+C para parar)
+[2026-04-07 11:47:04][R385][INFO] INICIANDO RONDA 385
+[2026-04-07 11:47:05][R385][INFO] Subvenciones: 449 | Sin PDF: 0 | Sin título: 0
+[2026-04-07 11:47:05][R385][INFO] Matches: 5277 | Sin motivo: 0
+[2026-04-07 11:47:05][R385][INFO] Expedientes: 10 | Sin fase: 0
+[2026-04-07 11:47:05][R385][INFO] Pipeline errores: 2
+[2026-04-07 11:47:05][R385][INFO] Estados convocatoria: {"abierta":261,"cerrada":43,"desconocido":55,"proxima":87,"resuelta":3}
+[2026-04-07 11:47:10][R385][WARN] TypeScript: 41 errores
+[2026-04-07 11:47:10][R385][INFO] ✓ Query matches: 5 resultados
+[2026-04-07 11:47:10][R385][INFO] ✓ Convocatorias abiertas: 261
+[2026-04-07 11:47:10][R385][INFO] ✓ Expedientes en cobro: todos tienen importe_concedido
+[2026-04-07 11:47:10][R385][INFO] Clientes sin NIF (onboarding incompleto): 3
+[2026-04-07 11:47:10][R385][INFO] Alertas sin leer: null
+[2026-04-07 11:47:11][R385][INFO] Matching reciente (hace 4.6h) — skip
+[2026-04-07 11:47:11][R385][INFO] Pipeline BDNS reciente (hace 4.7h) — skip
+[2026-04-07 11:47:11][R385][INFO] Analizando 2 hallazgos top con Claude...
+[2026-04-07 11:47:11][R385][INFO] Top hallazgo: [prio 9] 41 errores TypeScript
+[2026-04-07 11:47:20][R385][INFO] Fix aplicado por Claude CLI
