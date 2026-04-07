@@ -19,7 +19,6 @@
 - Solo pregunta si vas a borrar datos de clientes reales o hacer algo genuinamente irreversible fuera del repo.
 - Haz commits frecuentes con mensajes descriptivos.
 - Si algo falla, intenta solucionarlo solo antes de escalar.
-- Prioriza velocidad de ejecución sobre perfección.
 
 ## Qué es AyudaPyme
 
